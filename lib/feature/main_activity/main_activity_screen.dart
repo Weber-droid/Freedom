@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:freedom/feature/home/view/home_screen.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
 
