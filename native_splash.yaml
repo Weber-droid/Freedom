@@ -1,0 +1,10 @@
+flutter_native_splash:
+  android: true
+  ios: true
+  web: false
+  background_image: "assets/images/freedom_native.png"
+
+  android_12:
+    image: assets/images/native_android.png
+    icon_background_color: "#ffffff"
+    icon_background_color_dark: "#121212"
