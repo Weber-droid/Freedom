@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class _Space extends StatelessWidget {
   const _Space(this.width, this.height);
@@ -9,22 +10,37 @@ class _Space extends StatelessWidget {
   Widget build(BuildContext context) => SizedBox(width: width, height: height);
 }
 
-class VSpace {
-  const VSpace(this.height);
-  VSpace.sm() : this(Insets.sm);
-  VSpace.md() : this(Insets.m);
+class VSpace extends StatelessWidget {
+  const VSpace(this.size, {super.key});
+  final double size;
 
-  VSpace.xs() : this(Insets.xs);
-  final double height;
+  @override
+  Widget build(BuildContext context) => _Space(0, size.h);
+
+  static VSpace get xs => VSpace(Insets.xs);
+  static VSpace get sm => VSpace(Insets.sm);
+  static VSpace get md => VSpace(Insets.m);
+  static VSpace get lg => VSpace(Insets.l);
+  static VSpace get xl => VSpace(Insets.xl);
+  static List<VSpace> get bottomOffset => [
+        VSpace.xl,
+        VSpace.xl,
+        VSpace.xl,
+      ];
 }
 
-class HSpace {
-  const HSpace(this.width);
+class HSpace extends StatelessWidget {
+  const HSpace(this.size, {super.key});
+  final double size;
 
-  HSpace.xs() : this(Insets.xs);
-  HSpace.sm() : this(Insets.sm);
-  HSpace.md() : this(Insets.m);
-  final double width;
+  @override
+  Widget build(BuildContext context) => _Space(size, 0);
+
+  static HSpace get xs => HSpace(Insets.xs);
+  static HSpace get sm => HSpace(Insets.sm);
+  static HSpace get md => HSpace(Insets.m);
+  static HSpace get lg => HSpace(Insets.l);
+  static HSpace get xl => HSpace(Insets.xl);
 }
 
 class Insets {

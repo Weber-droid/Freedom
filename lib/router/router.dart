@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
+import 'package:freedom/feature/onboarding/view/carousel_view.dart';
 import 'package:freedom/feature/splash/splash_screen.dart';
 import 'package:freedom/router/error_page.dart';
 
@@ -17,6 +18,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     case MainActivityScreen.routeName:
       return _pageBuilder(
         (context) => const MainActivityScreen(),
+        settings: settings,
+      );
+    case CarouselViewer.routeName:
+      return _pageBuilder(
+        (context) => const CarouselViewer(),
         settings: settings,
       );
     default:

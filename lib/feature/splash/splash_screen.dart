@@ -19,14 +19,17 @@ class _SplashPageState extends State<SplashPage> {
   Widget build(BuildContext context) {
     return const Scaffold(
       backgroundColor: Colors.white,
-      body: Center(
-        child: Text('Splash'),
+      body: Image(
+        image: AssetImage('assets/images/splash_image.png'),
+        height: double.infinity,
+        width: double.infinity,
+        fit: BoxFit.cover,
       ),
     );
   }
 
   Future<void> _navigateUser() async {
     await Future<void>.delayed(const Duration(seconds: 2));
-    await Navigator.pushNamed(context, '/main_activity');
+    await Navigator.pushNamed(context, '/onBoarding');
   }
 }
