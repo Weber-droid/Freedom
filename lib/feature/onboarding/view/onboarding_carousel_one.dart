@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:freedom/app/view/app.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -12,49 +10,51 @@ class OnboardingCarouselOne extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          Stack(
-            children: [
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.6,
-                width: double.infinity,
-                child: const Image(
-                  image: AssetImage('assets/images/Onboarding_image_1.png'),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            Stack(
+              children: [
+                SizedBox(
+                  height: MediaQuery.of(context).size.height * 0.6,
+                  width: double.infinity,
+                  child: const Image(
+                    image: AssetImage('assets/images/Onboarding_image_1.png'),
+                  ),
                 ),
-              ),
-              Positioned(
-                top: 44,
-                left: 310,
-                child: SizedBox(
-                  height: 29,
-                  child: TextButton(
-                    style: TextButton.styleFrom(
-                        backgroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 19,
-                          vertical: 4,
-                        )),
-                    onPressed: () {},
-                    child: const Text(
-                      'Skip',
-                      style: TextStyle(color: Colors.white, fontSize: 13.7),
+                Positioned(
+                  top: 44,
+                  left: 310,
+                  child: SizedBox(
+                    height: 29,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                          backgroundColor: Colors.black,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 19,
+                            vertical: 4,
+                          )),
+                      onPressed: () {},
+                      child: const Text(
+                        'Skip',
+                        style: TextStyle(color: Colors.white, fontSize: 13.7),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const VSpace(28),
-          const CarouselDescription(
-            description:
-                'Discover a new way to move through the city, quickly and affordably. With Gofreedom, bikes are at your fingertips, ready to take you where you need to go in minutes.',
-            title: 'Welcome to Gofreedom',
-          ),
-        ],
+              ],
+            ),
+            const VSpace(28),
+            const CarouselDescription(
+              description:
+                  'Discover a new way to move through the city, quickly and affordably. With Gofreedom, bikes are at your fingertips, ready to take you where you need to go in minutes.',
+              title: 'Welcome to Gofreedom',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -70,9 +70,15 @@ class CarouselDescription extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(title,
-            style: GoogleFonts.poppins(
-                fontSize: 21.4, fontWeight: FontWeight.w600, color: colorRed)),
+        Text(
+          title,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.poppins(
+            fontSize: 21.4,
+            fontWeight: FontWeight.w600,
+            color: colorRed,
+          ),
+        ),
         const VSpace(6),
         Container(
           padding: EdgeInsets.symmetric(horizontal: 11.w),

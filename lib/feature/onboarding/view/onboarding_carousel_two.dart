@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:freedom/feature/onboarding/view/onboarding_carousel_one.dart';
 import 'package:freedom/shared/utilities.dart';
-import 'package:freedom/shared/widgets/buttons.dart';
 
 class OnboardingCarouselTwo extends StatefulWidget {
   const OnboardingCarouselTwo({super.key});
@@ -19,7 +18,6 @@ class _OnboardingCarouselTwoState extends State<OnboardingCarouselTwo> {
           children: [
             Stack(
               children: [
-                // Use a flexible height for the image to avoid overflow
                 SizedBox(
                   height: MediaQuery.of(context).size.height * 0.6,
                   width: double.infinity,
@@ -59,6 +57,7 @@ class _OnboardingCarouselTwoState extends State<OnboardingCarouselTwo> {
               padding: EdgeInsets.symmetric(horizontal: 16.0),
               child: CarouselDescription(
                 description:
+                    // ignore: lines_longer_than_80_chars
                     'As a customer, finding a bike has never been easier. Track nearby riders, compare fares, and get moving – all from the palm of your hand.',
                 title: 'Designed for Your Convenience',
               ),

@@ -3,7 +3,9 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
 import 'package:freedom/feature/onboarding/view/carousel_view.dart';
+import 'package:freedom/feature/registration/view/register_form_screen.dart';
 import 'package:freedom/feature/splash/splash_screen.dart';
+import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/router/error_page.dart';
 
 Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -23,6 +25,16 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     case CarouselViewer.routeName:
       return _pageBuilder(
         (context) => const CarouselViewer(),
+        settings: settings,
+      );
+    case RegisterFormScreen.routeName:
+      return _pageBuilder(
+        (context) => const RegisterFormScreen(),
+        settings: settings,
+      );
+    case VerifyOtpScreen.routeName:
+      return _pageBuilder(
+        (context) => const VerifyOtpScreen(),
         settings: settings,
       );
     default:

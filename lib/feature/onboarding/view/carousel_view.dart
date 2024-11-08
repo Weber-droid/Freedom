@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:freedom/feature/onboarding/view/onboarding_carousel_one.dart';
 import 'package:freedom/feature/onboarding/view/onboarding_carousel_two.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
@@ -72,13 +73,11 @@ class _CarouselViewerState extends State<CarouselViewer> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 35),
               child: FreedomButton(
+                backGroundColor: Colors.black,
                 onPressed: () {
                   goToPage(1);
                 },
-                title: const Text(
-                  'Next',
-                  style: TextStyle(fontSize: 17.41, color: Colors.white),
-                ),
+                title: 'Next',
               ),
             ),
           if (_currentPage == 1)
@@ -89,27 +88,29 @@ class _CarouselViewerState extends State<CarouselViewer> {
                   padding: const EdgeInsets.symmetric(horizontal: 35),
                   width: double.infinity,
                   child: FreedomButton(
+                    backGroundColor: Colors.black,
+                    height: 57.76.h,
                     onPressed: () {
-                      // Define action for first button
+                      Navigator.pushNamed(context, '/register');
                     },
-                    title: const Text(
-                      'Skip',
-                      style: TextStyle(fontSize: 17.41, color: Colors.white),
-                    ),
+                    title: 'Get Started',
                   ),
                 ),
                 const VSpace(8.24),
-                Container(
+                Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 35),
-                  width: double.infinity,
-                  child: FreedomButton(
-                    onPressed: () {
-                      // Define action for second button
-                    },
-                    title: const Text(
-                      'Continue',
-                      style: TextStyle(fontSize: 17.41, color: Colors.white),
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      FreedomButton(
+                        height: 57.76.h,
+                        useGradient: true,
+                        gradient: gradient,
+                        borderRadius: BorderRadius.circular(13),
+                        onPressed: () {},
+                        title: 'Continue',
+                      ),
+                    ],
                   ),
                 ),
               ],

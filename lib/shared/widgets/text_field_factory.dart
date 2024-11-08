@@ -1,109 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class TextFieldFactory extends StatefulWidget {
-  const TextFieldFactory(
-      {super.key,
-      required this.controller,
-      this.suffixIcon,
-      this.onChanged,
-      this.hinText = '',
-      this.validator,
-      this.autovalidateMode,
-      this.errorText = '',
-      this.maxLines,
-      this.textAlign,
-      this.textAlignVertical,
-      this.contentPadding,
-      this.hintTextStyle,
-      this.fontStyle,
-      this.prefixText,
-      this.focusNode,
-      this.keyboardType,
-      this.initialBorderColor,
-      this.fieldActiveBorderColor,
-      this.inputFormatters});
-  final TextEditingController controller;
-  final Widget? suffixIcon;
-  final Function(String)? onChanged;
-  final String hinText;
-  final String? Function(String?)? validator;
-  final AutovalidateMode? autovalidateMode;
-  final String errorText;
-  final int? maxLines;
-  final TextAlign? textAlign;
-  final TextAlignVertical? textAlignVertical;
-  final EdgeInsetsGeometry? contentPadding;
-  final TextStyle? hintTextStyle;
-  final TextStyle? fontStyle;
-  final Widget? prefixText;
-  final FocusNode? focusNode;
-  final TextInputType? keyboardType;
-  final Color? initialBorderColor;
-  final Color? fieldActiveBorderColor;
-  final List<TextInputFormatter>? inputFormatters;
-  factory TextFieldFactory.email({
-    required TextEditingController controller,
-    TextStyle? hintTextStyle,
-    TextStyle? fontStyle,
-    TextAlign? textAlign,
-    TextAlignVertical? textAlignVertical,
-    EdgeInsetsGeometry? contentPadding,
-    Widget? prefixText,
-    FocusNode? focusNode,
-    TextInputType? keyboardType,
-    Color? initialBorderColor,
-    Color? fieldActiveBorderColor,
-    final String? Function(String?)? validator,
-    List<TextInputFormatter>? inputFormatters,
-  }) =>
-      TextFieldFactory(
-        controller: controller,
-        hintTextStyle: hintTextStyle,
-        fontStyle: fontStyle,
-        textAlign: textAlign,
-        textAlignVertical: textAlignVertical,
-        contentPadding: contentPadding,
-        prefixText: prefixText,
-        focusNode: focusNode,
-        keyboardType: keyboardType,
-        initialBorderColor: initialBorderColor,
-        fieldActiveBorderColor: fieldActiveBorderColor,
-        inputFormatters: inputFormatters,
-        validator: validator,
-      );
-  factory TextFieldFactory.password({
-    required TextEditingController controller,
-    TextStyle? hintTextStyle,
-    TextStyle? fontStyle,
-    TextAlign? textAlign,
-    TextAlignVertical? textAlignVertical,
-    EdgeInsetsGeometry? contentPadding,
-    Widget? prefixText,
-    FocusNode? focusNode,
-    TextInputType? keyboardType,
-    Color? initialBorderColor,
-    Color? fieldActiveBorderColor,
-    final String? Function(String?)? validator,
-    List<TextInputFormatter>? inputFormatters,
-  }) =>
-      TextFieldFactory(
-        controller: controller,
-        hintTextStyle: hintTextStyle,
-        fontStyle: fontStyle,
-        textAlign: textAlign,
-        textAlignVertical: textAlignVertical,
-        contentPadding: contentPadding,
-        prefixText: prefixText,
-        focusNode: focusNode,
-        keyboardType: keyboardType,
-        initialBorderColor: initialBorderColor,
-        fieldActiveBorderColor: fieldActiveBorderColor,
-        inputFormatters: inputFormatters,
-        validator: validator,
-      );
   factory TextFieldFactory.name({
     required TextEditingController controller,
     TextStyle? hintTextStyle,
@@ -116,7 +17,7 @@ class TextFieldFactory extends StatefulWidget {
     TextInputType? keyboardType,
     Color? initialBorderColor,
     Color? fieldActiveBorderColor,
-    final String? Function(String?)? validator,
+    String? Function(String?)? validator,
     List<TextInputFormatter>? inputFormatters,
   }) =>
       TextFieldFactory(
@@ -146,7 +47,7 @@ class TextFieldFactory extends StatefulWidget {
     TextInputType? keyboardType,
     Color? initialBorderColor,
     Color? fieldActiveBorderColor,
-    final String? Function(String?)? validator,
+    String? Function(String?)? validator,
     List<TextInputFormatter>? inputFormatters,
   }) =>
       TextFieldFactory(
@@ -164,6 +65,110 @@ class TextFieldFactory extends StatefulWidget {
         inputFormatters: inputFormatters,
         validator: validator,
       );
+  factory TextFieldFactory.password({
+    required TextEditingController controller,
+    TextStyle? hintTextStyle,
+    TextStyle? fontStyle,
+    TextAlign? textAlign,
+    TextAlignVertical? textAlignVertical,
+    EdgeInsetsGeometry? contentPadding,
+    Widget? prefixText,
+    FocusNode? focusNode,
+    TextInputType? keyboardType,
+    Color? initialBorderColor,
+    Color? fieldActiveBorderColor,
+    String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
+  }) =>
+      TextFieldFactory(
+        controller: controller,
+        hintTextStyle: hintTextStyle,
+        fontStyle: fontStyle,
+        textAlign: textAlign,
+        textAlignVertical: textAlignVertical,
+        contentPadding: contentPadding,
+        prefixText: prefixText,
+        focusNode: focusNode,
+        keyboardType: keyboardType,
+        initialBorderColor: initialBorderColor,
+        fieldActiveBorderColor: fieldActiveBorderColor,
+        inputFormatters: inputFormatters,
+        validator: validator,
+      );
+  factory TextFieldFactory.email({
+    required TextEditingController controller,
+    TextStyle? hintTextStyle,
+    TextStyle? fontStyle,
+    TextAlign? textAlign,
+    TextAlignVertical? textAlignVertical,
+    EdgeInsetsGeometry? contentPadding,
+    Widget? prefixText,
+    FocusNode? focusNode,
+    TextInputType? keyboardType,
+    Color? initialBorderColor,
+    Color? fieldActiveBorderColor,
+    String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
+  }) =>
+      TextFieldFactory(
+        controller: controller,
+        hintTextStyle: hintTextStyle,
+        fontStyle: fontStyle,
+        textAlign: textAlign,
+        textAlignVertical: textAlignVertical,
+        contentPadding: contentPadding,
+        prefixText: prefixText,
+        focusNode: focusNode,
+        keyboardType: keyboardType,
+        initialBorderColor: initialBorderColor,
+        fieldActiveBorderColor: fieldActiveBorderColor,
+        inputFormatters: inputFormatters,
+        validator: validator,
+      );
+  const TextFieldFactory(
+      {super.key,
+      required this.controller,
+      this.suffixIcon,
+      this.onChanged,
+      this.hinText,
+      this.validator,
+      this.autovalidateMode,
+      this.errorText,
+      this.maxLines,
+      this.textAlign,
+      this.textAlignVertical,
+      this.contentPadding,
+      this.hintTextStyle,
+      this.fontStyle,
+      this.prefixText,
+      this.focusNode,
+      this.keyboardType,
+      this.initialBorderColor,
+      this.fieldActiveBorderColor,
+      this.inputFormatters,
+      this.enabledBorderColor,
+      this.focusedBorderColor});
+  final TextEditingController controller;
+  final Widget? suffixIcon;
+  final Function(String)? onChanged;
+  final String? hinText;
+  final String? Function(String?)? validator;
+  final AutovalidateMode? autovalidateMode;
+  final String? errorText;
+  final int? maxLines;
+  final TextAlign? textAlign;
+  final TextAlignVertical? textAlignVertical;
+  final EdgeInsetsGeometry? contentPadding;
+  final TextStyle? hintTextStyle;
+  final TextStyle? fontStyle;
+  final Widget? prefixText;
+  final FocusNode? focusNode;
+  final TextInputType? keyboardType;
+  final Color? initialBorderColor;
+  final Color? fieldActiveBorderColor;
+  final List<TextInputFormatter>? inputFormatters;
+  final Color? enabledBorderColor;
+  final Color? focusedBorderColor;
 
   @override
   State<TextFieldFactory> createState() => _TextFieldFactoryState();
@@ -189,13 +194,16 @@ class _TextFieldFactoryState extends State<TextFieldFactory> {
             fontWeight: FontWeight.w500,
           ),
       decoration: InputDecoration(
+        fillColor: fillColor,
+        filled: true,
         labelText: widget.hinText,
         labelStyle: widget.hintTextStyle ??
             GoogleFonts.poppins(
               fontSize: 14.sp,
               color: const Color(0xffE0E0E0),
             ),
-        prefix: widget.prefixText,
+        // prefix: widget.prefixText,
+        prefixIcon: widget.prefixText,
         errorText: widget.errorText,
         errorStyle: const TextStyle(
           height: 0,
@@ -203,7 +211,7 @@ class _TextFieldFactoryState extends State<TextFieldFactory> {
         contentPadding: widget.contentPadding ?? const EdgeInsets.all(12),
         errorBorder: OutlineInputBorder(
           borderSide:
-              BorderSide(color: widget.initialBorderColor ?? Colors.red),
+              BorderSide(color: widget.initialBorderColor ?? Colors.purple),
           borderRadius: const BorderRadius.all(Radius.circular(5)),
         ),
         focusedErrorBorder: OutlineInputBorder(
@@ -211,14 +219,16 @@ class _TextFieldFactoryState extends State<TextFieldFactory> {
               BorderSide(color: widget.fieldActiveBorderColor ?? Colors.orange),
           borderRadius: const BorderRadius.all(Radius.circular(5)),
         ),
-        enabledBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(Radius.circular(5)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: const BorderRadius.all(Radius.circular(5)),
           borderSide: BorderSide(
-            color: Color(0xffE0E0E0),
+            color: widget.enabledBorderColor ?? Colors.transparent,
           ),
         ),
-        focusedBorder: const OutlineInputBorder(
-          borderRadius: BorderRadius.all(
+        focusedBorder: OutlineInputBorder(
+          borderSide:
+              BorderSide(color: widget.focusedBorderColor ?? thickFillColor),
+          borderRadius: const BorderRadius.all(
             Radius.circular(5),
           ),
         ),
