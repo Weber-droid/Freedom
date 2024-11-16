@@ -23,6 +23,7 @@ dependencies:
   freezed_annotation: ^2.4.4
   get_it: ^8.0.0
   google_fonts: ^6.2.1
+  google_maps_flutter: ^2.9.0
   intl: ^0.19.0
   intl_phone_number_input: ^0.7.4
   json_annotation: ^4.9.0
@@ -45,6 +46,8 @@ flutter:
   generate: true
   assets:
     - assets/images/
+    - assets/images/nav_icon/active/
+    - assets/images/nav_icon/inactive/
   # fonts:
   #   - family: SF Pro Display
   #     fonts:

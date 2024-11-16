@@ -19,6 +19,7 @@ class TextFieldFactory extends StatefulWidget {
     Color? fieldActiveBorderColor,
     String? Function(String?)? validator,
     List<TextInputFormatter>? inputFormatters,
+    String? hinText,
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -34,6 +35,7 @@ class TextFieldFactory extends StatefulWidget {
         fieldActiveBorderColor: fieldActiveBorderColor,
         inputFormatters: inputFormatters,
         validator: validator,
+        hinText: hinText,
       );
   factory TextFieldFactory.phone({
     required TextEditingController controller,
@@ -109,6 +111,7 @@ class TextFieldFactory extends StatefulWidget {
     Color? fieldActiveBorderColor,
     String? Function(String?)? validator,
     List<TextInputFormatter>? inputFormatters,
+    String? hinText,
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -124,6 +127,7 @@ class TextFieldFactory extends StatefulWidget {
         fieldActiveBorderColor: fieldActiveBorderColor,
         inputFormatters: inputFormatters,
         validator: validator,
+        hinText: hinText,
       );
   const TextFieldFactory(
       {super.key,
@@ -147,7 +151,8 @@ class TextFieldFactory extends StatefulWidget {
       this.fieldActiveBorderColor,
       this.inputFormatters,
       this.enabledBorderColor,
-      this.focusedBorderColor});
+      this.focusedBorderColor,
+      this.hintText});
   final TextEditingController controller;
   final Widget? suffixIcon;
   final Function(String)? onChanged;
@@ -169,6 +174,7 @@ class TextFieldFactory extends StatefulWidget {
   final List<TextInputFormatter>? inputFormatters;
   final Color? enabledBorderColor;
   final Color? focusedBorderColor;
+  final String? hintText;
 
   @override
   State<TextFieldFactory> createState() => _TextFieldFactoryState();
@@ -202,7 +208,6 @@ class _TextFieldFactoryState extends State<TextFieldFactory> {
               fontSize: 14.sp,
               color: const Color(0xffE0E0E0),
             ),
-        // prefix: widget.prefixText,
         prefixIcon: widget.prefixText,
         errorText: widget.errorText,
         errorStyle: const TextStyle(

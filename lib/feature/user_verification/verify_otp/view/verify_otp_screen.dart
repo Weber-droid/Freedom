@@ -24,7 +24,7 @@ class VerifyOtpScreen extends StatefulWidget {
 class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   final _otpFormKey = GlobalKey<FormState>();
   final _otpController = TextEditingController();
-  FocusNode _otpFocusNode = FocusNode();
+  final _otpFocusNode = FocusNode();
 
   Timer? _timer;
   int _start = 10;
@@ -60,7 +60,12 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   Widget build(BuildContext context) {
     final formCubit = BlocProvider.of<RegisterFormCubit>(context);
     return Scaffold(
-      body: BlocBuilder<VerifyOtpCubit, VerifyOtpState>(
+      body: BlocConsumer<VerifyOtpCubit, VerifyOtpState>(
+        listener: (context, state) {
+          if (state.isVerified) {
+            Navigator.pushNamed(context, '/personal_details');
+          }
+        },
         builder: (context, state) {
           return SafeArea(
             child: Padding(
@@ -68,25 +73,13 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const VSpace(54),
                   InkWell(
                     onTap: () {
                       if (mounted) {
                         Navigator.pop(context);
                       }
                     },
-                    child: Container(
-                      height: 38.09,
-                      width: 38.09,
-                      decoration: const BoxDecoration(
-                          color: Colors.black, shape: BoxShape.circle),
-                      child: Padding(
-                        padding:
-                            const EdgeInsets.fromLTRB(8.86, 8.86, 9.74, 9.74),
-                        child:
-                            SvgPicture.asset('assets/images/back_button.svg'),
-                      ),
-                    ),
+                    child: const DecoratedBackButton(),
                   ),
                   const VSpace(35.45),
                   Text(
@@ -198,22 +191,13 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                     useLoader: true,
                     borderRadius: BorderRadius.circular(10),
                     width: double.infinity,
-                    title: state.isLoading ? 'Loading' : 'Verify',
-                    child: state.isLoading
+                    title: state.isLoading == true ? 'Loading' : 'Verify',
+                    child: state.isLoading == true
                         ? const CircularProgressIndicator(
                             strokeWidth: 2,
                           )
                         : null,
-                    onPressed: () {
-                      if (_otpFormKey.currentState!.validate()) {
-                        context
-                            .read<VerifyOtpCubit>()
-                            .verifyOtp(_otpController.text);
-                        if (state.isVerified) {
-                          Navigator.pushNamed(context, '/personal_details');
-                        }
-                      }
-                    },
+                    onPressed: () => _onVerifyPressed(context, state),
                   ),
                 ],
               ),
@@ -230,5 +214,37 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     _otpController.dispose();
     _otpFocusNode.dispose();
     super.dispose();
+  }
+
+  void _onVerifyPressed(BuildContext context, VerifyOtpState state) {
+    log('Loading state: ${state.isLoading}');
+
+    if (_otpFormKey.currentState!.validate()) {
+      context.read<VerifyOtpCubit>().verifyOtp(_otpController.text);
+
+      // Log states after the verify action
+      log('Verification in progress...');
+      log('isVerified: ${state.isVerified}, isLoading: ${state.isLoading}');
+    }
+  }
+}
+
+class DecoratedBackButton extends StatelessWidget {
+  const DecoratedBackButton({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 38.09,
+      width: 38.09,
+      decoration:
+          const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8.86, 8.86, 9.74, 9.74),
+        child: SvgPicture.asset('assets/images/back_button.svg'),
+      ),
+    );
   }
 }

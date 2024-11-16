@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 
@@ -7,14 +9,33 @@ class VerifyOtpCubit extends Cubit<VerifyOtpState> {
   VerifyOtpCubit() : super(const VerifyOtpState());
 
   void verifyOtp(String otp) {
-    emit(state.copyWith(isLoading: true));
-    if (isOtpValid(otp)) {
-      emit(state.copyWith(isVerified: true));
-      emit(state.copyWith(isLoading: false));
+    emit(
+      state.copyWith(
+        isLoading: true,
+      ),
+    );
+    log('isloading from state ${state.isLoading}');
+    final isValid = isOtpValid(otp);
+    if (isValid) {
+      emit(
+        state.copyWith(
+          isVerified: isValid,
+          isLoading: false,
+          clearMessage: isValid,
+          isError: false,
+          errorMessage: '',
+        ),
+      );
     } else {
-      emit(state.copyWith(isError: true));
-      emit(state.copyWith(errorMessage: 'Invalid OTP'));
-      emit(state.copyWith(isLoading: false));
+      emit(
+        state.copyWith(
+          isError: true,
+          errorMessage: 'Invalid OTP',
+          isLoading: false,
+          clearMessage: isValid,
+          isVerified: false,
+        ),
+      );
     }
   }
 }

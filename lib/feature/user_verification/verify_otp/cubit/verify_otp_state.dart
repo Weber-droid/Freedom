@@ -4,7 +4,7 @@ class VerifyOtpState extends Equatable {
   const VerifyOtpState({
     this.isLoading = false,
     this.isError = false,
-    this.errorMessage = '',
+    this.errorMessage,
     this.isVerified = false,
   });
   final bool isLoading;
@@ -13,16 +13,16 @@ class VerifyOtpState extends Equatable {
   final bool isVerified;
 
   VerifyOtpState copyWith({
-    String? otp,
     bool? isLoading,
     bool? isError,
     String? errorMessage,
     bool? isVerified,
+    bool clearMessage = false,
   }) {
     return VerifyOtpState(
       isLoading: isLoading ?? this.isLoading,
       isError: isError ?? this.isError,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: clearMessage ? null : (errorMessage ?? this.errorMessage),
       isVerified: isVerified ?? this.isVerified,
     );
   }

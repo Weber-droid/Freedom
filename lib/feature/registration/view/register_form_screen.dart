@@ -56,184 +56,192 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
     return Scaffold(
       body: BlocBuilder<RegisterFormCubit, RegisterFormState>(
         builder: (context, state) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const VSpace(67),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 17),
-                child: SvgPicture.asset(
-                  'assets/images/login_logo.svg',
+          return SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const VSpace(67),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 17),
+                  child: SvgPicture.asset(
+                    'assets/images/login_logo.svg',
+                  ),
                 ),
-              ),
-              const VSpace(20.37),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 17),
-                child: Text(
-                  'Enter your phone number',
-                  style: GoogleFonts.poppins(
-                      fontSize: 15.6, fontWeight: FontWeight.w500),
+                const VSpace(20.37),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 17),
+                  child: Text(
+                    'Enter your phone number',
+                    style: GoogleFonts.poppins(
+                        fontSize: 15.6, fontWeight: FontWeight.w500),
+                  ),
                 ),
-              ),
-              const VSpace(7),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 17),
-                child: Form(
-                  key: fromKey,
-                  autovalidateMode: AutovalidateMode.onUserInteraction,
-                  child: TextFieldFactory.phone(
-                    controller: phoneController,
-                    fontStyle: const TextStyle(fontSize: 19.58),
-                    prefixText: Transform.translate(
-                      offset: const Offset(0, -5),
-                      child: Padding(
-                        padding: const EdgeInsets.only(
-                            left: 10, top: 18, bottom: 7, right: 17),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(5),
-                            color: const Color(0x4FF59E0B),
-                          ),
-                          child: Stack(
-                            children: [
-                              CountryCodePicker(
-                                onChanged: (value) {
-                                  setState(() {
-                                    countryCode = value.dialCode ?? '+233';
-                                    phoneController.text = countryCode;
-                                  });
-                                },
-                                padding: EdgeInsets.zero,
-                                initialSelection: 'GH',
-                                hideMainText: true,
+                const VSpace(7),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 17),
+                  child: Form(
+                    key: fromKey,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    child: TextFieldFactory.phone(
+                        controller: phoneController,
+                        fontStyle: const TextStyle(fontSize: 19.58),
+                        prefixText: Transform.translate(
+                          offset: const Offset(0, -5),
+                          child: Padding(
+                            padding: const EdgeInsets.only(
+                                left: 10, top: 18, bottom: 7, right: 17),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(5),
+                                color: const Color(0x4FF59E0B),
                               ),
-                              Positioned(
-                                top: MediaQuery.of(context).size.height * 0.014,
-                                left: MediaQuery.of(context).size.width * 0.11,
-                                child: SvgPicture.asset(
-                                    'assets/images/drop_down.svg'),
+                              child: Stack(
+                                children: [
+                                  CountryCodePicker(
+                                    onChanged: (value) {
+                                      setState(() {
+                                        countryCode = value.dialCode ?? '+233';
+                                        phoneController.text = countryCode;
+                                      });
+                                    },
+                                    padding: EdgeInsets.zero,
+                                    initialSelection: 'GH',
+                                    hideMainText: true,
+                                  ),
+                                  Positioned(
+                                    top: MediaQuery.of(context).size.height *
+                                        0.014,
+                                    left: MediaQuery.of(context).size.width *
+                                        0.11,
+                                    child: SvgPicture.asset(
+                                        'assets/images/drop_down.svg'),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
-                    validator: (val) {
-                      if (val == null || val.isEmpty) {
-                        return 'Phone number is required';
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) {
+                            return 'Phone number is required';
+                          }
+
+                          final cleanedNumber =
+                              val.replaceAll(RegExp(r'\D'), '');
+                          if (cleanedNumber.isEmpty) {
+                            return 'Please enter valid digits only';
+                          }
+
+                          if (cleanedNumber.length < 10) {
+                            return 'Phone number must be at least 10 digits';
+                          }
+
+                          return null;
+                        }),
+                  ),
+                ),
+                const VSpace(29),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 17),
+                  child: FreedomButton(
+                    backGroundColor: Colors.black,
+                    borderRadius: BorderRadius.circular(7),
+                    width: double.infinity,
+                    title: 'Continue',
+                    onPressed: () {
+                      if (fromKey.currentState!.validate()) {
+                        final phoneNumber = getFullPhoneNumber();
+                        context
+                            .read<RegisterFormCubit>()
+                            .setPhoneNumber(phoneNumber);
+                        Navigator.pushNamed(context, '/verify_otp');
                       }
-                      final cleanNumber = val.replaceAll(RegExp(r'[^\d]'), '');
-                      if (!RegExp(r'^[0-9]+$').hasMatch(cleanNumber)) {
-                        return 'Please enter valid digits only';
-                      }
-                      return null;
                     },
                   ),
                 ),
-              ),
-              const VSpace(29),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 17),
-                child: FreedomButton(
-                  backGroundColor: Colors.black,
-                  borderRadius: BorderRadius.circular(7),
-                  width: double.infinity,
-                  title: 'Continue',
-                  onPressed: () {
-                    if (fromKey.currentState!.validate()) {
-                      final phoneNumber = getFullPhoneNumber();
-                      context
-                          .read<RegisterFormCubit>()
-                          .setPhoneNumber(phoneNumber);
-                      log('Phone number before navigation: ${context.read<RegisterFormCubit>().state.phoneNumber}');
-
-                      Navigator.pushNamed(context, '/verify_otp');
-                    }
-                  },
-                ),
-              ),
-              const VSpace(26),
-              Row(
-                children: [
-                  Container(
-                    height: 7,
-                    width: 167,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(100),
-                      color: colorGrey,
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'Or',
-                    style: GoogleFonts.poppins(fontSize: 15.36),
-                  ),
-                  const Spacer(),
-                  Container(
-                    height: 7,
-                    width: 167,
-                    decoration: BoxDecoration(
+                const VSpace(26),
+                Row(
+                  children: [
+                    Container(
+                      height: 7,
+                      width: 167,
+                      decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(100),
-                        color: colorGrey),
-                  ),
-                ],
-              ),
-              const VSpace(28),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 17),
-                child: FreedomButton(
-                  backGroundColor: socialLoginColor,
-                  leadingIcon: 'apple_icon',
-                  borderRadius: BorderRadius.circular(7),
-                  title: 'Login with Apple',
-                  titleColor: Colors.black,
-                  width: double.infinity,
-                  fontSize: 16,
-                  onPressed: () {},
+                        color: colorGrey,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      'Or',
+                      style: GoogleFonts.poppins(fontSize: 15.36),
+                    ),
+                    const Spacer(),
+                    Container(
+                      height: 7,
+                      width: 167,
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(100),
+                          color: colorGrey),
+                    ),
+                  ],
                 ),
-              ),
-              const VSpace(20),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 17),
-                child: FreedomButton(
-                  backGroundColor: socialLoginColor,
-                  leadingIcon: 'google_icon',
-                  borderRadius: BorderRadius.circular(7),
-                  title: 'Login with Google',
-                  titleColor: Colors.black,
-                  fontSize: 16,
-                  width: double.infinity,
-                  onPressed: () {},
-                ),
-              ),
-              const VSpace(17),
-              Center(
-                child: Text(
-                  'Or',
-                  style: GoogleFonts.poppins(
-                    fontSize: 15.36,
-                    fontWeight: FontWeight.w500,
+                const VSpace(28),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 17),
+                  child: FreedomButton(
+                    backGroundColor: socialLoginColor,
+                    leadingIcon: 'apple_icon',
+                    borderRadius: BorderRadius.circular(7),
+                    title: 'Login with Apple',
+                    titleColor: Colors.black,
+                    width: double.infinity,
+                    fontSize: 16,
+                    onPressed: () {},
                   ),
                 ),
-              ),
-              const VSpace(7),
-              Center(
-                child: ShaderMask(
-                  blendMode: BlendMode.srcIn,
-                  shaderCallback: (bounds) => gradient.createShader(
-                    Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                const VSpace(20),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 17),
+                  child: FreedomButton(
+                    backGroundColor: socialLoginColor,
+                    leadingIcon: 'google_icon',
+                    borderRadius: BorderRadius.circular(7),
+                    title: 'Login with Google',
+                    titleColor: Colors.black,
+                    fontSize: 16,
+                    width: double.infinity,
+                    onPressed: () {},
                   ),
-                  child: InkWell(
-                    onTap: () {},
-                    child: Text(
-                      'Already have an account?',
-                      style: GoogleFonts.poppins(
-                          fontSize: 17.41, fontWeight: FontWeight.w500),
+                ),
+                const VSpace(17),
+                Center(
+                  child: Text(
+                    'Or',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15.36,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
-              )
-            ],
+                const VSpace(7),
+                Center(
+                  child: ShaderMask(
+                    blendMode: BlendMode.srcIn,
+                    shaderCallback: (bounds) => gradient.createShader(
+                      Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                    ),
+                    child: InkWell(
+                      onTap: () {},
+                      child: Text(
+                        'Already have an account?',
+                        style: GoogleFonts.poppins(
+                            fontSize: 17.41, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ),
+                )
+              ],
+            ),
           );
         },
       ),
