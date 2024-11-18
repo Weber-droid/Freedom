@@ -11,6 +11,11 @@ LinearGradient get locationSearchFillGradient => const LinearGradient(
       end: Alignment.bottomRight,
       colors: [Color(0xFFFFFDF9A3), Color(0xffFFFFFF)],
     );
+LinearGradient get redLinearGradient => const LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xffF59E0B), Color(0xffE61D2A)],
+    );
 
 Color get carouselActiveColor => const Color(0xFFF59E0B);
 Color get carouselInactiveColor => const Color(0xFFFFD790);

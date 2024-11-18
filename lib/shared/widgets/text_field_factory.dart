@@ -155,7 +155,7 @@ class TextFieldFactory extends StatefulWidget {
       this.hintText});
   final TextEditingController controller;
   final Widget? suffixIcon;
-  final Function(String)? onChanged;
+  final void Function(String)? onChanged;
   final String? hinText;
   final String? Function(String?)? validator;
   final AutovalidateMode? autovalidateMode;

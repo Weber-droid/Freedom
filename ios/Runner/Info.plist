@@ -54,5 +54,7 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>DART_DEFINES</key>
+		<string>$(DART_DEFINES)</string>
 	</dict>
 </plist>

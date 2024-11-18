@@ -32,6 +32,7 @@ dependencies:
   retrofit: ^4.4.1
   shared_preferences: ^2.3.2
   smooth_page_indicator: ^1.2.0+3
+  gradient_borders: ^1.0.1
 dev_dependencies:
   bloc_test: ^9.1.7
   retrofit_generator: ^9.1.3
