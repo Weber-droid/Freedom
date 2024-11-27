@@ -129,6 +129,38 @@ class TextFieldFactory extends StatefulWidget {
         validator: validator,
         hinText: hinText,
       );
+  factory TextFieldFactory.location({
+    required TextEditingController controller,
+    TextStyle? hintTextStyle,
+    TextStyle? fontStyle,
+    TextAlign? textAlign,
+    TextAlignVertical? textAlignVertical,
+    EdgeInsetsGeometry? contentPadding,
+    Widget? prefixText,
+    FocusNode? focusNode,
+    TextInputType? keyboardType,
+    Color? initialBorderColor,
+    Color? fieldActiveBorderColor,
+    String? Function(String?)? validator,
+    List<TextInputFormatter>? inputFormatters,
+    String? hinText,
+  }) =>
+      TextFieldFactory(
+        controller: controller,
+        hintTextStyle: hintTextStyle,
+        fontStyle: fontStyle,
+        textAlign: textAlign,
+        textAlignVertical: textAlignVertical,
+        contentPadding: contentPadding,
+        prefixText: prefixText,
+        focusNode: focusNode,
+        keyboardType: keyboardType,
+        initialBorderColor: initialBorderColor,
+        fieldActiveBorderColor: fieldActiveBorderColor,
+        inputFormatters: inputFormatters,
+        validator: validator,
+        hinText: hinText,
+      );
   const TextFieldFactory(
       {super.key,
       required this.controller,
