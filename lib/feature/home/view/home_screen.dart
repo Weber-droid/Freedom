@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/models/home_history_model.dart';
@@ -10,6 +11,7 @@ import 'package:freedom/feature/home/view/welcome_screen.dart';
 import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
+import 'package:freedom/shared/widgets/text_field_factory.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:gradient_borders/box_borders/gradient_box_border.dart';
@@ -30,6 +32,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _destinationController = TextEditingController();
   final List<TextEditingController> _destinationControllers =
       <TextEditingController>[];
+  final TextEditingController _houseNumberController = TextEditingController();
+  final TextEditingController _phoneNumberController = TextEditingController();
+  final TextEditingController _itemDestinationController =
+      TextEditingController();
+  final TextEditingController _itemDestinationHomeNumberController =
+      TextEditingController();
 
   String defaultValue = 'Now';
   List<String> dropdownItems = ['Now', 'Later'];
@@ -188,7 +196,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         opacity: _containerOpacity,
                         duration: const Duration(milliseconds: 500),
                         child: InkWell(
-                          onTap: () {},
+                          onTap: () async {
+                            if (trackSelectedIndex == 2) {
+                              await _showLogisticsBottomSheet(
+                                context,
+                                pickUpController: _pickUpLocationController,
+                                destinationController: _destinationController,
+                                houseNumberController: _houseNumberController,
+                                phoneNumberController: _phoneNumberController,
+                                itemDestinationController:
+                                    _itemDestinationController,
+                                itemDestinationHomeNumberController:
+                                    _itemDestinationHomeNumberController,
+                              );
+                            }
+                          },
                           child: const LogisticsDetailContainer(),
                         ),
                       ),
@@ -243,11 +265,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 _containerOpacity =
                                     trackSelectedIndex == 2 ? 1 : 0;
                               });
-                              if (trackSelectedIndex == 2) {
-                                await _showLogisticsBottomSheet(
-                                  context,
-                                );
-                              }
                             },
                             child: ChooseServiceBox(
                               isSelected: trackSelectedIndex == 2,
@@ -560,17 +577,237 @@ Future<void> _showMotorCycleBottomSheet(
   );
 }
 
-Future<void> _showLogisticsBottomSheet(BuildContext context) {
+Future<void> _showLogisticsBottomSheet(
+  BuildContext context, {
+  required TextEditingController pickUpController,
+  required TextEditingController destinationController,
+  required TextEditingController houseNumberController,
+  required TextEditingController phoneNumberController,
+  required TextEditingController itemDestinationController,
+  required TextEditingController itemDestinationHomeNumberController,
+}) {
   return showModalBottomSheet(
     context: context,
     builder: (BuildContext context) {
       return Container(
-        height: 150,
+        height: 547.h,
         width: double.infinity,
-        decoration: BoxDecoration(gradient: whiteAmberGradient),
+        decoration: BoxDecoration(
+          gradient: whiteAmberGradient,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const VSpace(24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 19),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Delivery Details',
+                    style: GoogleFonts.poppins(
+                        fontSize: 13.22.sp, fontWeight: FontWeight.w500),
+                  ),
+                  Container(
+                    height: 36,
+                    width: 36,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(11),
+                      color: Colors.white,
+                    ),
+                    child: SvgPicture.asset('assets/images/cancel_icon.svg'),
+                  ),
+                ],
+              ),
+            ),
+            const VSpace(15),
+            Container(
+              height: 11,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.37),
+              ),
+            ),
+            const VSpace(15),
+            Padding(
+              padding: const EdgeInsets.only(left: 13),
+              child: Text(
+                'Where to pick up',
+                style: GoogleFonts.poppins(
+                  color: Colors.black,
+                  fontSize: 10.89,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const VSpace(7),
+            _LogisticsDetailsFields(
+              controller1: pickUpController,
+              controller2: houseNumberController,
+            ),
+            const VSpace(15),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 13),
+              child: TextFieldFactory.phone(
+                controller: phoneNumberController,
+                fillColor: fillColor2,
+                hintText: 'Enter Phone Number',
+                enabledColorBorder: Colors.white,
+                enabledBorderRadius:
+                    const BorderRadius.all(Radius.circular(10)),
+                prefixText: const LogisticsPrefixIcon(
+                  imageName: 'push_arrow',
+                ),
+                hintTextStyle:
+                    GoogleFonts.poppins(color: hintTextColor, fontSize: 11.50),
+                suffixIcon: const Padding(
+                  padding: EdgeInsets.only(right: 10),
+                  child: LogisticsPrefixIcon(
+                    imageName: 'phone_icon',
+                  ),
+                ),
+              ),
+            ),
+            const VSpace(10),
+            Padding(
+              padding: const EdgeInsets.only(left: 13),
+              child: Text(
+                'Where to deliver Item',
+                style: GoogleFonts.poppins(
+                  color: Colors.black,
+                  fontSize: 10.89,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            const VSpace(7),
+            _LogisticsDetailsFields(
+              controller1: itemDestinationController,
+              controller2: itemDestinationHomeNumberController,
+            ),
+            const VSpace(12),
+            Padding(
+              padding: const EdgeInsets.only(left: 13),
+              child: Text(
+                'Deliver What?',
+                style: GoogleFonts.poppins(
+                  color: Colors.black,
+                  fontSize: 10.89,
+                  fontWeight: FontWeight.w600,
+                  height: 0,
+                ),
+              ),
+            ),
+            const VSpace(4),
+            Padding(
+              padding: const EdgeInsets.only(left: 13, right: 20),
+              child: TextFieldFactory.itemField(
+                controller: destinationController,
+                fillColor: fillColor2,
+                maxLines: 3,
+                focusedBorderRadius: BorderRadius.circular(10),
+                hinText: 'Example:Big Sized Sneaker boxed nike -Red carton',
+                enabledBorderColor: Colors.white,
+                enabledBorderRadius:
+                    const BorderRadius.all(Radius.circular(10)),
+                hintTextStyle: GoogleFonts.poppins(
+                  color: hintTextColor,
+                  fontSize: 10.18,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            )
+          ],
+        ),
       );
     },
   );
+}
+
+class _LogisticsDetailsFields extends StatelessWidget {
+  const _LogisticsDetailsFields({
+    required this.controller1,
+    required this.controller2,
+  });
+  final TextEditingController controller1;
+  final TextEditingController controller2;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 13),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Expanded(
+            child: TextFieldFactory.location(
+              controller: controller1,
+              fillColor: fillColor2,
+              enabledBorderColor: Colors.white,
+              hinText: 'Enter Pickup Location',
+              enabledBorderRadius: const BorderRadius.all(Radius.circular(10)),
+              hintTextStyle:
+                  GoogleFonts.poppins(color: hintTextColor, fontSize: 11.50),
+              prefixText: const LogisticsPrefixIcon(
+                imageName: 'street_map',
+              ),
+            ),
+          ),
+          const HSpace(7),
+          SizedBox(
+            height: 53,
+            width: 111,
+            child: TextFieldFactory.location(
+              controller: controller2,
+              fillColor: fillColor2,
+              enabledBorderRadius: const BorderRadius.all(Radius.circular(10)),
+              enabledBorderColor: Colors.white,
+              hinText: 'House Number',
+              hintTextStyle: GoogleFonts.poppins(
+                color: hintTextColor,
+                fontSize: 11.50,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class LogisticsPrefixIcon extends StatelessWidget {
+  const LogisticsPrefixIcon({
+    super.key,
+    this.imageName,
+  });
+  final String? imageName;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 33,
+      height: 33,
+      padding: const EdgeInsets.fromLTRB(9, 8, 9, 9),
+      margin: const EdgeInsets.only(
+        top: 10,
+        left: 4,
+        bottom: 10,
+        right: 5,
+      ),
+      decoration: ShapeDecoration(
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+      ),
+      child: SvgPicture.asset('assets/images/$imageName.svg'),
+    );
+  }
 }
 
 class ChooseServiceTextDetailsUi2 extends StatelessWidget {

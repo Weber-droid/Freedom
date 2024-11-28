@@ -1,0 +1,26 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="solar:recive-square-line-duotone" clip-path="url(#clip0_1_1914)">
+<g id="Receive Icon">
+<path id="Vector" d="M4.6665 8H9.33317M9.33317 8L7.33317 10M9.33317 8L7.33317 6" stroke="url(#paint0_linear_1_1914)" stroke-linecap="round" stroke-linejoin="round"/>
+<path id="Vector_2" d="M11.3335 10.6667V5.33337" stroke="url(#paint1_linear_1_1914)" stroke-linecap="round"/>
+<path id="Vector_3" opacity="0.5" d="M1.3335 8.00004C1.3335 4.85737 1.3335 3.28604 2.3095 2.30937C3.28683 1.33337 4.8575 1.33337 8.00016 1.33337C11.1428 1.33337 12.7142 1.33337 13.6902 2.30937C14.6668 3.28671 14.6668 4.85737 14.6668 8.00004C14.6668 11.1427 14.6668 12.714 13.6902 13.69C12.7148 14.6667 11.1428 14.6667 8.00016 14.6667C4.8575 14.6667 3.28616 14.6667 2.3095 13.69C1.3335 12.7147 1.3335 11.1427 1.3335 8.00004Z" stroke="url(#paint2_linear_1_1914)"/>
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_1_1914" x1="4.6665" y1="8" x2="9.33317" y2="8" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F59E0B"/>
+<stop offset="1" stop-color="#E61D2A"/>
+</linearGradient>
+<linearGradient id="paint1_linear_1_1914" x1="11.3335" y1="8.00004" x2="12.3335" y2="8.00004" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F59E0B"/>
+<stop offset="1" stop-color="#E61D2A"/>
+</linearGradient>
+<linearGradient id="paint2_linear_1_1914" x1="1.3335" y1="8.00004" x2="14.6668" y2="8.00004" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F59E0B"/>
+<stop offset="1" stop-color="#E61D2A"/>
+</linearGradient>
+<clipPath id="clip0_1_1914">
+<rect width="16" height="16" fill="white"/>
+</clipPath>
+</defs>
+</svg>
