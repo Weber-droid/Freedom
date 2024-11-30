@@ -104,31 +104,19 @@ Widget stackedBottomSheet(
   BuildContext context,
   Widget child,
 ) {
-  return DraggableScrollableSheet(
-    minChildSize: 0.5,
-    builder: (context, scrollController) {
-      return SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxHeight: MediaQuery.of(context).size.height * 0.8,
-          ),
-          child: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFFFFF2DD), Color(0xFFFCFCFC)],
-              ),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(14.32),
-                topRight: Radius.circular(14.32),
-              ),
-            ),
-            child: IntrinsicHeight(child: child),
-          ),
-        ),
-      );
-    },
+  return Container(
+    decoration: const BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFFFF2DD), Color(0xFFFCFCFC)],
+      ),
+      borderRadius: BorderRadius.only(
+        topLeft: Radius.circular(14.32),
+        topRight: Radius.circular(14.32),
+      ),
+    ),
+    child: child,
   );
 }
 

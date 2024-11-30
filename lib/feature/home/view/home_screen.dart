@@ -142,153 +142,187 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              stackedBottomSheet(
-                context,
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 22),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const VSpace(17),
-                      Center(
-                        child: Container(
-                          width: 40,
-                          height: 5,
-                          decoration: ShapeDecoration(
-                            color: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const VSpace(13),
-                      Text(
-                        'Where would you like to go?',
-                        style: GoogleFonts.poppins(
-                          color: Colors.black,
-                          fontSize: 10.89,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const VSpace(8),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xA3FFFCF8),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(
-                            color: const Color(0xFFEBECEB),
-                          ),
-                        ),
-                        child: LocationSearchTextField(
-                          onTap: () {
-                            _showCalenderPicker(context);
-                          },
-                        ),
-                      ),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 500),
-                        height: _spacing,
-                      ),
-                      AnimatedContainer(
-                        height: _containerHeight,
-                        duration: const Duration(milliseconds: 500),
-                        child: InkWell(
-                          onTap: () async {
-                            if (trackSelectedIndex == 2) {
-                              await showLogisticsBottomSheet(
-                                context,
-                                pickUpController: _pickUpLocationController,
-                                destinationController: _destinationController,
-                                houseNumberController: _houseNumberController,
-                                phoneNumberController: _phoneNumberController,
-                                itemDestinationController:
-                                    _itemDestinationController,
-                                itemDestinationHomeNumberController:
-                                    _itemDestinationHomeNumberController,
-                              );
-                            }
-                          },
-                          child: const LogisticsDetailContainer(),
-                        ),
-                      ),
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 500),
-                        height: trackSelectedIndex == 2 ? 4.0 : 6.0,
-                      ),
-                      Text(
-                        'Select what you want?',
-                        style: GoogleFonts.poppins(
-                          color: Colors.black,
-                          fontSize: 10.89,
-                          fontWeight: FontWeight.w600,
-                          height: 0,
-                        ),
-                      ),
-                      const VSpace(10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Positioned(
+                top: MediaQuery.of(context).size.height * 0.47,
+                child: SizedBox(
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height * 0.45,
+                  child: stackedBottomSheet(
+                    context,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 22),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          GestureDetector(
-                            onTap: () async {
-                              setState(() {
-                                trackSelectedIndex =
-                                    (trackSelectedIndex == 1) ? 1 : 1;
-                                _containerHeight = trackSelectedIndex == 1
-                                    ? 0
-                                    : _containerHeight;
-                                _spacing = trackSelectedIndex == 1 ? 4.0 : 13.0;
-                              });
-                              if (trackSelectedIndex == 1) {
-                                await showMotorCycleBottomSheet(
-                                  context,
-                                  destinationController: _destinationController,
-                                  pickUpLocationController:
-                                      _pickUpLocationController,
-                                  destinationControllers:
-                                      _destinationControllers,
-                                );
-                              }
-                            },
-                            child: ChooseServiceBox(
-                              isSelected: trackSelectedIndex == 1,
-                              child: const Padding(
-                                padding: EdgeInsets.only(
-                                  top: 7,
-                                  left: 7,
-                                  bottom: 12,
+                          const VSpace(17),
+                          Center(
+                            child: Container(
+                              width: 40,
+                              height: 5,
+                              decoration: ShapeDecoration(
+                                color: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: ChooseServiceTextDetailsUi2(),
                               ),
                             ),
                           ),
-                          GestureDetector(
-                            onTap: () async {
-                              setState(() {
-                                trackSelectedIndex =
-                                    (trackSelectedIndex == 2) ? 0 : 2;
-                                _containerHeight =
-                                    trackSelectedIndex == 2 ? 53.0 : 0;
-                                _spacing = trackSelectedIndex == 2 ? 13 : 4.0;
-                              });
-                            },
-                            child: ChooseServiceBox(
-                              isSelected: trackSelectedIndex == 2,
-                              child: const Padding(
-                                padding: EdgeInsets.only(
-                                  top: 7,
-                                  left: 7,
-                                  bottom: 12,
-                                ),
-                                child: ChooseServiceTextDetailsUi(),
+                          const VSpace(13),
+                          Expanded(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Where would you like to go?',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.black,
+                                      fontSize: 10.89,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const VSpace(8),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xA3FFFCF8),
+                                      borderRadius: BorderRadius.circular(10),
+                                      border: Border.all(
+                                        color: const Color(0xFFEBECEB),
+                                      ),
+                                    ),
+                                    child: LocationSearchTextField(
+                                      onTap: () {
+                                        _showCalenderPicker(context);
+                                      },
+                                    ),
+                                  ),
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 500),
+                                    height: _spacing,
+                                  ),
+                                  AnimatedContainer(
+                                    height: _containerHeight,
+                                    duration: const Duration(milliseconds: 500),
+                                    child: InkWell(
+                                      onTap: () async {
+                                        if (trackSelectedIndex == 2) {
+                                          await showLogisticsBottomSheet(
+                                            context,
+                                            pickUpController:
+                                                _pickUpLocationController,
+                                            destinationController:
+                                                _destinationController,
+                                            houseNumberController:
+                                                _houseNumberController,
+                                            phoneNumberController:
+                                                _phoneNumberController,
+                                            itemDestinationController:
+                                                _itemDestinationController,
+                                            itemDestinationHomeNumberController:
+                                                _itemDestinationHomeNumberController,
+                                          );
+                                        }
+                                      },
+                                      child: const LogisticsDetailContainer(),
+                                    ),
+                                  ),
+                                  AnimatedContainer(
+                                    duration: const Duration(milliseconds: 500),
+                                    height: trackSelectedIndex == 2 ? 4.0 : 6.0,
+                                  ),
+                                  Text(
+                                    'Select what you want?',
+                                    style: GoogleFonts.poppins(
+                                      color: Colors.black,
+                                      fontSize: 10.89,
+                                      fontWeight: FontWeight.w600,
+                                      height: 0,
+                                    ),
+                                  ),
+                                  const VSpace(10),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: () async {
+                                          setState(() {
+                                            trackSelectedIndex =
+                                                (trackSelectedIndex == 1)
+                                                    ? 1
+                                                    : 1;
+                                            _containerHeight =
+                                                trackSelectedIndex == 1
+                                                    ? 0
+                                                    : _containerHeight;
+                                            _spacing = trackSelectedIndex == 1
+                                                ? 4.0
+                                                : 13.0;
+                                          });
+                                          if (trackSelectedIndex == 1) {
+                                            await showMotorCycleBottomSheet(
+                                              context,
+                                              destinationController:
+                                                  _destinationController,
+                                              pickUpLocationController:
+                                                  _pickUpLocationController,
+                                              destinationControllers:
+                                                  _destinationControllers,
+                                            );
+                                          }
+                                        },
+                                        child: ChooseServiceBox(
+                                          isSelected: trackSelectedIndex == 1,
+                                          child: const Padding(
+                                            padding: EdgeInsets.only(
+                                              top: 7,
+                                              left: 7,
+                                              bottom: 12,
+                                            ),
+                                            child:
+                                                ChooseServiceTextDetailsUi2(),
+                                          ),
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () async {
+                                          setState(() {
+                                            trackSelectedIndex =
+                                                (trackSelectedIndex == 2)
+                                                    ? 0
+                                                    : 2;
+                                            _containerHeight =
+                                                trackSelectedIndex == 2
+                                                    ? 53.0
+                                                    : 0;
+                                            _spacing = trackSelectedIndex == 2
+                                                ? 13
+                                                : 4.0;
+                                          });
+                                        },
+                                        child: ChooseServiceBox(
+                                          isSelected: trackSelectedIndex == 2,
+                                          child: const Padding(
+                                            padding: EdgeInsets.only(
+                                              top: 7,
+                                              left: 7,
+                                              bottom: 12,
+                                            ),
+                                            child: ChooseServiceTextDetailsUi(),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const VSpace(13),
+                                  const ChoosePayMentMethod(),
+                                ],
                               ),
                             ),
-                          ),
+                          )
                         ],
                       ),
-                      const VSpace(13),
-                      const ChoosePayMentMethod(),
-                    ],
+                    ),
                   ),
                 ),
               ),
