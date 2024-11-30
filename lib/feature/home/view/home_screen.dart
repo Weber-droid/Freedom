@@ -1,20 +1,13 @@
-import 'dart:async';
 import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
-import 'package:freedom/feature/home/models/home_history_model.dart';
-import 'package:freedom/feature/home/view/welcome_screen.dart';
 import 'package:freedom/feature/home/view/widgets.dart';
-import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
-import 'package:freedom/shared/widgets/text_field_factory.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:gradient_borders/box_borders/gradient_box_border.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -46,6 +39,8 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isSecondSelected = false;
   int trackSelectedIndex = 0;
   double _containerOpacity = 0;
+  double _containerHeight = 100;
+  double _spacing = 13;
 
   @override
   void initState() {
@@ -150,7 +145,7 @@ class _HomeScreenState extends State<HomeScreen> {
               stackedBottomSheet(
                 context,
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 21),
+                  padding: const EdgeInsets.symmetric(horizontal: 22),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -191,14 +186,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           },
                         ),
                       ),
-                      const VSpace(13),
-                      AnimatedOpacity(
-                        opacity: _containerOpacity,
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 500),
+                        height: _spacing,
+                      ),
+                      AnimatedContainer(
+                        height: _containerHeight,
                         duration: const Duration(milliseconds: 500),
                         child: InkWell(
                           onTap: () async {
                             if (trackSelectedIndex == 2) {
-                              await _showLogisticsBottomSheet(
+                              await showLogisticsBottomSheet(
                                 context,
                                 pickUpController: _pickUpLocationController,
                                 destinationController: _destinationController,
@@ -214,7 +212,10 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: const LogisticsDetailContainer(),
                         ),
                       ),
-                      const VSpace(6),
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 500),
+                        height: trackSelectedIndex == 2 ? 4.0 : 6.0,
+                      ),
                       Text(
                         'Select what you want?',
                         style: GoogleFonts.poppins(
@@ -226,15 +227,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const VSpace(10),
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           GestureDetector(
                             onTap: () async {
                               setState(() {
                                 trackSelectedIndex =
-                                    (trackSelectedIndex == 1) ? 0 : 1;
+                                    (trackSelectedIndex == 1) ? 1 : 1;
+                                _containerHeight = trackSelectedIndex == 1
+                                    ? 0
+                                    : _containerHeight;
+                                _spacing = trackSelectedIndex == 1 ? 4.0 : 13.0;
                               });
                               if (trackSelectedIndex == 1) {
-                                await _showMotorCycleBottomSheet(
+                                await showMotorCycleBottomSheet(
                                   context,
                                   destinationController: _destinationController,
                                   pickUpLocationController:
@@ -256,14 +262,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
-                          const HSpace(10),
                           GestureDetector(
                             onTap: () async {
                               setState(() {
                                 trackSelectedIndex =
                                     (trackSelectedIndex == 2) ? 0 : 2;
-                                _containerOpacity =
-                                    trackSelectedIndex == 2 ? 1 : 0;
+                                _containerHeight =
+                                    trackSelectedIndex == 2 ? 53.0 : 0;
+                                _spacing = trackSelectedIndex == 2 ? 13 : 4.0;
                               });
                             },
                             child: ChooseServiceBox(
@@ -301,7 +307,7 @@ class _HomeScreenState extends State<HomeScreen> {
         lastDate: DateTime(2100),
       );
     } else {
-      _showCuperTinoDialog(
+      showCuperTinoDialog(
         context,
         child: CupertinoDatePicker(
           initialDateTime: DateTime.now(),
@@ -315,636 +321,4 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
   }
-}
-
-class LogisticsDetailContainer extends StatelessWidget {
-  const LogisticsDetailContainer({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 53,
-      padding: const EdgeInsets.only(left: 15, right: 13),
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: fillColor2,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: Colors.white,
-        ),
-      ),
-      child: Row(
-        children: [
-          SvgPicture.asset(
-            'assets/images/logistics_filter_icon.svg',
-          ),
-          const HSpace(8),
-          Text(
-            'Delivery Details',
-            style: GoogleFonts.poppins(
-              color: hintTextColor,
-              fontSize: 10.89,
-              fontWeight: FontWeight.w500,
-              height: 0,
-            ),
-          ),
-          const Spacer(),
-          SvgPicture.asset(
-            'assets/images/right-triangle_icon.svg',
-          )
-        ],
-      ),
-    );
-  }
-}
-
-int trackSelectedIndex = 0;
-bool _isDestinationFieldVisible = false;
-
-Future<void> _showMotorCycleBottomSheet(
-  BuildContext context, {
-  required TextEditingController destinationController,
-  required TextEditingController pickUpLocationController,
-  required List<TextEditingController> destinationControllers,
-}) {
-  return showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (BuildContext context) {
-      return BlocBuilder<HomeCubit, HomeState>(
-        builder: (context, state) {
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.8,
-            padding: const EdgeInsets.only(top: 18),
-            decoration: BoxDecoration(
-              gradient: whiteAmberGradient,
-            ),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.only(right: 11, bottom: 11),
-                      decoration: ShapeDecoration(
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(
-                            strokeAlign: BorderSide.strokeAlignOutside,
-                            color: Colors.black.withOpacity(0.059),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const HSpace(6.4),
-                          const Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.only(
-                                    left: 12, bottom: 4.62, top: 6.38),
-                                child: Text(
-                                  'Pickup Location',
-                                  style: TextStyle(
-                                    fontSize: 10.13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          PickupLocationFieldWidget(
-                            state: state,
-                            pickupController: pickUpLocationController,
-                            hintText: 'Pickup Location',
-                            iconPath: 'assets/images/location_pointer_icon.svg',
-                            iconBaseColor: Colors.orange,
-                            isPickUpLocation: true,
-                            isInitialDestinationField: false,
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.only(
-                                  left: 12,
-                                ),
-                                child: Text(
-                                  'Destination',
-                                  style: TextStyle(
-                                    fontSize: 10.13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 4,
-                                  right: 9,
-                                  bottom: 1,
-                                ),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    destinationControllers.add(
-                                      TextEditingController(),
-                                    );
-                                    context.read<HomeCubit>().addDestination();
-                                    _isDestinationFieldVisible = true;
-                                  },
-                                  child: Container(
-                                    width: 23,
-                                    height: 23,
-                                    decoration: ShapeDecoration(
-                                      color: Colors.black,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(7)),
-                                    ),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.add,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const VSpace(3),
-                          DestinationLocationFieldWidget(
-                            isPickUpLocation: false,
-                            isInitialDestinationField: true,
-                            state: state,
-                            destinationController: destinationController,
-                            hintText: 'Destination',
-                            iconPath: 'assets/images/maps_icon.svg',
-                            iconBaseColor: Colors.red,
-                          ),
-                          const VSpace(14),
-                          if (_isDestinationFieldVisible)
-                            Column(
-                              children: List.generate(state.locations.length,
-                                  (index) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: DestinationLocationFieldWidget(
-                                    isPickUpLocation: false,
-                                    isInitialDestinationField: false,
-                                    state: state,
-                                    destinationController:
-                                        destinationControllers[index],
-                                    hintText: 'Destination ${index + 1}',
-                                    iconPath: 'assets/images/maps_icon.svg',
-                                    iconBaseColor: Colors.red,
-                                  ),
-                                );
-                              }),
-                            )
-                          else
-                            const SizedBox(),
-                        ],
-                      ),
-                    ),
-                    const VSpace(19.65),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Your last Trip',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(
-                            color: Colors.black,
-                            fontSize: 11.68,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        SvgPicture.asset('assets/images/history_icon.svg'),
-                      ],
-                    ),
-                    ...homeHistoryList.map((e) {
-                      return Column(
-                        children: [
-                          Divider(
-                            thickness: 2,
-                            color: Colors.black.withOpacity(0.019),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(3),
-                                width: 30,
-                                height: 30,
-                                decoration: ShapeDecoration(
-                                  color: Colors.white.withOpacity(0.55),
-                                  shape: RoundedRectangleBorder(
-                                    side: BorderSide(
-                                      strokeAlign:
-                                          BorderSide.strokeAlignOutside,
-                                      color: Colors.black.withOpacity(0.05),
-                                    ),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                ),
-                                child: e.image,
-                              ),
-                              SvgPicture.asset(
-                                  'assets/images/top-right_icon.svg')
-                            ],
-                          ),
-                        ],
-                      );
-                    }),
-                    Divider(
-                      thickness: 2,
-                      color: Colors.black.withOpacity(0.019),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-
-Future<void> _showLogisticsBottomSheet(
-  BuildContext context, {
-  required TextEditingController pickUpController,
-  required TextEditingController destinationController,
-  required TextEditingController houseNumberController,
-  required TextEditingController phoneNumberController,
-  required TextEditingController itemDestinationController,
-  required TextEditingController itemDestinationHomeNumberController,
-}) {
-  return showModalBottomSheet(
-    context: context,
-    builder: (BuildContext context) {
-      return Container(
-        height: 547.h,
-        width: double.infinity,
-        decoration: BoxDecoration(
-          gradient: whiteAmberGradient,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(20),
-            topRight: Radius.circular(20),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const VSpace(24),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 19),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Delivery Details',
-                    style: GoogleFonts.poppins(
-                        fontSize: 13.22.sp, fontWeight: FontWeight.w500),
-                  ),
-                  Container(
-                    height: 36,
-                    width: 36,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(11),
-                      color: Colors.white,
-                    ),
-                    child: SvgPicture.asset('assets/images/cancel_icon.svg'),
-                  ),
-                ],
-              ),
-            ),
-            const VSpace(15),
-            Container(
-              height: 11,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.37),
-              ),
-            ),
-            const VSpace(15),
-            Padding(
-              padding: const EdgeInsets.only(left: 13),
-              child: Text(
-                'Where to pick up',
-                style: GoogleFonts.poppins(
-                  color: Colors.black,
-                  fontSize: 10.89,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const VSpace(7),
-            _LogisticsDetailsFields(
-              controller1: pickUpController,
-              controller2: houseNumberController,
-            ),
-            const VSpace(15),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 13),
-              child: TextFieldFactory.phone(
-                controller: phoneNumberController,
-                fillColor: fillColor2,
-                hintText: 'Enter Phone Number',
-                enabledColorBorder: Colors.white,
-                enabledBorderRadius:
-                    const BorderRadius.all(Radius.circular(10)),
-                prefixText: const LogisticsPrefixIcon(
-                  imageName: 'push_arrow',
-                ),
-                hintTextStyle:
-                    GoogleFonts.poppins(color: hintTextColor, fontSize: 11.50),
-                suffixIcon: const Padding(
-                  padding: EdgeInsets.only(right: 10),
-                  child: LogisticsPrefixIcon(
-                    imageName: 'phone_icon',
-                  ),
-                ),
-              ),
-            ),
-            const VSpace(10),
-            Padding(
-              padding: const EdgeInsets.only(left: 13),
-              child: Text(
-                'Where to deliver Item',
-                style: GoogleFonts.poppins(
-                  color: Colors.black,
-                  fontSize: 10.89,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const VSpace(7),
-            _LogisticsDetailsFields(
-              controller1: itemDestinationController,
-              controller2: itemDestinationHomeNumberController,
-            ),
-            const VSpace(12),
-            Padding(
-              padding: const EdgeInsets.only(left: 13),
-              child: Text(
-                'Deliver What?',
-                style: GoogleFonts.poppins(
-                  color: Colors.black,
-                  fontSize: 10.89,
-                  fontWeight: FontWeight.w600,
-                  height: 0,
-                ),
-              ),
-            ),
-            const VSpace(4),
-            Padding(
-              padding: const EdgeInsets.only(left: 13, right: 20),
-              child: TextFieldFactory.itemField(
-                controller: destinationController,
-                fillColor: fillColor2,
-                maxLines: 3,
-                focusedBorderRadius: BorderRadius.circular(10),
-                hinText: 'Example:Big Sized Sneaker boxed nike -Red carton',
-                enabledBorderColor: Colors.white,
-                enabledBorderRadius:
-                    const BorderRadius.all(Radius.circular(10)),
-                hintTextStyle: GoogleFonts.poppins(
-                  color: hintTextColor,
-                  fontSize: 10.18,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            )
-          ],
-        ),
-      );
-    },
-  );
-}
-
-class _LogisticsDetailsFields extends StatelessWidget {
-  const _LogisticsDetailsFields({
-    required this.controller1,
-    required this.controller2,
-  });
-  final TextEditingController controller1;
-  final TextEditingController controller2;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 13),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Expanded(
-            child: TextFieldFactory.location(
-              controller: controller1,
-              fillColor: fillColor2,
-              enabledBorderColor: Colors.white,
-              hinText: 'Enter Pickup Location',
-              enabledBorderRadius: const BorderRadius.all(Radius.circular(10)),
-              hintTextStyle:
-                  GoogleFonts.poppins(color: hintTextColor, fontSize: 11.50),
-              prefixText: const LogisticsPrefixIcon(
-                imageName: 'street_map',
-              ),
-            ),
-          ),
-          const HSpace(7),
-          SizedBox(
-            height: 53,
-            width: 111,
-            child: TextFieldFactory.location(
-              controller: controller2,
-              fillColor: fillColor2,
-              enabledBorderRadius: const BorderRadius.all(Radius.circular(10)),
-              enabledBorderColor: Colors.white,
-              hinText: 'House Number',
-              hintTextStyle: GoogleFonts.poppins(
-                color: hintTextColor,
-                fontSize: 11.50,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class LogisticsPrefixIcon extends StatelessWidget {
-  const LogisticsPrefixIcon({
-    super.key,
-    this.imageName,
-  });
-  final String? imageName;
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 33,
-      height: 33,
-      padding: const EdgeInsets.fromLTRB(9, 8, 9, 9),
-      margin: const EdgeInsets.only(
-        top: 10,
-        left: 4,
-        bottom: 10,
-        right: 5,
-      ),
-      decoration: ShapeDecoration(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-      child: SvgPicture.asset('assets/images/$imageName.svg'),
-    );
-  }
-}
-
-class ChooseServiceTextDetailsUi2 extends StatelessWidget {
-  const ChooseServiceTextDetailsUi2({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SvgPicture.asset(
-          'assets/images/choose_bike.svg',
-        ),
-        const VSpace(9),
-        ShaderMask(
-          blendMode: BlendMode.srcIn,
-          shaderCallback: (bounds) => LinearGradient(
-            colors: [gradient1, gradient2],
-          ).createShader(
-            Rect.fromLTWH(
-              0,
-              0,
-              bounds.width,
-              bounds.height,
-            ),
-          ),
-          child: Text(
-            'Motorcycle',
-            style: GoogleFonts.poppins(
-              fontSize: 10.89,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const VSpace(4),
-        Text(
-          'Ride with your favourite Motorcycle',
-          style: GoogleFonts.poppins(
-            color: Colors.black,
-            fontSize: 10.89,
-            fontWeight: FontWeight.w300,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class ChooseServiceTextDetailsUi extends StatelessWidget {
-  const ChooseServiceTextDetailsUi({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SvgPicture.asset(
-          'assets/images/choose_logistics.svg',
-        ),
-        const VSpace(9),
-        ShaderMask(
-          blendMode: BlendMode.srcIn,
-          shaderCallback: (bounds) => LinearGradient(
-            colors: [gradient1, gradient2],
-          ).createShader(
-            Rect.fromLTWH(
-              0,
-              0,
-              bounds.width,
-              bounds.height,
-            ),
-          ),
-          child: Text(
-            'Logistic',
-            style: GoogleFonts.poppins(
-              fontSize: 10.89,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        const VSpace(4),
-        Text(
-          'Ride with your favorite logistics',
-          style: GoogleFonts.poppins(
-            color: Colors.black,
-            fontSize: 10.89,
-            fontWeight: FontWeight.w300,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class ChooseServiceBox extends StatelessWidget {
-  const ChooseServiceBox({super.key, this.isSelected = false, this.child});
-  final bool isSelected;
-  final Widget? child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 170,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: isSelected
-            ? GradientBoxBorder(gradient: redLinearGradient)
-            : Border.all(
-                color: const Color(0xFFfeebca),
-              ),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: child,
-    );
-  }
-}
-
-void _showCuperTinoDialog(BuildContext context, {required Widget child}) {
-  showCupertinoModalPopup<void>(
-    context: context,
-    builder: (context) {
-      return Container(
-        height: 216,
-        padding: const EdgeInsets.only(top: 6.0),
-        margin: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        color: CupertinoColors.systemBackground.resolveFrom(context),
-        child: SafeArea(
-          top: false,
-          child: child,
-        ),
-      );
-    },
-  );
 }
