@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
+import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_otp_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
@@ -180,6 +182,9 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                             MainActivityScreen.routeName,
                           );
                         }
+                        context
+                            .read<VerifyOtpCubit>()
+                            .isFirstTimer(isFirstTimer: false);
                       }
                     : null,
                 backGroundColor: Colors.black,

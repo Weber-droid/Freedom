@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 part 'verify_otp_state.dart';
 
@@ -37,6 +38,12 @@ class VerifyOtpCubit extends Cubit<VerifyOtpState> {
         ),
       );
     }
+  }
+
+  Future<void> isFirstTimer({required bool isFirstTimer}) async {
+    final box = await Hive.openBox<bool>('firstTimerUser');
+    await box.put('isFirstTimer', isFirstTimer);
+    log('isFirstTimer: $isFirstTimer');
   }
 }
 

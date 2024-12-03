@@ -22,6 +22,11 @@ LinearGradient get whiteAmberGradient => const LinearGradient(
       end: Alignment.bottomCenter,
       colors: [Color(0xFFFFF2DD), Color(0xFFFCFCFC)],
     );
+LinearGradient get darkGoldGradient => const LinearGradient(
+      begin: Alignment.centerLeft,
+      end: Alignment.centerRight,
+      colors: [Color(0xffF59E0B), Color(0xFF8F5C06)],
+    );
 
 Color get carouselActiveColor => const Color(0xFFF59E0B);
 Color get carouselInactiveColor => const Color(0xFFFFD790);
@@ -38,3 +43,4 @@ Color get greyFillColor => const Color(0xFFF5F5F5);
 Color get hintTextFontColor => const Color(0xFFBEBCBC);
 Color get fillColor2 => const Color(0xA3FFFCF8);
 Color get hintTextColor => const Color(0xFFA6A39D);
+Color get darkGoldColor => const Color(0xffF59E0B);

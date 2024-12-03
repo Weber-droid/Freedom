@@ -221,7 +221,6 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
     if (_otpFormKey.currentState!.validate()) {
       context.read<VerifyOtpCubit>().verifyOtp(_otpController.text);
-
       // Log states after the verify action
       log('Verification in progress...');
       log('isVerified: ${state.isVerified}, isLoading: ${state.isLoading}');

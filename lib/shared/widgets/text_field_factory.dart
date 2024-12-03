@@ -231,6 +231,7 @@ class TextFieldFactory extends StatefulWidget {
     BorderRadius? enabledBorderRadius,
     int? maxLines,
     BorderRadius? focusedBorderRadius,
+    Widget? suffixIcon,
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -253,6 +254,7 @@ class TextFieldFactory extends StatefulWidget {
         enabledBorderRadius: enabledBorderRadius,
         maxLines: maxLines,
         focusedBorderRadius: focusedBorderRadius,
+        suffixIcon: suffixIcon,
       );
   final TextEditingController controller;
   final Widget? suffixIcon;
