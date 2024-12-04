@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:freedom/feature/History/view/history_screen.dart';
 import 'package:freedom/feature/home/view/home_screen.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
@@ -89,7 +90,7 @@ class _MainActivityScreen extends StatelessWidget {
 
 List<Widget> _pages = [
   const HomeScreen(),
-  const HomeScreen(),
+  const HistoryScreen(),
   const HomeScreen(),
   const HomeScreen(),
 ];

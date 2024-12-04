@@ -4,16 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:freedom/app/view/app.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
-import 'package:freedom/shared/widgets/text_field_factory.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -470,102 +467,9 @@ class RiderFoundBottomSheet extends StatelessWidget {
                           ),
                         ),
                         // const Spacer(),
-                        Column(
-                          children: [
-                            Container(
-                                alignment: Alignment.center,
-                                child: SvgPicture.asset(
-                                    'assets/images/distance_line.svg')),
-                            const VSpace(5),
-                            Container(
-                              // color: Colors.red,
-                              width: 200,
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: Container(
-                                      width: 100,
-                                      padding: const EdgeInsets.only(left: 10),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          const Padding(
-                                            padding: EdgeInsets.only(left: 15),
-                                            child: Text(
-                                              'Pick up',
-                                              style: TextStyle(
-                                                color: Colors.black,
-                                                fontSize: 8.78,
-                                                fontWeight: FontWeight.w400,
-                                                height: 0,
-                                              ),
-                                            ),
-                                          ),
-                                          Padding(
-                                            padding:
-                                                const EdgeInsets.only(left: 14),
-                                            child: ShaderMask(
-                                              shaderCallback: (Rect bounds) {
-                                                return darkGoldGradient
-                                                    .createShader(bounds);
-                                              },
-                                              child: const Text(
-                                                'Ghana ,Kumasi',
-                                                style: TextStyle(
-                                                  color: Color(0xFFF59E0B),
-                                                  fontSize: 9.07,
-                                                  fontFamily: 'Poppins',
-                                                  fontWeight: FontWeight.w600,
-                                                  height: 0,
-                                                ),
-                                              ),
-                                            ),
-                                          )
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  const HSpace(41),
-                                  Expanded(
-                                    child: Container(
-                                      width: 100,
-                                      padding: const EdgeInsets.only(left: 11),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Destination',
-                                            style: GoogleFonts.poppins(
-                                              color: Colors.black,
-                                              fontSize: 8.78,
-                                              fontWeight: FontWeight.w400,
-                                              height: 0,
-                                            ),
-                                          ),
-                                          ShaderMask(
-                                            shaderCallback: (Rect bounds) {
-                                              return darkGoldGradient
-                                                  .createShader(bounds);
-                                            },
-                                            child: Text(
-                                              'Ghana ,Kumasi',
-                                              style: GoogleFonts.poppins(
-                                                color: const Color(0xFFF59E0B),
-                                                fontSize: 9.07,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          )
-                                        ],
-                                      ),
-                                    ),
-                                  )
-                                ],
-                              ),
-                            ),
-                          ],
+                        const RiderTimeLine(
+                          pickUpDetails: 'Ghana, Kumasi',
+                          destinationDetails: 'Chale ,Kumasi',
                         ),
                       ],
                     ),
@@ -574,7 +478,9 @@ class RiderFoundBottomSheet extends StatelessWidget {
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 15),
                     child: FreedomButton(
-                      onPressed: () {},
+                      onPressed: () {
+                        showAlertDialog(context);
+                      },
                       useGradient: true,
                       gradient: gradient,
                       title: 'Cancel Ride',
@@ -630,6 +536,179 @@ class RiderFoundBottomSheet extends StatelessWidget {
       );
     });
   }
+}
+
+class RiderTimeLine extends StatelessWidget {
+  const RiderTimeLine({
+    super.key,
+    this.destinationDetails = '',
+    this.pickUpDetails = '',
+  });
+  final String destinationDetails;
+  final String pickUpDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SvgPicture.asset('assets/images/distance_line.svg'),
+        const VSpace(5),
+        SizedBox(
+          width: 200,
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  width: 100,
+                  padding: const EdgeInsets.only(left: 10),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(left: 15),
+                        child: Text(
+                          'Pick up',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 8.78,
+                            fontWeight: FontWeight.w400,
+                            height: 0,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(left: 14),
+                        child: ShaderMask(
+                          shaderCallback: (Rect bounds) {
+                            return darkGoldGradient.createShader(bounds);
+                          },
+                          child: Text(
+                            pickUpDetails,
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFFF59E0B),
+                              fontSize: 9.07,
+                              fontWeight: FontWeight.w600,
+                              height: 0,
+                            ),
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+              const HSpace(41),
+              Expanded(
+                child: Container(
+                  width: 100,
+                  padding: const EdgeInsets.only(left: 11),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Destination',
+                        style: GoogleFonts.poppins(
+                          color: Colors.black,
+                          fontSize: 8.78,
+                          fontWeight: FontWeight.w400,
+                          height: 0,
+                        ),
+                      ),
+                      ShaderMask(
+                        shaderCallback: (Rect bounds) {
+                          return darkGoldGradient.createShader(bounds);
+                        },
+                        child: Text(
+                          destinationDetails,
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFFF59E0B),
+                            fontSize: 9.07,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+Future<void> showAlertDialog(BuildContext context) async {
+  return showAdaptiveDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (builder) {
+      return AlertDialog(
+        backgroundColor: Colors.white,
+        contentPadding: const EdgeInsets.fromLTRB(13.8, 19.23, 12.26, 50.9),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SvgPicture.asset('assets/images/emergency_icon.svg'),
+            const VSpace(13),
+            Text(
+              'Cancel Ride',
+              style: GoogleFonts.poppins(
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const VSpace(9.66),
+            SizedBox(
+              width: 163.38,
+              child: Text(
+                'Are you sure you want cancel this ride',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.black.withOpacity(0.46000000834465027),
+                  fontSize: 12.44,
+                  fontWeight: FontWeight.w300,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Flexible(
+                child: FreedomButton(
+                  borderRadius: BorderRadius.circular(2.36),
+                  backGroundColor: Colors.black,
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  title: 'Go Back',
+                  fontSize: 10.6,
+                ),
+              ),
+              const HSpace(8),
+              Flexible(
+                child: FreedomButton(
+                  borderRadius: BorderRadius.circular(2.36),
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  useGradient: true,
+                  gradient: gradient,
+                  title: 'Cancel Ride',
+                  fontSize: 9.6,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    },
+  );
 }
 
 class RiderContainerAndRideActions extends StatelessWidget {

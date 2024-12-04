@@ -23,8 +23,6 @@ LinearGradient get whiteAmberGradient => const LinearGradient(
       colors: [Color(0xFFFFF2DD), Color(0xFFFCFCFC)],
     );
 LinearGradient get darkGoldGradient => const LinearGradient(
-      begin: Alignment.centerLeft,
-      end: Alignment.centerRight,
       colors: [Color(0xffF59E0B), Color(0xFF8F5C06)],
     );
 

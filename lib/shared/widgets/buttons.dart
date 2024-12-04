@@ -44,7 +44,7 @@ class FreedomButton extends StatelessWidget {
     return Container(
       width: width,
       height: height,
-      decoration: useGradient == true
+      decoration: useGradient
           ? BoxDecoration(
               gradient: gradient,
               borderRadius: borderRadius,
@@ -53,47 +53,45 @@ class FreedomButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              useGradient == true ? Colors.transparent : backGroundColor,
+          backgroundColor: useGradient ? Colors.transparent : backGroundColor,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: borderRadius),
         ),
-        child: useLoader == null
+        // ignore: use_if_null_to_convert_nulls_to_bools
+        child: useLoader == true
             ? Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (leadingIcon.isNotEmpty)
-                    SvgPicture.asset('assets/images/$leadingIcon.svg')
-                  else
-                    Icon(
-                      icon,
-                      color: Colors.white,
-                    ),
-                  const HSpace(6),
                   Text(
                     title,
                     style: GoogleFonts.poppins(
-                      fontSize: fontSize ?? 17.41.sp,
+                      fontSize: fontSize ?? 17.41,
                       color: titleColor ?? Colors.white,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
+                  const SizedBox(width: 6),
+                  SizedBox(height: 20, width: 20, child: child),
                 ],
               )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: fontSize ?? 17.41.sp,
-                      color: titleColor ?? Colors.white,
-                      fontWeight: FontWeight.w500,
+            : Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (leadingIcon.isNotEmpty)
+                      SvgPicture.asset('assets/images/$leadingIcon.svg'),
+                    if (leadingIcon.isNotEmpty) const SizedBox(width: 8),
+                    Text(
+                      title,
+                      style: GoogleFonts.poppins(
+                        fontSize: fontSize ?? 17.41,
+                        color: titleColor ?? Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  const HSpace(6),
-                  SizedBox(height: 20, width: 20, child: child)
-                ],
+                  ],
+                ),
               ),
       ),
     );
