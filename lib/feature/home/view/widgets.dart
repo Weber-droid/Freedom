@@ -100,26 +100,6 @@ class ChoosePayMentMethodState extends State<ChoosePayMentMethod> {
   }
 }
 
-Widget stackedBottomSheet(
-  BuildContext context,
-  Widget child,
-) {
-  return Container(
-    decoration: const BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFFFF2DD), Color(0xFFFCFCFC)],
-      ),
-      borderRadius: BorderRadius.only(
-        topLeft: Radius.circular(14.32),
-        topRight: Radius.circular(14.32),
-      ),
-    ),
-    child: child,
-  );
-}
-
 class LocationSearchTextField extends StatefulWidget {
   const LocationSearchTextField({required this.onTap, super.key});
 

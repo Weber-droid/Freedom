@@ -9,6 +9,7 @@ import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
+import 'package:freedom/shared/widgets/stacked_bottom_sheet.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
@@ -550,6 +551,7 @@ class RiderTimeLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SvgPicture.asset('assets/images/distance_line.svg'),
         const VSpace(5),
@@ -558,38 +560,30 @@ class RiderTimeLine extends StatelessWidget {
           child: Row(
             children: [
               Expanded(
-                child: Container(
+                child: SizedBox(
                   width: 100,
-                  padding: const EdgeInsets.only(left: 10),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Padding(
-                        padding: EdgeInsets.only(left: 15),
-                        child: Text(
-                          'Pick up',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 8.78,
-                            fontWeight: FontWeight.w400,
-                            height: 0,
-                          ),
+                      Text(
+                        'Pick up',
+                        style: GoogleFonts.poppins(
+                          color: Colors.black,
+                          fontSize: 8.78,
+                          fontWeight: FontWeight.w400,
+                          height: 0,
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 14),
-                        child: ShaderMask(
-                          shaderCallback: (Rect bounds) {
-                            return darkGoldGradient.createShader(bounds);
-                          },
-                          child: Text(
-                            pickUpDetails,
-                            style: GoogleFonts.poppins(
-                              color: const Color(0xFFF59E0B),
-                              fontSize: 9.07,
-                              fontWeight: FontWeight.w600,
-                              height: 0,
-                            ),
+                      ShaderMask(
+                        shaderCallback: (Rect bounds) {
+                          return darkGoldGradient.createShader(bounds);
+                        },
+                        child: Text(
+                          pickUpDetails,
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFFF59E0B),
+                            fontSize: 9.07,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       )
@@ -599,9 +593,8 @@ class RiderTimeLine extends StatelessWidget {
               ),
               const HSpace(41),
               Expanded(
-                child: Container(
+                child: SizedBox(
                   width: 100,
-                  padding: const EdgeInsets.only(left: 11),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [

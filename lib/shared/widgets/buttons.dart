@@ -1,25 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:freedom/shared/utilities.dart';
+import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:gradient_borders/box_borders/gradient_box_border.dart';
 
 class FreedomButton extends StatelessWidget {
-  final BorderRadiusGeometry? borderRadius;
-  final double? width;
-  final double height;
-  final Gradient gradient;
-  final VoidCallback? onPressed;
-  final String title;
-  final bool useGradient;
-  final String leadingIcon;
-  final IconData? icon;
-  final Color? backGroundColor;
-  final Color? titleColor;
-  final double? fontSize;
-  final bool? useLoader;
-  final Widget? child;
-
   const FreedomButton({
     Key? key,
     required this.onPressed,
@@ -36,7 +21,23 @@ class FreedomButton extends StatelessWidget {
     this.fontSize,
     this.useLoader,
     this.child,
+    this.useOnlBorderGradient = false,
   }) : super(key: key);
+  final BorderRadiusGeometry? borderRadius;
+  final double? width;
+  final double height;
+  final Gradient gradient;
+  final VoidCallback? onPressed;
+  final String title;
+  final bool useGradient;
+  final String leadingIcon;
+  final IconData? icon;
+  final Color? backGroundColor;
+  final Color? titleColor;
+  final double? fontSize;
+  final bool? useLoader;
+  final Widget? child;
+  final bool useOnlBorderGradient;
 
   @override
   Widget build(BuildContext context) {
@@ -46,8 +47,14 @@ class FreedomButton extends StatelessWidget {
       height: height,
       decoration: useGradient
           ? BoxDecoration(
-              gradient: gradient,
+              gradient: useOnlBorderGradient ? null : gradient,
               borderRadius: borderRadius,
+              border: useOnlBorderGradient
+                  ? const GradientBoxBorder(
+                      gradient: LinearGradient(
+                          colors: [Color(0xFFF59E0B), Color(0xffE61D2A)]),
+                    )
+                  : null,
             )
           : null,
       child: ElevatedButton(
@@ -82,14 +89,29 @@ class FreedomButton extends StatelessWidget {
                     if (leadingIcon.isNotEmpty)
                       SvgPicture.asset('assets/images/$leadingIcon.svg'),
                     if (leadingIcon.isNotEmpty) const SizedBox(width: 8),
-                    Text(
-                      title,
-                      style: GoogleFonts.poppins(
-                        fontSize: fontSize ?? 17.41,
-                        color: titleColor ?? Colors.white,
-                        fontWeight: FontWeight.w500,
+                    if (useGradient)
+                      ShaderMask(
+                        shaderCallback: (Rect bounds) {
+                          return darkGoldGradient.createShader(bounds);
+                        },
+                        child: Text(
+                          title,
+                          style: GoogleFonts.poppins(
+                            fontSize: fontSize ?? 17.41,
+                            color: titleColor ?? Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        title,
+                        style: GoogleFonts.poppins(
+                          fontSize: fontSize ?? 17.41,
+                          color: titleColor ?? Colors.white,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                    ),
                   ],
                 ),
               ),
