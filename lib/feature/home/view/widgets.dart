@@ -848,3 +848,103 @@ void showCuperTinoDialog(BuildContext context, {required Widget child}) {
     },
   );
 }
+
+Future<void> showAlertDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+  required void Function() confirm,
+  required void Function() cancel,
+  String confirmText = 'Confirm',
+  String cancelText = 'Cancel',
+}) async {
+  return showAdaptiveDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (builder) {
+      return AlertDialog(
+        backgroundColor: Colors.white,
+        contentPadding: const EdgeInsets.fromLTRB(13.8, 19.23, 12.26, 50.9),
+        content: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 200, maxWidth: 400),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SvgPicture.asset(
+                'assets/images/emergency_icon.svg',
+              ),
+              const VSpace(13),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  color: Colors.black,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const VSpace(9.66),
+              SizedBox(
+                width: 261.38,
+                child: Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.black.withOpacity(0.460),
+                    fontSize: 15.44,
+                    fontWeight: FontWeight.w300,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.black,
+                  ),
+                  child: TextButton(
+                    style: TextButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(2),
+                        )),
+                    onPressed: cancel,
+                    child: Text(
+                      cancelText,
+                      style: GoogleFonts.poppins(
+                        fontSize: 12.06,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const HSpace(8),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: gradient,
+                  ),
+                  child: TextButton(
+                    onPressed: confirm,
+                    style: TextButton.styleFrom(),
+                    child: Text(confirmText,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.06,
+                          color: Colors.white,
+                        )),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    },
+  );
+}

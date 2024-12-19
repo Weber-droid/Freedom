@@ -480,7 +480,17 @@ class RiderFoundBottomSheet extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 15),
                     child: FreedomButton(
                       onPressed: () {
-                        showAlertDialog(context);
+                        showAlertDialog(
+                          context,
+                          title: 'Cancel Ride',
+                          cancel: () {
+                            return Navigator.pop(context);
+                          },
+                          message: 'Are you sure you want to cancel the ride?',
+                          confirm: () {
+                            Navigator.pop(context);
+                          },
+                        );
                       },
                       useGradient: true,
                       gradient: gradient,
@@ -630,78 +640,6 @@ class RiderTimeLine extends StatelessWidget {
       ],
     );
   }
-}
-
-Future<void> showAlertDialog(BuildContext context) async {
-  return showAdaptiveDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (builder) {
-      return AlertDialog(
-        backgroundColor: Colors.white,
-        contentPadding: const EdgeInsets.fromLTRB(13.8, 19.23, 12.26, 50.9),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SvgPicture.asset('assets/images/emergency_icon.svg'),
-            const VSpace(13),
-            Text(
-              'Cancel Ride',
-              style: GoogleFonts.poppins(
-                color: Colors.black,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const VSpace(9.66),
-            SizedBox(
-              width: 163.38,
-              child: Text(
-                'Are you sure you want cancel this ride',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.black.withOpacity(0.46000000834465027),
-                  fontSize: 12.44,
-                  fontWeight: FontWeight.w300,
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Flexible(
-                child: FreedomButton(
-                  borderRadius: BorderRadius.circular(2.36),
-                  backGroundColor: Colors.black,
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  title: 'Go Back',
-                  fontSize: 10.6,
-                ),
-              ),
-              const HSpace(8),
-              Flexible(
-                child: FreedomButton(
-                  borderRadius: BorderRadius.circular(2.36),
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  useGradient: true,
-                  gradient: gradient,
-                  title: 'Cancel Ride',
-                  fontSize: 9.6,
-                ),
-              ),
-            ],
-          ),
-        ],
-      );
-    },
-  );
 }
 
 class RiderContainerAndRideActions extends StatelessWidget {

@@ -94,12 +94,14 @@ class FreedomButton extends StatelessWidget {
                         shaderCallback: (Rect bounds) {
                           return darkGoldGradient.createShader(bounds);
                         },
-                        child: Text(
-                          title,
-                          style: GoogleFonts.poppins(
-                            fontSize: fontSize ?? 17.41,
-                            color: titleColor ?? Colors.white,
-                            fontWeight: FontWeight.w500,
+                        child: FittedBox(
+                          child: Text(
+                            title,
+                            style: GoogleFonts.poppins(
+                              fontSize: fontSize ?? 17.41,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            ),
                           ),
                         ),
                       )

@@ -1,6 +1,8 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:freedom/feature/emergency/view/emergency_activated.dart';
+import 'package:freedom/feature/emergency/view/location_sharing.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
 import 'package:freedom/feature/onboarding/view/carousel_view.dart';
 import 'package:freedom/feature/registration/view/personal_detail_screen.dart';
@@ -48,6 +50,16 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     case HistoryDetailedScreen.routeName:
       return _pageBuilder(
         (context) => const HistoryDetailedScreen(),
+        settings: settings,
+      );
+    case EmergencyActivated.routeName:
+      return _pageBuilder(
+        (context) => const EmergencyActivated(),
+        settings: settings,
+      );
+    case LocationSharing.routeName:
+      return _pageBuilder(
+        (context) => const LocationSharing(),
         settings: settings,
       );
     default:

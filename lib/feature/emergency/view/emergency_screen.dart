@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:freedom/feature/emergency/view/emergency_activated.dart';
+import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
@@ -36,7 +39,7 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
             child: Text(
               // ignore: lines_longer_than_80_chars
               'In case of an emergency, tap the  red Panic Button below  to alert our emergency response team and local authorities.',
-              style: TextStyle(
+              style: GoogleFonts.poppins(
                 color: Colors.black.withOpacity(0.5),
                 fontSize: 14.24,
                 fontWeight: FontWeight.w300,
@@ -47,12 +50,28 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 25),
             child: FreedomButton(
-              onPressed: () {},
-              title: 'Panic Button',
+              onPressed: () {
+                showAlertDialog(
+                  context,
+                  title: 'Emergency Activation',
+                  message:
+                      'Confirm that you want to activate the emergency assistance feature.',
+                  cancelText: 'Cancel',
+                  confirmText: 'Activate Emergency',
+                  confirm: () {
+                    Navigator.pushNamed(context, EmergencyActivated.routeName);
+                  },
+                  cancel: () {
+                    Navigator.pop(context);
+                  },
+                );
+              },
+              title: 'Tap to Activate',
               useGradient: true,
               titleColor: Colors.white,
               borderRadius: BorderRadius.circular(6),
               gradient: gradient,
+              width: double.infinity,
             ),
           )
         ],
@@ -62,16 +81,25 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
 }
 
 class EmergencyAppBar extends StatelessWidget {
-  const EmergencyAppBar({
-    super.key,
-    this.title = 'Emergency Assistance',
-    this.gifUrl,
-    this.decoratedImageSource,
-  });
+  const EmergencyAppBar(
+      {super.key,
+      this.title = 'Emergency Assistance',
+      this.gifUrl,
+      this.decoratedImageSource,
+      this.useNetworkImage = true,
+      this.imageSource,
+      this.positionRight,
+      this.positionLeft,
+      this.positionBottom});
 
   final String title;
   final String? gifUrl;
   final String? decoratedImageSource;
+  final bool useNetworkImage;
+  final String? imageSource;
+  final double? positionRight;
+  final double? positionLeft;
+  final double? positionBottom;
 
   @override
   Widget build(BuildContext context) {
@@ -90,69 +118,74 @@ class EmergencyAppBar extends StatelessWidget {
         ),
         Positioned(
           top: 72,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 25),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Back Button
-                Container(
-                  width: 42,
-                  height: 40,
-                  decoration: ShapeDecoration(
-                    color: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      side: BorderSide(
-                        color: Colors.black.withOpacity(0.079),
-                      ),
-                      borderRadius: BorderRadius.circular(9),
+          right: 0,
+          left: 0,
+          child: Row(
+            children: [
+              Container(
+                width: 42,
+                height: 40,
+                decoration: ShapeDecoration(
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(
+                      color: Colors.black.withOpacity(0.079),
                     ),
-                    shadows: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(9),
                   ),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back_ios_new_rounded,
-                      size: 20,
+                  shadows: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
                     ),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
+                  ],
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 20,
+                  ),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
-                const HSpace(70),
-                Text(
-                  title,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
         Positioned(
           top: 120,
-          left: MediaQuery.of(context).size.width * 0.3,
+          left: positionLeft ?? 0,
+          right: positionRight ?? 0,
+          bottom: positionBottom ?? 0,
           child: SizedBox(
             height: 177,
-            child: Image.network(
-              'https://s3-alpha-sig.figma.com/img/1d74/2335/075adf1fea030f83898ee3b748ef6968?Expires=1734912000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=cUFTHuQA7NHc1KtfH0DaZxL~dFPCnQOY00F2ho1I9oSLj~uIWA21NtkzqWAesrJoj2eIUAo3TkaCPsOIEhppgxTTZ0k8VtShax2fLWswPhh8t4YM8ERE-LL-Gn47LKy69xCD3~NLn48i04Clf5odvQXGbCf0uHwHdP1KqzW0L8ReV5-b2DXIzl-xDLmxflP4Atirs9UeL9joVlil9fWkGaZvHnhDWxcLGxVk1Gv-ViLBNDtjqCex8Vpdb2vhSG2gAEWaVZpeNhcdReCZjfR90aE5FwFAhGCyMLB8C94suOeyc1MGs2rFKyc-COv4pl67c6pgXsAE-qwJyOX0N6VHaQ__',
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return const CircularProgressIndicator();
-              },
-              errorBuilder: (context, error, stackTrace) {
-                return const Icon(Icons.error);
-              },
-            ),
+            child: useNetworkImage
+                ? Image.network(
+                    gifUrl ??
+                        'https://s3-alpha-sig.figma.com/img/1d74/2335/075adf1fea030f83898ee3b748ef6968?Expires=1734912000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=cUFTHuQA7NHc1KtfH0DaZxL~dFPCnQOY00F2ho1I9oSLj~uIWA21NtkzqWAesrJoj2eIUAo3TkaCPsOIEhppgxTTZ0k8VtShax2fLWswPhh8t4YM8ERE-LL-Gn47LKy69xCD3~NLn48i04Clf5odvQXGbCf0uHwHdP1KqzW0L8ReV5-b2DXIzl-xDLmxflP4Atirs9UeL9joVlil9fWkGaZvHnhDWxcLGxVk1Gv-ViLBNDtjqCex8Vpdb2vhSG2gAEWaVZpeNhcdReCZjfR90aE5FwFAhGCyMLB8C94suOeyc1MGs2rFKyc-COv4pl67c6pgXsAE-qwJyOX0N6VHaQ__',
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(child: CircularProgressIndicator());
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(Icons.error);
+                    },
+                  )
+                : SvgPicture.asset(imageSource ?? ''),
           ),
         )
       ],
