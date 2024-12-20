@@ -2,6 +2,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:freedom/feature/emergency/view/emergency_activated.dart';
+import 'package:freedom/feature/emergency/view/emergency_chat.dart';
 import 'package:freedom/feature/emergency/view/location_sharing.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
 import 'package:freedom/feature/onboarding/view/carousel_view.dart';
@@ -60,6 +61,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     case LocationSharing.routeName:
       return _pageBuilder(
         (context) => const LocationSharing(),
+        settings: settings,
+      );
+    case EmergencyChat.routeName:
+      return _pageBuilder(
+        (context) => const EmergencyChat(),
         settings: settings,
       );
     default:

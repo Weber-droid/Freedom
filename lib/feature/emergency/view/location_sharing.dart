@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:freedom/feature/emergency/view/emergency_chat.dart';
 import 'package:freedom/feature/emergency/view/emergency_screen.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
@@ -94,7 +95,10 @@ class _LocationSharingState extends State<LocationSharing> {
                       ),
                       const VSpace(31),
                       GestureDetector(
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.of(context)
+                              .pushNamed(EmergencyChat.routeName);
+                        },
                         child: Container(
                           decoration: BoxDecoration(
                               gradient: gradient,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:freedom/feature/emergency/cubit/emergency_cubit.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
 import 'package:freedom/feature/onboarding/cubit/onboarding_cubit.dart';
@@ -36,6 +37,9 @@ class App extends StatelessWidget {
           ),
           BlocProvider(
             create: (context) => HomeCubit(),
+          ),
+          BlocProvider(
+            create: (context) => EmergencyCubit(),
           ),
         ],
         child: MaterialApp(

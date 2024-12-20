@@ -49,6 +49,9 @@ class TextFieldFactory extends StatefulWidget {
     String? Function(String?)? validator,
     List<TextInputFormatter>? inputFormatters,
     String? hinText,
+    Color? fillColor,
+    Widget? suffixIcon,
+    void Function(String)? onChanged,
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -65,6 +68,9 @@ class TextFieldFactory extends StatefulWidget {
         inputFormatters: inputFormatters,
         validator: validator,
         hinText: hinText,
+        fillColor: fillColor,
+        suffixIcon: suffixIcon,
+        onChanged: onChanged,
       );
   factory TextFieldFactory.phone({
     required TextEditingController controller,
@@ -300,6 +306,7 @@ class _TextFieldFactoryState extends State<TextFieldFactory> {
       autovalidateMode: widget.autovalidateMode,
       maxLines: widget.maxLines ?? 1,
       cursorColor: Colors.black,
+      onChanged: widget.onChanged,
       style: widget.fontStyle ??
           GoogleFonts.poppins(
             fontSize: 12.sp,

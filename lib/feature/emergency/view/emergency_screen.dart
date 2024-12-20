@@ -90,7 +90,8 @@ class EmergencyAppBar extends StatelessWidget {
       this.imageSource,
       this.positionRight,
       this.positionLeft,
-      this.positionBottom});
+      this.positionBottom,
+      this.titleHorizontalSpace = 70});
 
   final String title;
   final String? gifUrl;
@@ -100,6 +101,7 @@ class EmergencyAppBar extends StatelessWidget {
   final double? positionRight;
   final double? positionLeft;
   final double? positionBottom;
+  final double titleHorizontalSpace;
 
   @override
   Widget build(BuildContext context) {
@@ -119,7 +121,7 @@ class EmergencyAppBar extends StatelessWidget {
         Positioned(
           top: 72,
           right: 0,
-          left: 0,
+          left: 25,
           child: Row(
             children: [
               Container(
@@ -151,15 +153,14 @@ class EmergencyAppBar extends StatelessWidget {
                   },
                 ),
               ),
-              Expanded(
-                child: Center(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+              HSpace(titleHorizontalSpace),
+              Center(
+                child: Text(
+                  title,
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
@@ -168,25 +169,22 @@ class EmergencyAppBar extends StatelessWidget {
         ),
         Positioned(
           top: 120,
-          left: positionLeft ?? 0,
-          right: positionRight ?? 0,
+          left: positionLeft ?? 116,
+          right: positionRight ?? 109,
           bottom: positionBottom ?? 0,
-          child: SizedBox(
-            height: 177,
-            child: useNetworkImage
-                ? Image.network(
-                    gifUrl ??
-                        'https://s3-alpha-sig.figma.com/img/1d74/2335/075adf1fea030f83898ee3b748ef6968?Expires=1734912000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=cUFTHuQA7NHc1KtfH0DaZxL~dFPCnQOY00F2ho1I9oSLj~uIWA21NtkzqWAesrJoj2eIUAo3TkaCPsOIEhppgxTTZ0k8VtShax2fLWswPhh8t4YM8ERE-LL-Gn47LKy69xCD3~NLn48i04Clf5odvQXGbCf0uHwHdP1KqzW0L8ReV5-b2DXIzl-xDLmxflP4Atirs9UeL9joVlil9fWkGaZvHnhDWxcLGxVk1Gv-ViLBNDtjqCex8Vpdb2vhSG2gAEWaVZpeNhcdReCZjfR90aE5FwFAhGCyMLB8C94suOeyc1MGs2rFKyc-COv4pl67c6pgXsAE-qwJyOX0N6VHaQ__',
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return const Center(child: CircularProgressIndicator());
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(Icons.error);
-                    },
-                  )
-                : SvgPicture.asset(imageSource ?? ''),
-          ),
+          child: useNetworkImage
+              ? Image.network(
+                  gifUrl ??
+                      'https://s3-alpha-sig.figma.com/img/1d74/2335/075adf1fea030f83898ee3b748ef6968?Expires=1734912000&Key-Pair-Id=APKAQ4GOSFWCVNEHN3O4&Signature=cUFTHuQA7NHc1KtfH0DaZxL~dFPCnQOY00F2ho1I9oSLj~uIWA21NtkzqWAesrJoj2eIUAo3TkaCPsOIEhppgxTTZ0k8VtShax2fLWswPhh8t4YM8ERE-LL-Gn47LKy69xCD3~NLn48i04Clf5odvQXGbCf0uHwHdP1KqzW0L8ReV5-b2DXIzl-xDLmxflP4Atirs9UeL9joVlil9fWkGaZvHnhDWxcLGxVk1Gv-ViLBNDtjqCex8Vpdb2vhSG2gAEWaVZpeNhcdReCZjfR90aE5FwFAhGCyMLB8C94suOeyc1MGs2rFKyc-COv4pl67c6pgXsAE-qwJyOX0N6VHaQ__',
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const Center(child: CircularProgressIndicator());
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(Icons.error);
+                  },
+                )
+              : SvgPicture.asset(imageSource ?? ''),
         )
       ],
     );
