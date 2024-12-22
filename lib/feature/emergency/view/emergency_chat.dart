@@ -134,7 +134,7 @@ class _EmergencyChatState extends State<EmergencyChat> {
                   ],
                 ),
               ),
-              const VSpace(28)
+              const VSpace(28),
             ],
           );
         },

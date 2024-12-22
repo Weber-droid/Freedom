@@ -52,6 +52,8 @@ class TextFieldFactory extends StatefulWidget {
     Color? fillColor,
     Widget? suffixIcon,
     void Function(String)? onChanged,
+    Color? enabledColorBorder,
+    Color? focusedBorderColor,
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -71,6 +73,8 @@ class TextFieldFactory extends StatefulWidget {
         fillColor: fillColor,
         suffixIcon: suffixIcon,
         onChanged: onChanged,
+        enabledBorderColor: enabledColorBorder,
+        focusedBorderColor: focusedBorderColor,
       );
   factory TextFieldFactory.phone({
     required TextEditingController controller,
@@ -92,6 +96,7 @@ class TextFieldFactory extends StatefulWidget {
     BorderRadius? enabledBorderRadius,
     String? hintText,
     Widget? suffixIcon,
+    Color? focusedBorderColor,
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -113,6 +118,7 @@ class TextFieldFactory extends StatefulWidget {
         enabledBorderRadius: enabledBorderRadius,
         hinText: hintText,
         suffixIcon: suffixIcon,
+        focusedBorderColor: focusedBorderColor,
       );
   factory TextFieldFactory.password({
     required TextEditingController controller,
@@ -159,6 +165,9 @@ class TextFieldFactory extends StatefulWidget {
     String? Function(String?)? validator,
     List<TextInputFormatter>? inputFormatters,
     String? hinText,
+    Color? fillColor,
+    Color? enabledColorBorder,
+    Color? focusedBorderColor,
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -175,6 +184,9 @@ class TextFieldFactory extends StatefulWidget {
         inputFormatters: inputFormatters,
         validator: validator,
         hinText: hinText,
+        fillColor: fillColor,
+        enabledBorderColor: enabledColorBorder,
+        focusedBorderColor: focusedBorderColor,
       );
   factory TextFieldFactory.location({
     required TextEditingController controller,

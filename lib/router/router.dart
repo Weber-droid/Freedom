@@ -6,6 +6,10 @@ import 'package:freedom/feature/emergency/view/emergency_chat.dart';
 import 'package:freedom/feature/emergency/view/location_sharing.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
 import 'package:freedom/feature/onboarding/view/carousel_view.dart';
+import 'package:freedom/feature/profile/view/address_screen.dart';
+import 'package:freedom/feature/profile/view/profile_details_screen.dart';
+import 'package:freedom/feature/profile/view/security_screen.dart';
+import 'package:freedom/feature/profile/view/wallet_screen.dart';
 import 'package:freedom/feature/registration/view/personal_detail_screen.dart';
 import 'package:freedom/feature/registration/view/register_form_screen.dart';
 import 'package:freedom/feature/splash/splash_screen.dart';
@@ -68,6 +72,27 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
         (context) => const EmergencyChat(),
         settings: settings,
       );
+    case ProfileDetailsScreen.routeName:
+      return _pageBuilder(
+        (context) => const ProfileDetailsScreen(),
+        settings: settings,
+      );
+    case WalletScreen.routeName:
+      return _pageBuilder(
+        (context) => const WalletScreen(),
+        settings: settings,
+      );
+    case AddressScreen.routeName:
+      return _pageBuilder(
+        (context) => const AddressScreen(),
+        settings: settings,
+      );
+    case SecurityScreen.routeName:
+      return _pageBuilder(
+        (context) => const SecurityScreen(),
+        settings: settings,
+      );
+
     default:
       return _pageBuilder(
         (context) => const ErrorPage(),

@@ -5,7 +5,7 @@ import 'package:freedom/feature/History/view/history_screen.dart';
 import 'package:freedom/feature/emergency/view/emergency_screen.dart';
 import 'package:freedom/feature/home/view/home_screen.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
-import 'package:freedom/shared/theme/app_colors.dart';
+import 'package:freedom/feature/profile/view/profile_screen.dart';
 
 class MainActivityScreen extends StatelessWidget {
   const MainActivityScreen({super.key});
@@ -93,7 +93,7 @@ List<Widget> _pages = [
   const HomeScreen(),
   const HistoryScreen(),
   const EmergencyScreen(),
-  const HomeScreen(),
+  const ProfileScreen(),
 ];
 
 List<Map<String, String>> _itemDetailsActive = [
