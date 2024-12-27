@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:freedom/feature/emergency/cubit/emergency_cubit.dart';
 import 'package:freedom/feature/emergency/view/emergency_screen.dart';
+import 'package:freedom/feature/main_activity/main_activity_screen.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
@@ -23,6 +24,7 @@ class _EmergencyChatState extends State<EmergencyChat> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: BlocConsumer<EmergencyCubit, EmergencyState>(
         listener: (context, state) {
           if (state.messages.isNotEmpty) {
@@ -33,11 +35,14 @@ class _EmergencyChatState extends State<EmergencyChat> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const EmergencyAppBar(
-                title: 'In-App Chat with Emergency Services',
-                decoratedImageSource: 'assets/images/decorated_image4.png',
-                titleHorizontalSpace: 50,
-              ),
+              EmergencyAppBar(
+                  title: 'In-App Chat with Emergency Services',
+                  decoratedImageSource: 'assets/images/decorated_image4.png',
+                  titleHorizontalSpace: 50,
+                  onBackButtonPressed: () => Navigator.popUntil(
+                        context,
+                        ModalRoute.withName(MainActivityScreen.routeName),
+                      )),
               const VSpace(31),
               if (state.messages.isEmpty)
                 Padding(

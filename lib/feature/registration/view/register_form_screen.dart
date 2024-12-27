@@ -54,6 +54,7 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: BlocBuilder<RegisterFormCubit, RegisterFormState>(
         builder: (context, state) {
           return SingleChildScrollView(
@@ -83,61 +84,68 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                     key: fromKey,
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     child: TextFieldFactory.phone(
-                        controller: phoneController,
-                        fontStyle: const TextStyle(fontSize: 19.58),
-                        prefixText: Transform.translate(
-                          offset: const Offset(0, -5),
-                          child: Padding(
-                            padding: const EdgeInsets.only(
-                                left: 10, top: 18, bottom: 7, right: 17),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(5),
-                                color: const Color(0x4FF59E0B),
-                              ),
-                              child: Stack(
-                                children: [
-                                  CountryCodePicker(
-                                    onChanged: (value) {
-                                      setState(() {
-                                        countryCode = value.dialCode ?? '+233';
-                                        phoneController.text = countryCode;
-                                      });
-                                    },
-                                    padding: EdgeInsets.zero,
-                                    initialSelection: 'GH',
-                                    hideMainText: true,
-                                  ),
-                                  Positioned(
-                                    top: MediaQuery.of(context).size.height *
-                                        0.014,
-                                    left: MediaQuery.of(context).size.width *
-                                        0.11,
-                                    child: SvgPicture.asset(
-                                        'assets/images/drop_down.svg'),
-                                  ),
-                                ],
-                              ),
+                      controller: phoneController,
+                      fontStyle: const TextStyle(
+                        fontSize: 19.58,
+                        color: Colors.black,
+                      ),
+                      prefixText: Transform.translate(
+                        offset: const Offset(0, -5),
+                        child: Padding(
+                          padding: const EdgeInsets.only(
+                            left: 10,
+                            top: 18,
+                            bottom: 7,
+                            right: 17,
+                          ),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(5),
+                              color: const Color(0x4FF59E0B),
+                            ),
+                            child: Stack(
+                              children: [
+                                CountryCodePicker(
+                                  onChanged: (value) {
+                                    setState(() {
+                                      countryCode = value.dialCode ?? '+233';
+                                      phoneController.text = countryCode;
+                                    });
+                                  },
+                                  padding: EdgeInsets.zero,
+                                  initialSelection: 'GH',
+                                  hideMainText: true,
+                                ),
+                                Positioned(
+                                  top: MediaQuery.of(context).size.height *
+                                      0.014,
+                                  left:
+                                      MediaQuery.of(context).size.width * 0.11,
+                                  child: SvgPicture.asset(
+                                      'assets/images/drop_down.svg'),
+                                ),
+                              ],
                             ),
                           ),
                         ),
-                        validator: (val) {
-                          if (val == null || val.trim().isEmpty) {
-                            return 'Phone number is required';
-                          }
+                      ),
+                      validator: (val) {
+                        if (val == null || val.trim().isEmpty) {
+                          return 'Phone number is required';
+                        }
+                        final cleanedNumber = val.replaceAll(RegExp(r'\D'), '');
 
-                          final cleanedNumber =
-                              val.replaceAll(RegExp(r'\D'), '');
-                          if (cleanedNumber.isEmpty) {
-                            return 'Please enter valid digits only';
-                          }
+                        if (cleanedNumber.isEmpty) {
+                          return 'Please enter digits only';
+                        }
 
-                          if (cleanedNumber.length < 10) {
-                            return 'Phone number must be at least 10 digits';
-                          }
+                        if (cleanedNumber.length < 10) {
+                          return 'Phone number must be at least 10 digits long';
+                        }
 
-                          return null;
-                        }),
+                        return null; // Valid input
+                      },
+                    ),
                   ),
                 ),
                 const VSpace(29),
@@ -148,6 +156,12 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                     borderRadius: BorderRadius.circular(7),
                     width: double.infinity,
                     title: 'Continue',
+                    buttonTitle: Text('Continue',
+                        style: GoogleFonts.poppins(
+                          fontSize: 17.4,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w500,
+                        )),
                     onPressed: () {
                       if (fromKey.currentState!.validate()) {
                         final phoneNumber = getFullPhoneNumber();
@@ -193,6 +207,11 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                     leadingIcon: 'apple_icon',
                     borderRadius: BorderRadius.circular(7),
                     title: 'Login with Apple',
+                    buttonTitle: Text('Login with Apple',
+                        style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black)),
                     titleColor: Colors.black,
                     width: double.infinity,
                     fontSize: 16,
@@ -206,7 +225,11 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                     backGroundColor: socialLoginColor,
                     leadingIcon: 'google_icon',
                     borderRadius: BorderRadius.circular(7),
-                    title: 'Login with Google',
+                    buttonTitle: Text('Login with Google',
+                        style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black)),
                     titleColor: Colors.black,
                     fontSize: 16,
                     width: double.infinity,

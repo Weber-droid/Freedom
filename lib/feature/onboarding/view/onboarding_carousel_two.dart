@@ -13,6 +13,7 @@ class _OnboardingCarouselTwoState extends State<OnboardingCarouselTwo> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [

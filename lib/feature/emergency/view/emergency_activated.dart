@@ -4,9 +4,7 @@ import 'package:freedom/feature/emergency/view/emergency_screen.dart';
 import 'package:freedom/feature/emergency/view/location_sharing.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
-import 'package:freedom/shared/widgets/buttons.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 
 class EmergencyActivated extends StatefulWidget {
   const EmergencyActivated({super.key});
@@ -22,6 +20,7 @@ class _EmergencyActivatedState extends State<EmergencyActivated> {
     final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

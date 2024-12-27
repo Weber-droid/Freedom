@@ -60,6 +60,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   Widget build(BuildContext context) {
     final formCubit = BlocProvider.of<RegisterFormCubit>(context);
     return Scaffold(
+      backgroundColor: Colors.white,
       body: BlocConsumer<VerifyOtpCubit, VerifyOtpState>(
         listener: (context, state) {
           if (state.isVerified) {
@@ -85,8 +86,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                   Text(
                     'Enter Code',
                     style: GoogleFonts.poppins(
-                      fontSize: 29.02,
-                    ),
+                        fontSize: 29.02, color: Colors.black),
                   ),
                   const VSpace(5),
                   Text(
@@ -102,6 +102,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                     style: GoogleFonts.poppins(
                       fontSize: 19.5,
                       fontWeight: FontWeight.w600,
+                      color: Colors.black,
                     ),
                   ),
                   const VSpace(17),
@@ -110,6 +111,11 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                     child: PinCodeTextField(
                       focusNode: _otpFocusNode,
                       appContext: context,
+                      textStyle: GoogleFonts.poppins(
+                        fontSize: 19.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
                       pastedTextStyle: TextStyle(
                         color: Colors.green.shade600,
                         fontWeight: FontWeight.bold,

@@ -45,17 +45,14 @@ class _HistoryScreenState extends State<HistoryScreen>
             padding: const EdgeInsets.symmetric(horizontal: 27),
             decoration: const BoxDecoration(color: Colors.white),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  child: const DecoratedBackButton(),
-                ),
-                const HSpace(82.9),
                 Text(
                   'Completed Ride',
                   style: GoogleFonts.poppins(
                     fontSize: 14.59,
                     fontWeight: FontWeight.w500,
+                    color: Colors.black,
                   ),
                 ),
               ],
@@ -109,7 +106,7 @@ class MotorCycleTab extends StatelessWidget {
           onTap: () => Navigator.push(
               context,
               MaterialPageRoute<dynamic>(
-                builder: (context) => const VerifyOtpScreen(),
+                builder: (context) => const HistoryDetailedScreen(),
               )),
           child: Container(
             width: 361,

@@ -5,6 +5,7 @@ import 'package:freedom/feature/onboarding/view/onboarding_carousel_two.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 class CarouselViewer extends StatefulWidget {
@@ -35,6 +36,7 @@ class _CarouselViewerState extends State<CarouselViewer> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Column(
         children: [
           Expanded(
@@ -78,6 +80,11 @@ class _CarouselViewerState extends State<CarouselViewer> {
                   goToPage(1);
                 },
                 title: 'Next',
+                buttonTitle: Text(
+                  'Next',
+                  style:
+                      GoogleFonts.poppins(color: Colors.white, fontSize: 17.41),
+                ),
               ),
             ),
           if (_currentPage == 1)
@@ -93,7 +100,13 @@ class _CarouselViewerState extends State<CarouselViewer> {
                     onPressed: () {
                       Navigator.pushNamed(context, '/register');
                     },
-                    title: 'Get Started',
+                    buttonTitle: Text(
+                      'Get Started',
+                      style: GoogleFonts.poppins(
+                        color: Colors.white,
+                        fontSize: 17.41,
+                      ),
+                    ),
                   ),
                 ),
                 const VSpace(8.24),
@@ -108,7 +121,13 @@ class _CarouselViewerState extends State<CarouselViewer> {
                         gradient: gradient,
                         borderRadius: BorderRadius.circular(13),
                         onPressed: () {},
-                        title: 'Continue',
+                        buttonTitle: Text(
+                          'Continue',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 17.41,
+                          ),
+                        ),
                       ),
                     ],
                   ),

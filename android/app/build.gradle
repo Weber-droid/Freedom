@@ -67,27 +67,21 @@ android {
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
-         manifestPlaceholders += [
-    MAPS_API_KEY: dartEnvironmentVariables.MAPS_API_KEY,
+        manifestPlaceholders += [
+    MAPS_API_KEY: dartEnvironmentVariables.MAPS_API_KEY ?: localProperties.getProperty('MAPS_API_KEY')
 ]
+        multiDexEnabled true
+
     }
 
     signingConfigs {
-        if (System.getenv("ANDROID_KEYSTORE_PATH")) {
-            release {
-                storeFile file(System.getenv("ANDROID_KEYSTORE_PATH"))
-                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
-                keyPassword System.getenv("ANDROID_KEYSTORE_PRIVATE_KEY_PASSWORD")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-            }
-        } else {
-            release {
-                keyAlias keystoreProperties['keyAlias']
-                keyPassword keystoreProperties['keyPassword']
+       release {
                 storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-                storePassword keystoreProperties['storePassword']
+                storePassword keystoreProperties['storePassword'] ?: ""
+                keyAlias keystoreProperties['keyAlias'] ?: ""
+                keyPassword keystoreProperties['keyPassword'] ?: ""
+
             }
-        }
     }
 
     flavorDimensions "default"
@@ -113,7 +107,7 @@ android {
         release {
             signingConfig signingConfigs.release
             minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt')
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
         debug {
             signingConfig signingConfigs.debug

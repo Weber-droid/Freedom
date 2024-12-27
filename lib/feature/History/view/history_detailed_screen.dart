@@ -167,16 +167,35 @@ class _HistoryDetailedScreenState extends State<HistoryDetailedScreen> {
                             width: double.infinity,
                             onPressed: () {},
                             title: 'Rate Rider',
+                            buttonTitle: Text(
+                              'Rate Rider',
+                              style: GoogleFonts.poppins(
+                                fontSize: 17,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                             backGroundColor: Colors.black,
                           ),
                           const VSpace(16),
                           FreedomButton(
                             width: double.infinity,
                             onPressed: () {},
-                            title: 'Support',
-                            titleColor: Colors.black,
                             useOnlBorderGradient: true,
                             useGradient: true,
+                            buttonTitle: ShaderMask(
+                              shaderCallback: (Rect bounds) {
+                                return darkGoldGradient.createShader(bounds);
+                              },
+                              child: Text(
+                                'Support',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 17,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
                           ),
                           const VSpace(34)
                         ],

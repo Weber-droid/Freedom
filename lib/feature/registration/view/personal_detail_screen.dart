@@ -44,7 +44,9 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                   Text(
                     'Personal Details',
                     style: GoogleFonts.poppins(
-                        fontSize: 20.59, fontWeight: FontWeight.w500),
+                        fontSize: 20.59,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black),
                   ),
                 ],
               ),
@@ -54,6 +56,7 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                 style: GoogleFonts.poppins(
                   fontSize: 17.86,
                   fontWeight: FontWeight.w500,
+                  color: Colors.black,
                 ),
               ),
               Text(
@@ -62,6 +65,7 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                 style: GoogleFonts.poppins(
                   fontSize: 10.41,
                   fontWeight: FontWeight.w400,
+                  color: Colors.black,
                 ),
               ),
               const VSpace(26.85),
@@ -101,7 +105,7 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                     if (val!.isEmpty) {
                       return 'Please enter your name';
                     }
-                    final regX = RegExp(r'^[a-zA-Z]+$');
+                    final regX = RegExp(r'^[a-zA-Z\s]+$');
                     if (!regX.hasMatch(val)) {
                       return 'Please enter a valid name';
                     }
@@ -189,6 +193,12 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                     : null,
                 backGroundColor: Colors.black,
                 title: 'Complete Registration',
+                buttonTitle: Text('Complete Registration',
+                    style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 17.92,
+                      fontWeight: FontWeight.w500,
+                    )),
                 fontSize: 17.92,
               ),
             ],

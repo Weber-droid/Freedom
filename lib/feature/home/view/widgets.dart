@@ -595,7 +595,14 @@ Future<void> showLogisticsBottomSheet(
                 padding: const EdgeInsets.symmetric(horizontal: 13),
                 child: FreedomButton(
                   onPressed: () {},
-                  title: 'Save Order Details',
+                  buttonTitle: Text(
+                    'Save Order Details',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   useGradient: true,
                   gradient: gradient,
                 ),

@@ -149,7 +149,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Visibility(
                 visible: hideStackedBottomSheet == false,
                 child: Positioned(
-                  top: MediaQuery.of(context).size.height * 0.47,
+                  top: MediaQuery.of(context).size.height * 0.49,
                   child: SizedBox(
                     width: MediaQuery.of(context).size.width,
                     height: MediaQuery.of(context).size.height * 0.45,
@@ -257,75 +257,83 @@ class _HomeScreenState extends State<HomeScreen> {
                                       mainAxisAlignment:
                                           MainAxisAlignment.spaceBetween,
                                       children: [
-                                        GestureDetector(
-                                          onTap: () async {
-                                            setState(() {
-                                              trackSelectedIndex =
-                                                  (trackSelectedIndex == 1)
-                                                      ? 1
-                                                      : 1;
-                                              _containerHeight =
-                                                  trackSelectedIndex == 1
-                                                      ? 0
-                                                      : _containerHeight;
-                                              _spacing = trackSelectedIndex == 1
-                                                  ? 4.0
-                                                  : 13.0;
-                                            });
-                                            if (trackSelectedIndex == 1) {
-                                              await showMotorCycleBottomSheet(
-                                                context,
-                                                destinationController:
-                                                    _destinationController,
-                                                pickUpLocationController:
-                                                    _pickUpLocationController,
-                                                destinationControllers:
-                                                    _destinationControllers,
-                                              );
-                                            }
-                                          },
-                                          child: ChooseServiceBox(
-                                            isSelected: trackSelectedIndex == 1,
-                                            child: const Padding(
-                                              padding: EdgeInsets.only(
-                                                top: 7,
-                                                left: 7,
-                                                bottom: 12,
+                                        Expanded(
+                                          child: GestureDetector(
+                                            onTap: () async {
+                                              setState(() {
+                                                trackSelectedIndex =
+                                                    (trackSelectedIndex == 1)
+                                                        ? 1
+                                                        : 1;
+                                                _containerHeight =
+                                                    trackSelectedIndex == 1
+                                                        ? 0
+                                                        : _containerHeight;
+                                                _spacing =
+                                                    trackSelectedIndex == 1
+                                                        ? 4.0
+                                                        : 13.0;
+                                              });
+                                              if (trackSelectedIndex == 1) {
+                                                await showMotorCycleBottomSheet(
+                                                  context,
+                                                  destinationController:
+                                                      _destinationController,
+                                                  pickUpLocationController:
+                                                      _pickUpLocationController,
+                                                  destinationControllers:
+                                                      _destinationControllers,
+                                                );
+                                              }
+                                            },
+                                            child: ChooseServiceBox(
+                                              isSelected:
+                                                  trackSelectedIndex == 1,
+                                              child: const Padding(
+                                                padding: EdgeInsets.only(
+                                                  top: 7,
+                                                  left: 7,
+                                                  bottom: 12,
+                                                ),
+                                                child:
+                                                    ChooseServiceTextDetailsUi2(),
                                               ),
-                                              child:
-                                                  ChooseServiceTextDetailsUi2(),
                                             ),
                                           ),
                                         ),
-                                        GestureDetector(
-                                          onTap: () async {
-                                            setState(
-                                              () {
-                                                trackSelectedIndex =
-                                                    (trackSelectedIndex == 2)
-                                                        ? 0
-                                                        : 2;
-                                                _containerHeight =
-                                                    trackSelectedIndex == 2
-                                                        ? 53.0
-                                                        : 0;
-                                                _spacing =
-                                                    trackSelectedIndex == 2
-                                                        ? 13
-                                                        : 4.0;
-                                              },
-                                            );
-                                          },
-                                          child: ChooseServiceBox(
-                                            isSelected: trackSelectedIndex == 2,
-                                            child: const Padding(
-                                              padding: EdgeInsets.only(
-                                                top: 7,
-                                                left: 7,
-                                                bottom: 12,
+                                        const HSpace(20),
+                                        Expanded(
+                                          child: GestureDetector(
+                                            onTap: () async {
+                                              setState(
+                                                () {
+                                                  trackSelectedIndex =
+                                                      (trackSelectedIndex == 2)
+                                                          ? 0
+                                                          : 2;
+                                                  _containerHeight =
+                                                      trackSelectedIndex == 2
+                                                          ? 53.0
+                                                          : 0;
+                                                  _spacing =
+                                                      trackSelectedIndex == 2
+                                                          ? 13
+                                                          : 4.0;
+                                                },
+                                              );
+                                            },
+                                            child: ChooseServiceBox(
+                                              isSelected:
+                                                  trackSelectedIndex == 2,
+                                              child: const Padding(
+                                                padding: EdgeInsets.only(
+                                                  top: 7,
+                                                  left: 7,
+                                                  bottom: 12,
+                                                ),
+                                                child:
+                                                    ChooseServiceTextDetailsUi(),
                                               ),
-                                              child:
-                                                  ChooseServiceTextDetailsUi(),
                                             ),
                                           ),
                                         ),
@@ -334,23 +342,36 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const VSpace(13),
                                     const ChoosePayMentMethod(),
                                     const VSpace(14),
-                                    FreedomButton(
-                                      onPressed: () {
-                                        setState(() {
-                                          hideStackedBottomSheet = true;
-                                        });
-                                        _showRiderFoundBottomSheet(context)
-                                            .then((_) {
-                                          if (hideStackedBottomSheet == true) {
-                                            setState(() {
-                                              hideStackedBottomSheet = false;
-                                            });
-                                          }
-                                        });
-                                      },
-                                      title: 'Find Rider',
-                                      useGradient: true,
-                                      gradient: gradient,
+                                    Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 20),
+                                      child: FreedomButton(
+                                        onPressed: () {
+                                          setState(() {
+                                            hideStackedBottomSheet = true;
+                                          });
+                                          _showRiderFoundBottomSheet(context)
+                                              .then((_) {
+                                            if (hideStackedBottomSheet ==
+                                                true) {
+                                              setState(() {
+                                                hideStackedBottomSheet = false;
+                                              });
+                                            }
+                                          });
+                                        },
+                                        title: 'Find Rider',
+                                        buttonTitle: Text(
+                                          'Find Rider',
+                                          style: GoogleFonts.poppins(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                        useGradient: true,
+                                        gradient: gradient,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -495,6 +516,14 @@ class RiderFoundBottomSheet extends StatelessWidget {
                       useGradient: true,
                       gradient: gradient,
                       title: 'Cancel Ride',
+                      buttonTitle: Text(
+                        'Cancel Ride',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ),
                 ],

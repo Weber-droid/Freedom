@@ -18,18 +18,24 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Column(
         children: [
-          const EmergencyAppBar(),
+          const EmergencyAppBar(
+            onBackButtonPressed: null,
+          ),
           const VSpace(32),
-          SizedBox(
-            width: 378,
-            child: Text(
-              'Your safety is our top priority',
-              style: GoogleFonts.poppins(
-                color: Colors.black,
-                fontSize: 14.24,
-                fontWeight: FontWeight.w700,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 25),
+            child: SizedBox(
+              width: 378,
+              child: Text(
+                'Your safety is our top priority',
+                style: GoogleFonts.poppins(
+                  color: Colors.black,
+                  fontSize: 14.24,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
           ),
@@ -66,7 +72,11 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
                   },
                 );
               },
-              title: 'Tap to Activate',
+              buttonTitle: Text('Tap to Activate',
+                  style: GoogleFonts.poppins(
+                      color: Colors.white,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600)),
               useGradient: true,
               titleColor: Colors.white,
               borderRadius: BorderRadius.circular(6),
@@ -81,17 +91,19 @@ class _EmergencyScreenState extends State<EmergencyScreen> {
 }
 
 class EmergencyAppBar extends StatelessWidget {
-  const EmergencyAppBar(
-      {super.key,
-      this.title = 'Emergency Assistance',
-      this.gifUrl,
-      this.decoratedImageSource,
-      this.useNetworkImage = true,
-      this.imageSource,
-      this.positionRight,
-      this.positionLeft,
-      this.positionBottom,
-      this.titleHorizontalSpace = 70});
+  const EmergencyAppBar({
+    super.key,
+    this.title = 'Emergency Assistance',
+    this.gifUrl,
+    this.decoratedImageSource,
+    this.useNetworkImage = true,
+    this.imageSource,
+    this.positionRight,
+    this.positionLeft,
+    this.positionBottom,
+    this.titleHorizontalSpace = 70,
+    this.onBackButtonPressed,
+  });
 
   final String title;
   final String? gifUrl;
@@ -102,6 +114,7 @@ class EmergencyAppBar extends StatelessWidget {
   final double? positionLeft;
   final double? positionBottom;
   final double titleHorizontalSpace;
+  final void Function()? onBackButtonPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -149,7 +162,7 @@ class EmergencyAppBar extends StatelessWidget {
                     size: 20,
                   ),
                   onPressed: () {
-                    Navigator.of(context).pop();
+                    onBackButtonPressed?.call();
                   },
                 ),
               ),

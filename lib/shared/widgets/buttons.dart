@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gradient_borders/box_borders/gradient_box_border.dart';
 
@@ -22,7 +21,9 @@ class FreedomButton extends StatelessWidget {
     this.useLoader,
     this.child,
     this.useOnlBorderGradient = false,
+    this.buttonTitle,
   }) : super(key: key);
+
   final BorderRadiusGeometry? borderRadius;
   final double? width;
   final double height;
@@ -38,10 +39,14 @@ class FreedomButton extends StatelessWidget {
   final bool? useLoader;
   final Widget? child;
   final bool useOnlBorderGradient;
+  final Widget? buttonTitle;
 
   @override
   Widget build(BuildContext context) {
     final borderRadius = this.borderRadius ?? BorderRadius.circular(13);
+    final effectiveTextColor =
+        useGradient ? Colors.white : (titleColor ?? Colors.white);
+
     return Container(
       width: width,
       height: height,
@@ -64,7 +69,6 @@ class FreedomButton extends StatelessWidget {
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(borderRadius: borderRadius),
         ),
-        // ignore: use_if_null_to_convert_nulls_to_bools
         child: useLoader == true
             ? Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -73,7 +77,7 @@ class FreedomButton extends StatelessWidget {
                     title,
                     style: GoogleFonts.poppins(
                       fontSize: fontSize ?? 17.41,
-                      color: titleColor ?? Colors.white,
+                      color: effectiveTextColor,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -89,31 +93,7 @@ class FreedomButton extends StatelessWidget {
                     if (leadingIcon.isNotEmpty)
                       SvgPicture.asset('assets/images/$leadingIcon.svg'),
                     if (leadingIcon.isNotEmpty) const SizedBox(width: 8),
-                    if (useGradient)
-                      ShaderMask(
-                        shaderCallback: (Rect bounds) {
-                          return darkGoldGradient.createShader(bounds);
-                        },
-                        child: FittedBox(
-                          child: Text(
-                            title,
-                            style: GoogleFonts.poppins(
-                              fontSize: fontSize ?? 17.41,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      Text(
-                        title,
-                        style: GoogleFonts.poppins(
-                          fontSize: fontSize ?? 17.41,
-                          color: titleColor ?? Colors.white,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
+                    FittedBox(child: buttonTitle),
                   ],
                 ),
               ),

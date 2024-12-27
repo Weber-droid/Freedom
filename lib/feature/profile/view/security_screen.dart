@@ -37,7 +37,7 @@ class SecurityScreen extends StatelessWidget {
             ],
           ),
           VSpace(14.91),
-          SecurityAndPrivacy()
+          SecurityAndPrivacy(),
         ],
       )),
     );
