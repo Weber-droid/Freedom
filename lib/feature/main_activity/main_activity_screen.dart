@@ -26,12 +26,6 @@ class _MainActivityScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // switch (int index) {
-    //   case 0:
-
-    //     break;
-    //   default:
-    // }
     return BlocBuilder<MainActivityCubit, MainActivityState>(
       builder: (context, state) {
         final currentIndex = state.currentIndex;

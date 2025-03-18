@@ -23,7 +23,7 @@ class _CustomDropDownState extends State<CustomDropDown> {
   @override
   void initState() {
     super.initState();
-    selectedValue = widget.initialValue; // Initialize with the initial value
+    selectedValue = widget.initialValue;
   }
 
   Future<void> _showDropdownMenu(BuildContext context) async {

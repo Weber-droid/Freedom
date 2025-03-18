@@ -6,6 +6,7 @@ import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
 import 'package:freedom/feature/onboarding/cubit/onboarding_cubit.dart';
 import 'package:freedom/feature/registration/cubit/forms_cubit.dart';
+import 'package:freedom/feature/registration/repository/register_repository.dart';
 import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_otp_cubit.dart';
 import 'package:freedom/l10n/l10n.dart';
 import 'package:freedom/router/router.dart';
@@ -30,7 +31,7 @@ class App extends StatelessWidget {
             create: (context) => OnboardingCubit(),
           ),
           BlocProvider(
-            create: (context) => RegisterFormCubit(),
+            create: (context) => RegisterFormCubit(RegisterRepository()),
           ),
           BlocProvider(
             create: (context) => VerifyOtpCubit(),

@@ -98,7 +98,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                   ),
                   const VSpace(5.3),
                   Text(
-                    '${formCubit.state.phoneNumber}',
+                    '${formCubit.state.phone}',
                     style: GoogleFonts.poppins(
                       fontSize: 19.5,
                       fontWeight: FontWeight.w600,

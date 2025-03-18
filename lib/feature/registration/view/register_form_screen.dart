@@ -5,10 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:freedom/feature/registration/cubit/forms_cubit.dart';
+import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
+import 'package:freedom/shared/widgets/loading_overlay.dart';
 import 'package:freedom/shared/widgets/text_field_factory.dart';
+import 'package:freedom/shared/widgets/toasts.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class RegisterFormScreen extends StatefulWidget {
@@ -151,25 +154,74 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                 const VSpace(29),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 17),
-                  child: FreedomButton(
-                    backGroundColor: Colors.black,
-                    borderRadius: BorderRadius.circular(7),
-                    width: double.infinity,
-                    title: 'Continue',
-                    buttonTitle: Text('Continue',
-                        style: GoogleFonts.poppins(
-                          fontSize: 17.4,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                        )),
-                    onPressed: () {
-                      if (fromKey.currentState!.validate()) {
-                        final phoneNumber = getFullPhoneNumber();
-                        context
-                            .read<RegisterFormCubit>()
-                            .setPhoneNumber(phoneNumber);
-                        Navigator.pushNamed(context, '/verify_otp');
+                  child: BlocConsumer<RegisterFormCubit, RegisterFormState>(
+                    listener: (context, state) {
+                      if (state.formStatus == FormStatus.failure) {
+                        context.showToast(
+                            type: ToastType.error,
+                            position: ToastPosition.top,
+                            message: 'Registration failed');
+                      } else if (state.formStatus == FormStatus.success) {
+                        context.showToast(
+                            type: ToastType.success,
+                            position: ToastPosition.top,
+                            message: state.message);
                       }
+                    },
+                    builder: (context, state) {
+                      if (state.formStatus == FormStatus.submitting) {
+                        return BlurredLoadingOverlay(
+                            blurAmount: 10.0,
+                            overlayColor: Colors.blue.withValues(alpha: 0.2),
+                            isLoading:
+                                state.formStatus == FormStatus.submitting,
+                            child: const Text('Registering User'));
+                      } else if (state.formStatus == FormStatus.success) {
+                        return FreedomButton(
+                            onPressed: () {
+                              Navigator.pushReplacementNamed(
+                                  context, VerifyOtpScreen.routeName);
+                            },
+                            buttonTitle: Text(
+                              'Complete Registration',
+                              style: GoogleFonts.poppins(
+                                fontSize: 17.4,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            backGroundColor: Colors.black,
+                            borderRadius: BorderRadius.circular(7),
+                            width: double.infinity);
+                      }
+                      return FreedomButton(
+                        backGroundColor: Colors.black,
+                        borderRadius: BorderRadius.circular(7),
+                        width: double.infinity,
+                        title: 'Continue',
+                        buttonTitle: Text('Complete Registration',
+                            style: GoogleFonts.poppins(
+                              fontSize: 17.4,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w500,
+                            )),
+                        onPressed: () async {
+                          if (fromKey.currentState!.validate()) {
+                            final phoneNumber = getFullPhoneNumber();
+                            context
+                                .read<RegisterFormCubit>()
+                                .setUserDetails(phone: phoneNumber);
+                            Future.delayed(const Duration(milliseconds: 500),
+                                () async {
+                              if (mounted) {
+                                await context
+                                    .read<RegisterFormCubit>()
+                                    .registerUser();
+                              }
+                            });
+                          }
+                        },
+                      );
                     },
                   ),
                 ),

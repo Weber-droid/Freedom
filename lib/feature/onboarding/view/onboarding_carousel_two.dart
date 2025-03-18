@@ -64,7 +64,6 @@ class _OnboardingCarouselTwoState extends State<OnboardingCarouselTwo> {
               ),
             ),
             const VSpace(20),
-            // Add your two buttons here
           ],
         ),
       ),

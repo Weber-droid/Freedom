@@ -1,13 +1,20 @@
+import 'dart:ui';
+
+import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
+import 'package:freedom/feature/registration/cubit/forms_cubit.dart';
+import 'package:freedom/feature/registration/view/register_form_screen.dart';
 import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_otp_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
+import 'package:freedom/shared/widgets/loading_overlay.dart';
 import 'package:freedom/shared/widgets/text_field_factory.dart';
+import 'package:freedom/shared/widgets/toasts.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class PersonalDetailScreen extends StatefulWidget {
@@ -20,191 +27,396 @@ class PersonalDetailScreen extends StatefulWidget {
 
 class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
   final firstNameController = TextEditingController();
+  final phoneNumberController = TextEditingController();
   final emailController = TextEditingController();
+  final passwordController = TextEditingController();
   final firstNameKey = GlobalKey<FormState>();
   final emailKey = GlobalKey<FormState>();
+  final phoneNumberKey = GlobalKey<FormState>();
+  final passwordKey = GlobalKey<FormState>();
   bool termAccepted = false;
+  String countryCode = '+233';
+
+  @override
+  void initState() {
+    super.initState();
+    phoneNumberController
+      ..text = countryCode
+      ..addListener(() {
+        if (!phoneNumberController.text.startsWith(countryCode)) {
+          phoneNumberController
+            ..text = countryCode +
+                phoneNumberController.text.replaceAll(RegExp(r'^\+\d+'), '')
+            ..selection = TextSelection.fromPosition(
+              TextPosition(offset: phoneNumberController.text.length),
+            );
+        }
+      });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 17),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  InkWell(
-                    onTap: () => Navigator.pop(context),
-                    child: const DecoratedBackButton(),
+      body: BlocConsumer<RegisterFormCubit, RegisterFormState>(
+          listener: (context, state) {
+        if (state.formStatus == FormStatus.failure) {
+          context.showToast(
+              type: ToastType.error,
+              position: ToastPosition.top,
+              message: 'Registration failed');
+        } else if (state.formStatus == FormStatus.success) {
+          context.showToast(type: ToastType.success, message: state.message);
+        }
+      }, builder: (context, state) {
+        Widget mainContent;
+        if (state.formStatus == FormStatus.success) {
+          mainContent = Center(
+            child: FreedomButton(
+                onPressed: () {
+                  Navigator.pushReplacementNamed(
+                      context, VerifyOtpScreen.routeName);
+                },
+                buttonTitle: Text(
+                  'Complete Registration',
+                  style: GoogleFonts.poppins(
+                    fontSize: 17.4,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const HSpace(13.9),
-                  Text(
-                    'Personal Details',
-                    style: GoogleFonts.poppins(
-                        fontSize: 20.59,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black),
-                  ),
-                ],
-              ),
-              const VSpace(20.45),
-              Text(
-                'Almost Done! Let’s Get to Know You',
-                style: GoogleFonts.poppins(
-                  fontSize: 17.86,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
                 ),
-              ),
-              Text(
-                'Please provide a few details so we can\n complete your profile.',
-                textAlign: TextAlign.left,
-                style: GoogleFonts.poppins(
-                  fontSize: 10.41,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black,
-                ),
-              ),
-              const VSpace(26.85),
-              Text(
-                'Full name ',
-                style: GoogleFonts.poppins(
-                  color: Colors.black,
-                  fontSize: 15.06,
-                  fontWeight: FontWeight.w500,
-                  height: 0,
-                ),
-              ),
-              const VSpace(6.82),
-              Form(
-                key: firstNameKey,
-                autovalidateMode: AutovalidateMode.onUserInteraction,
-                child: TextFieldFactory.name(
-                  hinText: 'Your name',
-                  hintTextStyle: GoogleFonts.poppins(
-                    fontSize: 15.06,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0x42F59E0B),
-                  ),
-                  contentPadding: const EdgeInsets.only(
-                      top: 21.06, left: 8.06, bottom: 21.06),
-                  controller: firstNameController,
-                  prefixText: Padding(
-                    padding:
-                        const EdgeInsets.only(top: 21, left: 8.06, bottom: 21),
-                    child: SvgPicture.asset(
-                      'assets/images/user_icon.svg',
-                      colorFilter:
-                          ColorFilter.mode(thickFillColor, BlendMode.srcIn),
-                    ),
-                  ),
-                  validator: (val) {
-                    if (val!.isEmpty) {
-                      return 'Please enter your name';
-                    }
-                    final regX = RegExp(r'^[a-zA-Z\s]+$');
-                    if (!regX.hasMatch(val)) {
-                      return 'Please enter a valid name';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const VSpace(9),
-              Text(
-                'Email',
-                style: GoogleFonts.poppins(
-                  color: Colors.black,
-                  fontSize: 15.06,
-                  fontWeight: FontWeight.w500,
-                  height: 0,
-                ),
-              ),
-              const VSpace(6.82),
-              Form(
-                key: emailKey,
-                child: TextFieldFactory.email(
-                  controller: emailController,
-                  hintTextStyle: GoogleFonts.poppins(
-                    fontSize: 15.06,
-                    fontWeight: FontWeight.w400,
-                    color: const Color(0x42F59E0B),
-                  ),
-                  prefixText: Padding(
-                    padding:
-                        const EdgeInsets.only(top: 21, left: 8.06, bottom: 21),
-                    child: SvgPicture.asset('assets/images/email_icon.svg'),
-                  ),
-                  hinText: 'Your email',
-                  validator: (email) {
-                    if (email!.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    final regX = RegExp(
-                        r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-                    if (!regX.hasMatch(email)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
-                ),
-              ),
-              const VSpace(25.46),
-              Row(
-                children: [
-                  Checkbox.adaptive(
-                    activeColor: thickFillColor,
-                    side: BorderSide(color: thickFillColor),
-                    value: termAccepted,
-                    onChanged: (val) {
-                      setState(() {
-                        termAccepted = val ?? false;
-                      });
-                    },
-                  ),
-                  Text(
-                    'Read Terms and Condition',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11.49,
-                      color: thickFillColor,
-                    ),
-                  ),
-                ],
-              ),
-              const VSpace(16.03),
-              FreedomButton(
-                // ignore: use_if_null_to_convert_nulls_to_bools
-                onPressed: termAccepted == true
-                    ? () {
-                        if (firstNameKey.currentState!.validate() &&
-                            emailKey.currentState!.validate()) {
-                          Navigator.pushNamed(
-                            context,
-                            MainActivityScreen.routeName,
-                          );
-                        }
-                        context
-                            .read<VerifyOtpCubit>()
-                            .isFirstTimer(isFirstTimer: false);
-                      }
-                    : null,
                 backGroundColor: Colors.black,
-                title: 'Complete Registration',
-                buttonTitle: Text('Complete Registration',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 17.92,
-                      fontWeight: FontWeight.w500,
-                    )),
-                fontSize: 17.92,
+                borderRadius: BorderRadius.circular(7),
+                width: double.infinity),
+          );
+        } else {
+          mainContent = SafeArea(
+            child: SingleChildScrollView(
+              child: Container(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 17),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          InkWell(
+                            onTap: () => Navigator.pop(context),
+                            child: const DecoratedBackButton(),
+                          ),
+                          const HSpace(13.9),
+                          Text(
+                            'Personal Details',
+                            style: GoogleFonts.poppins(
+                                fontSize: 20.59,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.black),
+                          ),
+                        ],
+                      ),
+                      const VSpace(20.45),
+                      Text(
+                        'Almost Done! Let’s Get to Know You',
+                        style: GoogleFonts.poppins(
+                          fontSize: 17.86,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black,
+                        ),
+                      ),
+                      Text(
+                        'Please provide a few details so we can\n complete your profile.',
+                        textAlign: TextAlign.left,
+                        style: GoogleFonts.poppins(
+                          fontSize: 10.41,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.black,
+                        ),
+                      ),
+                      const VSpace(26.85),
+                      Text(
+                        'Full name ',
+                        style: GoogleFonts.poppins(
+                          color: Colors.black,
+                          fontSize: 15.06,
+                          fontWeight: FontWeight.w500,
+                          height: 0,
+                        ),
+                      ),
+                      const VSpace(6.82),
+                      Form(
+                        key: firstNameKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: TextFieldFactory.name(
+                          hinText: 'Your name',
+                          hintTextStyle: GoogleFonts.poppins(
+                            fontSize: 15.06,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0x42F59E0B),
+                          ),
+                          contentPadding: const EdgeInsets.only(
+                            top: 21.06,
+                            left: 8.06,
+                            bottom: 21.06,
+                          ),
+                          controller: firstNameController,
+                          prefixText: Padding(
+                            padding: const EdgeInsets.only(
+                                top: 21, left: 8.06, bottom: 21),
+                            child: SvgPicture.asset(
+                              'assets/images/user_icon.svg',
+                              colorFilter: ColorFilter.mode(
+                                  thickFillColor, BlendMode.srcIn),
+                            ),
+                          ),
+                          validator: (val) {
+                            if (val!.isEmpty) {
+                              return 'Please enter your name';
+                            }
+                            final regX = RegExp(r'^[a-zA-Z\s]+$');
+                            if (!regX.hasMatch(val)) {
+                              return 'Please enter a valid name';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const VSpace(9),
+                      Text(
+                        'Email',
+                        style: GoogleFonts.poppins(
+                          color: Colors.black,
+                          fontSize: 15.06,
+                          fontWeight: FontWeight.w500,
+                          height: 0,
+                        ),
+                      ),
+                      const VSpace(6.82),
+                      Form(
+                        key: emailKey,
+                        child: TextFieldFactory.email(
+                          controller: emailController,
+                          hintTextStyle: GoogleFonts.poppins(
+                            fontSize: 15.06,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0x42F59E0B),
+                          ),
+                          prefixText: Padding(
+                            padding: const EdgeInsets.only(
+                                top: 21, left: 8.06, bottom: 21),
+                            child: SvgPicture.asset(
+                                'assets/images/email_icon.svg'),
+                          ),
+                          hinText: 'Your email',
+                          validator: (email) {
+                            if (email!.isEmpty) {
+                              return 'Please enter your email';
+                            }
+                            final regX = RegExp(
+                                r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                            if (!regX.hasMatch(email)) {
+                              return 'Please enter a valid email';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const VSpace(9),
+                      Text(
+                        'Password',
+                        style: GoogleFonts.poppins(
+                          color: Colors.black,
+                          fontSize: 15.06,
+                          fontWeight: FontWeight.w500,
+                          height: 0,
+                        ),
+                      ),
+                      const VSpace(6.82),
+                      Form(
+                        key: passwordKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: TextFieldFactory.password(
+                          controller: passwordController,
+                          hintTextStyle: GoogleFonts.poppins(
+                            fontSize: 15.06,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0x42F59E0B),
+                          ),
+                          prefixText: Padding(
+                            padding: const EdgeInsets.only(
+                                top: 21, left: 8.06, bottom: 21),
+                            child: SvgPicture.asset(
+                                'assets/images/freedom_password_icon.svg'), // Consider using a lock icon instead
+                          ),
+                          hinText: 'Enter a password',
+                          validator: (password) {
+                            if (password!.isEmpty) {
+                              return 'Please enter a password';
+                            }
+                            final regX = RegExp(
+                                r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$');
+                            if (!regX.hasMatch(password)) {
+                              return 'Password must be at least 8 characters and include uppercase, lowercase, number and special character';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const VSpace(9),
+                      Text(
+                        'Phone number',
+                        style: GoogleFonts.poppins(
+                          color: Colors.black,
+                          fontSize: 15.06,
+                          fontWeight: FontWeight.w500,
+                          height: 0,
+                        ),
+                      ),
+                      const VSpace(6.82),
+                      Form(
+                        key: phoneNumberKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: TextFieldFactory.phone(
+                          controller: phoneNumberController,
+                          fontStyle: const TextStyle(
+                            fontSize: 19.58,
+                            color: Colors.black,
+                          ),
+                          prefixText: Transform.translate(
+                            offset: const Offset(0, -5),
+                            child: Padding(
+                              padding: const EdgeInsets.only(
+                                left: 10,
+                                top: 18,
+                                bottom: 7,
+                                right: 17,
+                              ),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(5),
+                                  color: const Color(0x4FF59E0B),
+                                ),
+                                child: Stack(
+                                  children: [
+                                    CountryCodePicker(
+                                      onChanged: (value) {
+                                        setState(() {
+                                          countryCode =
+                                              value.dialCode ?? '+233';
+                                          phoneNumberController.text =
+                                              countryCode;
+                                        });
+                                      },
+                                      padding: EdgeInsets.zero,
+                                      initialSelection: 'GH',
+                                      hideMainText: true,
+                                    ),
+                                    Positioned(
+                                      top: MediaQuery.of(context).size.height *
+                                          0.014,
+                                      left: MediaQuery.of(context).size.width *
+                                          0.11,
+                                      child: SvgPicture.asset(
+                                          'assets/images/drop_down.svg'),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          validator: (val) {
+                            if (val == null || val.trim().isEmpty) {
+                              return 'Phone number is required';
+                            }
+                            final cleanedNumber =
+                                val.replaceAll(RegExp(r'\D'), '');
+
+                            if (cleanedNumber.isEmpty) {
+                              return 'Please enter digits only';
+                            }
+
+                            if (cleanedNumber.length < 10) {
+                              return 'Phone number must be at least 10 digits long';
+                            }
+
+                            return null; // Valid input
+                          },
+                        ),
+                      ),
+                      const VSpace(25.46),
+                      Row(
+                        children: [
+                          Checkbox.adaptive(
+                            activeColor: thickFillColor,
+                            side: BorderSide(color: thickFillColor),
+                            value: termAccepted,
+                            onChanged: (val) {
+                              setState(() {
+                                termAccepted = val ?? false;
+                              });
+                            },
+                          ),
+                          Text(
+                            'Read Terms and Condition',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.49,
+                              color: thickFillColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const VSpace(16.03),
+                      FreedomButton(
+                        // ignore: use_if_null_to_convert_nulls_to_bools
+                        onPressed: termAccepted == true
+                            ? () {
+                                if (firstNameKey.currentState!.validate() &&
+                                    emailKey.currentState!.validate() &&
+                                    passwordKey.currentState!.validate() &&
+                                    phoneNumberKey.currentState!.validate()) {
+                                  context
+                                      .read<RegisterFormCubit>()
+                                      .setUserDetails(
+                                          fullName: firstNameController.text,
+                                          password: passwordController.text,
+                                          email: emailController.text,
+                                          phone: phoneNumberController.text);
+                                  Future.delayed(Duration(milliseconds: 500),
+                                      () async {
+                                    await context
+                                        .read<RegisterFormCubit>()
+                                        .registerUser();
+                                  });
+                                }
+                                // context
+                                //     .read<VerifyOtpCubit>()
+                                //     .isFirstTimer(isFirstTimer: false);
+                              }
+                            : null,
+                        backGroundColor: Colors.black,
+                        title: 'Complete Registration',
+                        buttonTitle: Text('Complete Registration',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 17.92,
+                              fontWeight: FontWeight.w500,
+                            )),
+                        fontSize: 17.92,
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
+          );
+        }
+        if (state.formStatus == FormStatus.submitting) {
+          return BlurredLoadingOverlay(
+              isLoading: state.formStatus == FormStatus.submitting,
+              child: mainContent);
+        } else {
+          return mainContent;
+        }
+      }),
     );
   }
 }

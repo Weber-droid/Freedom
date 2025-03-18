@@ -134,6 +134,7 @@ class TextFieldFactory extends StatefulWidget {
     Color? fieldActiveBorderColor,
     String? Function(String?)? validator,
     List<TextInputFormatter>? inputFormatters,
+    String ? hinText,
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -149,6 +150,7 @@ class TextFieldFactory extends StatefulWidget {
         fieldActiveBorderColor: fieldActiveBorderColor,
         inputFormatters: inputFormatters,
         validator: validator,
+        hinText:hinText ,
       );
   factory TextFieldFactory.email({
     required TextEditingController controller,

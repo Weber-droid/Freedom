@@ -5,7 +5,6 @@ import 'package:freedom/feature/History/model/history_model.dart';
 import 'package:freedom/feature/History/view/history_detailed_screen.dart';
 import 'package:freedom/feature/History/widgets/ride_enum_tab.dart';
 import 'package:freedom/feature/home/view/home_screen.dart';
-import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:google_fonts/google_fonts.dart';
 
