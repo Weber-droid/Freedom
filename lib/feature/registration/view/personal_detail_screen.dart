@@ -4,10 +4,7 @@ import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:freedom/feature/main_activity/main_activity_screen.dart';
 import 'package:freedom/feature/registration/cubit/forms_cubit.dart';
-import 'package:freedom/feature/registration/view/register_form_screen.dart';
-import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_otp_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
@@ -59,37 +56,20 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: BlocConsumer<RegisterFormCubit, RegisterFormState>(
-          listener: (context, state) {
-        if (state.formStatus == FormStatus.failure) {
-          context.showToast(
-              type: ToastType.error,
-              position: ToastPosition.top,
-              message: 'Registration failed');
-        } else if (state.formStatus == FormStatus.success) {
-          context.showToast(type: ToastType.success, message: state.message);
-        }
-      }, builder: (context, state) {
-        Widget mainContent;
-        if (state.formStatus == FormStatus.success) {
-          mainContent = Center(
-            child: FreedomButton(
-                onPressed: () {
-                  Navigator.pushReplacementNamed(
-                      context, VerifyOtpScreen.routeName);
-                },
-                buttonTitle: Text(
-                  'Complete Registration',
-                  style: GoogleFonts.poppins(
-                    fontSize: 17.4,
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                backGroundColor: Colors.black,
-                borderRadius: BorderRadius.circular(7),
-                width: double.infinity),
-          );
-        } else {
+        listener: (context, state) {
+          if (state.formStatus == FormStatus.failure) {
+            context.showToast(
+                type: ToastType.error,
+                position: ToastPosition.top,
+                message: 'Registration failed');
+          } else if (state.formStatus == FormStatus.success) {
+            context.showToast(type: ToastType.success, message: state.message);
+            Navigator.pushNamed(context, VerifyOtpScreen.routeName);
+          }
+        },
+        builder: (context, state) {
+          Widget mainContent;
+
           mainContent = SafeArea(
             child: SingleChildScrollView(
               child: Container(
@@ -408,15 +388,15 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
               ),
             ),
           );
-        }
-        if (state.formStatus == FormStatus.submitting) {
-          return BlurredLoadingOverlay(
+          if (state.formStatus == FormStatus.submitting) {
+            return BlurredLoadingOverlay(
               isLoading: state.formStatus == FormStatus.submitting,
-              child: mainContent);
-        } else {
+              child: mainContent,
+            );
+          }
           return mainContent;
-        }
-      }),
+        },
+      ),
     );
   }
 }

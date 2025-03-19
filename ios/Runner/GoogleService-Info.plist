@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>97698100461-d609q3n1pm672b8pgann8uasmfj8odhg.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.97698100461-d609q3n1pm672b8pgann8uasmfj8odhg</string>
+	<key>API_KEY</key>
+	<string>AIzaSyB7Dqc8vHFcmqzruJ8iZ67lwyqGUDLFkcA</string>
+	<key>GCM_SENDER_ID</key>
+	<string>97698100461</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.freedom.app</string>
+	<key>PROJECT_ID</key>
+	<string>freedom-users</string>
+	<key>STORAGE_BUCKET</key>
+	<string>freedom-users.firebasestorage.app</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:97698100461:ios:3a4959fa934f3e44df08e4</string>
+</dict>
+</plist>
