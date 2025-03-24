@@ -32,9 +32,7 @@ class RegisterFormCubit extends Cubit<RegisterFormState> {
     emit(state.copyWith(formStatus: FormStatus.submitting));
     try {
       final response = await registerRepository.registerUser(UserModel(
-          name: state.fullName,
-          email: state.email,
-          phoneNumber: state.phone));
+          name: state.fullName, email: state.email, phoneNumber: state.phone));
 
       response.fold(
         (l) => emit(state.copyWith(formStatus: FormStatus.failure)),
@@ -42,7 +40,7 @@ class RegisterFormCubit extends Cubit<RegisterFormState> {
             formStatus: FormStatus.success,
             message: 'Success, please verify your number to login')),
       );
-    } on Exception catch (e) {
+    } on Exception catch (_) {
       emit(state.copyWith(formStatus: FormStatus.failure));
     }
   }
@@ -58,7 +56,7 @@ class RegisterFormCubit extends Cubit<RegisterFormState> {
             fullName: r?.displayName,
             message: 'Success, please verify your number to login')),
       );
-    } on Exception catch (e) {
+    } on Exception catch (_) {
       emit(state.copyWith(formStatus: FormStatus.failure));
     }
   }

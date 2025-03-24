@@ -393,7 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _showCalenderPicker(BuildContext context) async {
     if (Platform.isAndroid) {
-      final selectedDate = await showDatePicker(
+      await showDatePicker(
         context: context,
         firstDate: DateTime.now(),
         lastDate: DateTime(2100),

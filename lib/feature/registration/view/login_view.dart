@@ -1,13 +1,9 @@
-import 'dart:developer';
-
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:freedom/feature/profile/view/profile_screen.dart';
 import 'package:freedom/feature/registration/cubit/forms_cubit.dart';
 import 'package:freedom/feature/registration/view/personal_detail_screen.dart';
-import 'package:freedom/feature/registration/view/register_form_screen.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';

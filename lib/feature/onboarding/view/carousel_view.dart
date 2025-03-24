@@ -3,7 +3,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:freedom/feature/onboarding/view/onboarding_carousel_one.dart';
 import 'package:freedom/feature/onboarding/view/onboarding_carousel_two.dart';
 import 'package:freedom/feature/registration/view/login_view.dart';
-import 'package:freedom/feature/registration/view/personal_detail_screen.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
@@ -100,8 +99,7 @@ class _CarouselViewerState extends State<CarouselViewer> {
                     backGroundColor: Colors.black,
                     height: 57.76.h,
                     onPressed: () {
-                      Navigator.pushNamed(
-                          context, LoginView.routeName);
+                      Navigator.pushNamed(context, LoginView.routeName);
                     },
                     buttonTitle: Text(
                       'Get Started',
