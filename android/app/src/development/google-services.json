@@ -1,0 +1,90 @@
+{
+  "project_info": {
+    "project_number": "97698100461",
+    "project_id": "freedom-users",
+    "storage_bucket": "freedom-users.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:97698100461:android:bc8041643e3b165fdf08e4",
+        "android_client_info": {
+          "package_name": "com.freedom.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "97698100461-dab2558atjp8g2pl2c2link2rqkjfpnu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBykruR6AFRKqZwcU3d5SYpBByknzwjSuI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "97698100461-dab2558atjp8g2pl2c2link2rqkjfpnu.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "97698100461-d609q3n1pm672b8pgann8uasmfj8odhg.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.freedom.app"
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:97698100461:android:5bc9c0620babd39cdf08e4",
+        "android_client_info": {
+          "package_name": "com.freedom.app.dev"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "97698100461-kjvj960fa0ut21s6tir3b2jp3kaqm63d.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.freedom.app.dev",
+            "certificate_hash": "d1d5a6dadd3ea796a0649730c996c2aef05dbce0"
+          }
+        },
+        {
+          "client_id": "97698100461-dab2558atjp8g2pl2c2link2rqkjfpnu.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBykruR6AFRKqZwcU3d5SYpBByknzwjSuI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "97698100461-dab2558atjp8g2pl2c2link2rqkjfpnu.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "97698100461-d609q3n1pm672b8pgann8uasmfj8odhg.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.freedom.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

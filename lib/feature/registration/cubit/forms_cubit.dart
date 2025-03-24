@@ -46,4 +46,20 @@ class RegisterFormCubit extends Cubit<RegisterFormState> {
       emit(state.copyWith(formStatus: FormStatus.failure));
     }
   }
+
+  Future<void> registerOrLoginWithGoogle() async {
+    emit(state.copyWith(formStatus: FormStatus.submitting));
+    try {
+      final response = await registerRepository.registerOrLoginWithGoogle();
+      response.fold(
+        (l) => emit(state.copyWith(formStatus: FormStatus.failure)),
+        (r) => emit(state.copyWith(
+            formStatus: FormStatus.success,
+            fullName: r?.displayName,
+            message: 'Success, please verify your number to login')),
+      );
+    } on Exception catch (e) {
+      emit(state.copyWith(formStatus: FormStatus.failure));
+    }
+  }
 }
