@@ -10,6 +10,7 @@
       "type": "dart",
       "program": "lib/main_development.dart",
       "args": [
+        "--no-enable-impeller",
         "--flavor",
         "development",
         "--target",

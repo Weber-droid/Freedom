@@ -2,6 +2,9 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:freedom/feature/History/view/history_detailed_screen.dart';
+import 'package:freedom/feature/auth/view/login_view.dart';
+import 'package:freedom/feature/auth/view/personal_detail_screen.dart';
+import 'package:freedom/feature/auth/view/register_form_screen.dart';
 import 'package:freedom/feature/emergency/view/emergency_activated.dart';
 import 'package:freedom/feature/emergency/view/emergency_chat.dart';
 import 'package:freedom/feature/emergency/view/location_sharing.dart';
@@ -11,10 +14,8 @@ import 'package:freedom/feature/profile/view/address_screen.dart';
 import 'package:freedom/feature/profile/view/profile_details_screen.dart';
 import 'package:freedom/feature/profile/view/security_screen.dart';
 import 'package:freedom/feature/profile/view/wallet_screen.dart';
-import 'package:freedom/feature/registration/view/login_view.dart';
-import 'package:freedom/feature/registration/view/personal_detail_screen.dart';
-import 'package:freedom/feature/registration/view/register_form_screen.dart';
 import 'package:freedom/feature/splash/splash_screen.dart';
+import 'package:freedom/feature/user_verification/verify_otp/view/verify_login_view.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/router/error_page.dart';
 
@@ -95,6 +96,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     case LoginView.routeName:
       return _pageBuilder(
             (context) => const LoginView(),
+        settings: settings,
+      );
+    case VerifyLoginScreen.routeName:
+      return _pageBuilder(
+            (context) => const VerifyLoginScreen(),
         settings: settings,
       );
 

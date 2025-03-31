@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
-import 'package:hive/hive.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -32,12 +32,12 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _navigateUser() async {
     await Future<void>.delayed(const Duration(seconds: 2));
-    final box = Hive.box<bool>('firstTimerUser');
-    final isFirstTimer = box.get('isFirstTimer', defaultValue: true) ?? true;
+    final isFirstTimer = RegisterLocalDataSource.checkIsFirstTimer();
     if (!isFirstTimer) {
       await Navigator.pushNamed(context, MainActivityScreen.routeName);
       return;
+    } else {
+      await Navigator.pushNamed(context, '/onBoarding');
     }
-    await Navigator.pushNamed(context, '/onBoarding');
   }
 }

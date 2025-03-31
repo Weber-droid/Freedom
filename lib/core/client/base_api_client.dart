@@ -15,11 +15,10 @@ class BaseApiClients {
   final String baseUrl;
   final Map<String, String> _headers;
 
-  Future<http.Response> get(
-      String endPoint, {
-        Map<String, dynamic>? queryParameters,
-        Map<String, String>? headers,
-      }) async {
+  Future<http.Response> get(String endPoint, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
     try {
       final uri = _buildUri(endPoint, queryParameters: queryParameters);
       final response = await http
@@ -32,7 +31,7 @@ class BaseApiClients {
         onTimeout: () => throw TimeoutException('Request timed out'),
       );
 
-      return _handleResponse(response);
+      return response;
     } on TimeoutException {
       throw TimeoutException('Request timed out');
     } on NetworkException {
@@ -40,16 +39,15 @@ class BaseApiClients {
     }
   }
 
-  Future<http.Response> post(
-      String endPoint, {
-        required Map<String, dynamic> body,
-        Map<String, dynamic>? queryParameters,
-        Map<String, String>? headers,
-      }) async {
+  Future<http.Response> post(String endPoint, {
+    required Map<String, dynamic> body,
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
     try {
       final uri = _buildUri(endPoint, queryParameters: queryParameters);
       final encodedBody = json.encode(body);
-
+      log('Uri: $uri');
       // Create default headers with content-type if not provided
       final Map<String, String> requestHeaders = {
         'Content-Type': 'application/json',
@@ -78,7 +76,7 @@ class BaseApiClients {
       log('Response Status: ${response.statusCode}');
       log('Response Body: ${response.body}');
 
-      return _handleResponse(response);
+      return response;
     } on TimeoutException {
       throw TimeoutException('Request timed out');
     } on NetworkException {
@@ -90,12 +88,11 @@ class BaseApiClients {
     }
   }
 
-  Future<http.Response> put(
-      String endPoint, {
-        required Map<String, dynamic> body,
-        Map<String, dynamic>? queryParameters,
-        Map<String, String>? headers,
-      }) async {
+  Future<http.Response> put(String endPoint, {
+    required Map<String, dynamic> body,
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
     try {
       final uri = _buildUri(endPoint, queryParameters: queryParameters);
       final encodedBody = json.encode(body);
@@ -111,7 +108,7 @@ class BaseApiClients {
         onTimeout: () => throw TimeoutException('Request timed out'),
       );
 
-      return _handleResponse(response);
+      return response;
     } on TimeoutException {
       throw TimeoutException('Request timed out');
     } on NetworkException {
@@ -119,12 +116,11 @@ class BaseApiClients {
     }
   }
 
-  Future<http.Response> patch(
-      String endPoint, {
-        required Map<String, dynamic> body,
-        Map<String, dynamic>? queryParameters,
-        Map<String, String>? headers,
-      }) async {
+  Future<http.Response> patch(String endPoint, {
+    required Map<String, dynamic> body,
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
     try {
       final encodedBody = json.encode(body);
       final uri = _buildUri(endPoint, queryParameters: queryParameters);
@@ -138,7 +134,7 @@ class BaseApiClients {
         const Duration(seconds: 10),
         onTimeout: () => throw TimeoutException('Request timed out'),
       );
-      return _handleResponse(response);
+      return response;
     } on TimeoutException {
       throw TimeoutException('Request timed out');
     } on NetworkException {
@@ -146,11 +142,10 @@ class BaseApiClients {
     }
   }
 
-  Future<http.Response> delete(
-      String endPoint, {
-        Map<String, dynamic>? queryParameters,
-        Map<String, String>? headers,
-      }) async {
+  Future<http.Response> delete(String endPoint, {
+    Map<String, dynamic>? queryParameters,
+    Map<String, String>? headers,
+  }) async {
     try {
       final uri = _buildUri(endPoint, queryParameters: queryParameters);
       final response = await http
@@ -162,7 +157,7 @@ class BaseApiClients {
         const Duration(seconds: 10),
         onTimeout: () => throw TimeoutException('Request timed out'),
       );
-      return _handleResponse(response);
+      return response;
     } on TimeoutException {
       throw TimeoutException('Request timed out');
     } on NetworkException {
@@ -171,32 +166,11 @@ class BaseApiClients {
   }
 
   Uri _buildUri(String endPoint, {Map<String, dynamic>? queryParameters}) {
-    log('logging: ${Uri.parse('$baseUrl$endPoint').replace(queryParameters: queryParameters)}');
+    log('logging: ${Uri.parse('$baseUrl$endPoint').replace(
+        queryParameters: queryParameters)}');
     final parsedValue = Uri.parse('$baseUrl$endPoint').replace(
       queryParameters: queryParameters,
     );
     return parsedValue;
-  }
-
-  http.Response _handleResponse(http.Response response) {
-    switch (response.statusCode) {
-      case 200:
-      case 201:
-        return response;
-      case 400:
-        throw BadRequestException(response.body);
-      case 401:
-        throw UnauthorizedException(response.body);
-      case 403:
-        throw ForbiddenException(response.body);
-      case 404:
-        throw NotFoundException(response.body);
-      case 500:
-        throw InternalServerErrorException(response.body);
-      default:
-        throw NetworkException(
-          'Error occurred with status code: ${response.statusCode}',
-        );
-    }
   }
 }

@@ -1,7 +1,9 @@
 class Endpoints {
-  static const String login = '/login';
-  static const String register = 'auth/register/user';
-  static const String profile = 'users/profile';
+  static const String login = 'auth/login/request';
+  static const String loginVerify = 'auth/login/verify';
+  static const String register = 'auth/register';
+  static const String verify = 'auth/verify';
+  static const String profile = 'getMyProfile';
   static const String preference = 'preference';
   static const String status = 'rides/request';
   static const String location = '/location';

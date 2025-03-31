@@ -1,6 +1,5 @@
 part of 'home_cubit.dart';
 
-@freezed
 class HomeState extends Equatable {
   const HomeState({
     this.locations = const [],
