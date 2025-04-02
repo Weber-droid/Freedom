@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/auth/view/login_view.dart';
@@ -40,10 +42,7 @@ class _SplashPageState extends State<SplashPage> {
         RegisterLocalDataSource.checkOnboardingCompleted();
     final token = RegisterLocalDataSource.getJwtToken();
 
-    if (!isFirstTimer &&
-        onboardingCompleted &&
-        token != null &&
-        token.isNotEmpty) {
+    if (!isFirstTimer && onboardingCompleted && token.isNotEmpty) {
       await Navigator.pushNamed(context, MainActivityScreen.routeName);
       return;
     } else if (!isFirstTimer && !onboardingCompleted) {
@@ -51,7 +50,7 @@ class _SplashPageState extends State<SplashPage> {
       return;
     } else if (isFirstTimer) {
       await RegisterLocalDataSource.setIsFirstTimer(isFirstTimer: false);
-      await Navigator.pushNamed(context,CarouselViewer.routeName);
+      await Navigator.pushNamed(context, CarouselViewer.routeName);
       return;
     } else {
       await Navigator.pushNamed(context, LoginView.routeName);

@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/location_cubit/location_cubit.dart';
 import 'package:freedom/feature/home/models/home_history_model.dart';
@@ -13,7 +12,6 @@ import 'package:freedom/feature/home/view/welcome_screen.dart';
 import 'package:freedom/feature/home/widgets/audio_call_widget.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
-import 'package:freedom/feature/profile/view/profile_screen.dart';
 import 'package:freedom/shared/enums/enums.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
@@ -1307,7 +1305,7 @@ class _RiderContainerAndRideActionsState
                     final callId =
                         'call_MWCHb02GD5m6_${DateTime.now().millisecondsSinceEpoch}';
                     Navigator.of(context).push(
-                      MaterialPageRoute(
+                      MaterialPageRoute<dynamic>(
                         builder: (context) => AudioCallScreen(
                           callId: callId,
                           driverName: 'Holland Chale',

@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart';
 
 class AudioCallParticipantList extends StatelessWidget {
-  final List<CallParticipantState> participants;
-
   const AudioCallParticipantList({
-    Key? key,
     required this.participants,
-  }) : super(key: key);
+    super.key,
+  });
+  final List<CallParticipantState> participants;
 
   @override
   Widget build(BuildContext context) {
@@ -57,7 +56,7 @@ class AudioCallParticipantList extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            participant.name ?? 'Unknown',
+            participant.name,
             style: const TextStyle(
               fontSize: 14,
               color: Colors.white,

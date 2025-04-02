@@ -3,20 +3,18 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freedom/core/services/audio_call_service/audio_call_service.dart';
-import 'package:freedom/shared/enums/enums.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart' as stream_video;
 
 part 'call_state.dart';
 
 class CallCubit extends Cubit<AudioCallState> {
-  final CallServiceInterface _callService;
-  StreamSubscription? _callStateSubscription;
-
   CallCubit({
     required CallServiceInterface callService,
   })  : _callService = callService,
         super(const AudioCallState());
+  final CallServiceInterface _callService;
+  StreamSubscription<dynamic>? _callStateSubscription;
 
   Future<void> initialize({
     required String userId,

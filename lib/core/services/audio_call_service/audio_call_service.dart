@@ -1,3 +1,5 @@
+// ignore_for_file: inference_failure_on_instance_creation
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -29,7 +31,6 @@ class StreamCallService implements CallServiceInterface {
 
   late StreamVideo _client;
   Call? _currentCall;
-  String? _userId;
   bool _isInitialized = false;
 
   @override
@@ -37,8 +38,6 @@ class StreamCallService implements CallServiceInterface {
       {required String userId, required String userName}) async {
     if (_isInitialized) return;
     try {
-      _userId = userId;
-
       // In a real app, you would get this token from your backend
       final userToken = await _getUserToken(userId);
 

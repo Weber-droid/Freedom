@@ -16,10 +16,10 @@ class StackedBottomSheetComponent extends StatefulWidget {
     super.key,
   });
   final VoidCallback onFindRider;
-  final Function(int) onServiceSelected;
+  final void Function(int) onServiceSelected;
 
   @override
-  _StackedBottomSheetComponentState createState() =>
+  State<StackedBottomSheetComponent> createState() =>
       _StackedBottomSheetComponentState();
 }
 

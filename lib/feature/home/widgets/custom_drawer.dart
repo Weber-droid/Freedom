@@ -78,29 +78,4 @@ class CustomDrawer extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String text,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: Colors.white,
-      ),
-      title: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 16,
-        ),
-      ),
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-      hoverColor: Colors.white.withOpacity(0.1),
-    );
-  }
 }
-
-// Usage in Scaffold

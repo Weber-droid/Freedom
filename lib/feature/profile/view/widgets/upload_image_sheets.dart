@@ -4,20 +4,22 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class ImageUploadBottomSheet extends StatefulWidget {
-
   const ImageUploadBottomSheet({
-    required this.onImageSelected, super.key,
+    required this.onImageSelected,
+    super.key,
     this.maxHeight = 400,
   });
-  final Function(File) onImageSelected;
+  final void Function(File) onImageSelected;
   final double maxHeight;
 
-  static Future<void> show(BuildContext context, Function(File) onImageSelected) async {
-    await showModalBottomSheet(
+  static Future<void> show(
+      BuildContext context, void Function(File) onImageSelected) async {
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => ImageUploadBottomSheet(onImageSelected: onImageSelected),
+      builder: (context) =>
+          ImageUploadBottomSheet(onImageSelected: onImageSelected),
     );
   }
 
@@ -35,7 +37,8 @@ class _ImageUploadBottomSheetState extends State<ImageUploadBottomSheet> {
     final status = await permission.request();
     if (status.isDenied) {
       setState(() {
-        _errorMessage = 'Permission denied. Please enable permissions in settings.';
+        _errorMessage =
+            'Permission denied. Please enable permissions in settings.';
       });
     }
   }
@@ -53,7 +56,7 @@ class _ImageUploadBottomSheetState extends State<ImageUploadBottomSheet> {
         await _requestPermission(Permission.photos);
       }
 
-      final XFile? image = await _picker.pickImage(
+      final image = await _picker.pickImage(
         source: source,
         imageQuality: 85,
         maxWidth: 1000,
@@ -88,9 +91,8 @@ class _ImageUploadBottomSheetState extends State<ImageUploadBottomSheet> {
   Widget build(BuildContext context) {
     return Container(
       constraints: BoxConstraints(
-        maxHeight: _selectedImage != null
-            ? widget.maxHeight + 240
-            : widget.maxHeight,
+        maxHeight:
+            _selectedImage != null ? widget.maxHeight + 240 : widget.maxHeight,
       ),
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -114,7 +116,7 @@ class _ImageUploadBottomSheetState extends State<ImageUploadBottomSheet> {
           ),
 
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -178,7 +180,7 @@ class _ImageUploadBottomSheetState extends State<ImageUploadBottomSheet> {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.6),
+                        color: Colors.black.withValues(alpha: 0.6),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -196,14 +198,14 @@ class _ImageUploadBottomSheetState extends State<ImageUploadBottomSheet> {
           if (_isLoading)
             const Center(
               child: Padding(
-                padding: EdgeInsets.all(16.0),
+                padding: EdgeInsets.all(16),
                 child: CircularProgressIndicator(),
               ),
             ),
 
           // Upload options
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 _buildOptionTile(
@@ -226,7 +228,7 @@ class _ImageUploadBottomSheetState extends State<ImageUploadBottomSheet> {
           // Confirm button
           if (_selectedImage != null)
             Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
               child: ElevatedButton(
                 onPressed: _confirmSelection,
                 style: ElevatedButton.styleFrom(
@@ -270,7 +272,7 @@ class _ImageUploadBottomSheetState extends State<ImageUploadBottomSheet> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(

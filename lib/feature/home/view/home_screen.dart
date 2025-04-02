@@ -1,5 +1,3 @@
-import 'dart:developer';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
@@ -51,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
         listener: (context, state) {
           if (state.serviceStatus == LocationServiceStatus.located &&
               state.currentLocation != null) {
-            _mapController?.animateCamera(
+            _mapController.animateCamera(
               CameraUpdate.newCameraPosition(
                 CameraPosition(
                   target: state.currentLocation!,

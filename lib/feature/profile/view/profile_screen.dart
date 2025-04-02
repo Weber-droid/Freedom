@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -203,7 +201,7 @@ class ProfileCard extends StatelessWidget {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             color: Colors.white,
-                            border: Border.all(color: Colors.black, width: 2),
+                            border: Border.all(width: 2),
                           ),
                           child: SvgPicture.asset(
                             'assets/images/edit_profile.svg',
@@ -274,7 +272,8 @@ class ProfileCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 50,
-                  backgroundImage: _getProfileImage(profileData?.profilePicture),
+                  backgroundImage:
+                      _getProfileImage(profileData?.profilePicture),
                 ),
                 Positioned(
                   bottom: 0,
@@ -299,7 +298,8 @@ class ProfileCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 50,
-                  backgroundImage: _getProfileImage(profileData?.profilePicture),
+                  backgroundImage:
+                      _getProfileImage(profileData?.profilePicture),
                 ),
                 Positioned(
                   bottom: 0,
@@ -341,7 +341,7 @@ class ProfileCard extends StatelessWidget {
   }
 
   void _showImagePickerOptions(BuildContext context) {
-    showModalBottomSheet(
+    showModalBottomSheet<void>(
       context: context,
       builder: (context) => Column(
         mainAxisSize: MainAxisSize.min,
@@ -351,7 +351,7 @@ class ProfileCard extends StatelessWidget {
             title: const Text('Take a photo'),
             onTap: () {
               Navigator.of(context).pop();
-              context.read<ProfileCubit>().pickImage(source: ImageSource.camera);
+              context.read<ProfileCubit>().pickImage();
             },
           ),
           ListTile(
@@ -359,7 +359,9 @@ class ProfileCard extends StatelessWidget {
             title: const Text('Choose from gallery'),
             onTap: () {
               Navigator.of(context).pop();
-              context.read<ProfileCubit>().pickImage(source: ImageSource.gallery);
+              context
+                  .read<ProfileCubit>()
+                  .pickImage(source: ImageSource.gallery);
             },
           ),
         ],
