@@ -53,6 +53,7 @@ dependencies:
   http_parser: ^4.1.2
   image_picker: ^1.1.2
   stream_video_flutter: ^0.8.4
+  geocoding: ^3.0.0
 dev_dependencies:
   bloc_test: ^9.1.7
   retrofit_generator: ^9.1.3

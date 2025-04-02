@@ -18,6 +18,7 @@ import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
 import 'package:freedom/shared/widgets/custom_dropdown_button.dart';
 import 'package:freedom/shared/widgets/text_field_factory.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gradient_borders/box_borders/gradient_box_border.dart';
 
@@ -1385,6 +1386,7 @@ class UserFloatingAccessBar extends StatelessWidget {
                 ),
               ),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   const BuildProfileImage(),
                   const HSpace(5),
@@ -1434,15 +1436,17 @@ class UserFloatingAccessBar extends StatelessWidget {
                           ],
                         )
                       else if (state.serviceStatus ==
-                          LocationServiceStatus.located)
+                              LocationServiceStatus.located ||
+                          state.serviceStatus ==
+                              LocationServiceStatus.permissionGranted)
                         SvgPicture.asset('assets/images/map_location_icon.svg'),
                     ],
                   ),
                   const HSpace(6),
                   Flexible(
                     child: Text(
-                      'Kumasi ,Ghana Kuwama',
-                      maxLines: 2,
+                      state.userAddress,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(

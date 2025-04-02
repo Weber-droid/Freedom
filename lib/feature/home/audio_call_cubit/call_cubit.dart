@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freedom/core/services/audio_call_service/audio_call_service.dart';
+import 'package:geocoding/geocoding.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart' as stream_video;
 
@@ -44,7 +45,6 @@ class CallCubit extends Cubit<AudioCallState> {
     try {
       await _callService.makeCall(callId: callId);
 
-      // Access the current call and subscribe to its state changes
       if (_callService is StreamCallService) {
         final streamCallService = _callService;
         final call = streamCallService.currentCall;

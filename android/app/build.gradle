@@ -45,7 +45,7 @@ println(dartEnvironmentVariables)
 
 android {
     namespace "com.freedom.app"
-    compileSdkVersion flutter.compileSdkVersion
+    compileSdkVersion 35
     ndkVersion flutter.ndkVersion
 
     compileOptions {
