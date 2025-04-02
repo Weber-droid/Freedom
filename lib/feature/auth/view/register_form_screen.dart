@@ -170,7 +170,7 @@ class _RegisterFormScreenState extends State<RegisterFormScreen> {
                     builder: (context, state) {
                       if (state.formStatus == FormStatus.submitting) {
                         return BlurredLoadingOverlay(
-                            blurAmount: 10.0,
+                            blurAmount: 10,
                             overlayColor: Colors.blue.withValues(alpha: 0.2),
                             isLoading:
                                 state.formStatus == FormStatus.submitting,

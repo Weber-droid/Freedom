@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:dartz/dartz.dart';
 import 'package:freedom/core/client/data_layer_exceptions.dart';
@@ -21,6 +22,18 @@ class ProfileRepository {
       final response = await _remoteDataSource.fetchUserProfile();
       log('response: ${response.toJson()}');
       return Right(response);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure('An unexpected error occurred: $e'));
+    }
+  }
+  Future<Either<Failure, void>> updateProfile(File profile) async {
+    try {
+      final response = await _remoteDataSource.uploadImage(profile);
+      return const Right(0);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
     } on NetworkException catch (e) {

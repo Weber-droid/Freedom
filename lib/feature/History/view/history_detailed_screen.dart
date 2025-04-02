@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:freedom/feature/History/view/history_screen.dart';
 import 'package:freedom/feature/home/view/home_screen.dart';
+import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';

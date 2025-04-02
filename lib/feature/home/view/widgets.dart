@@ -5,9 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
+import 'package:freedom/feature/home/location_cubit/location_cubit.dart';
 import 'package:freedom/feature/home/models/home_history_model.dart';
 import 'package:freedom/feature/home/view/welcome_screen.dart';
+import 'package:freedom/feature/home/widgets/audio_call_widget.dart';
+import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
+import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
+import 'package:freedom/feature/profile/view/profile_screen.dart';
+import 'package:freedom/shared/enums/enums.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
@@ -953,5 +960,573 @@ Future<void> showAlertDialog(
         ],
       );
     },
+  );
+}
+
+class RiderFoundBottomSheet extends StatelessWidget {
+  const RiderFoundBottomSheet({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, constraints) {
+      return Stack(
+        children: [
+          Container(
+            height: 349.h,
+            width: constraints.maxWidth,
+            decoration: const BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 39.h,
+            child: Container(
+              height: 310.h,
+              width: constraints.maxWidth,
+              decoration: BoxDecoration(
+                gradient: whiteAmberGradient,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+              ),
+              child: Column(
+                children: [
+                  const VSpace(13),
+                  Container(height: 5, width: 50, color: Colors.white),
+                  const VSpace(15),
+                  const RiderContainerAndRideActions(),
+                  const VSpace(14),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: fillColor2,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: Colors.white,
+                      ),
+                    ),
+                    padding: const EdgeInsets.fromLTRB(15, 10, 6, 17.78),
+                    margin: EdgeInsets.symmetric(horizontal: 13.w),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Route',
+                          style: GoogleFonts.poppins(
+                            color: Colors.black,
+                            fontSize: 11.51,
+                            fontWeight: FontWeight.w600,
+                            height: 0,
+                          ),
+                        ),
+                        // const Spacer(),
+                        const RiderTimeLine(
+                          pickUpDetails: 'Ghana, Kumasi',
+                          destinationDetails: 'Chale ,Kumasi',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const VSpace(47),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    child: FreedomButton(
+                      onPressed: () {
+                        showAlertDialog(
+                          context,
+                          title: 'Cancel Ride',
+                          cancel: () {
+                            return Navigator.pop(context);
+                          },
+                          message: 'Are you sure you want to cancel the ride?',
+                          confirm: () {
+                            Navigator.pop(context);
+                          },
+                        );
+                      },
+                      useGradient: true,
+                      gradient: gradient,
+                      title: 'Cancel Ride',
+                      buttonTitle: Text(
+                        'Cancel Ride',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 9,
+            left: 14,
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width - 28,
+              child: Row(
+                children: [
+                  const Image(
+                    image: AssetImage('assets/images/jump-time_icon.png'),
+                  ),
+                  const HSpace(3),
+                  const Text(
+                    'The rider will arrive in ....',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(6, 4, 4, 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: Row(
+                      children: [
+                        SvgPicture.asset('assets/images/clock_icon.svg'),
+                        const HSpace(4),
+                        Text(
+                          '08:12 Mins',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 11.76,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        ],
+      );
+    });
+  }
+}
+
+class RiderTimeLine extends StatelessWidget {
+  const RiderTimeLine({
+    super.key,
+    this.destinationDetails = '',
+    this.pickUpDetails = '',
+  });
+  final String destinationDetails;
+  final String pickUpDetails;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SvgPicture.asset('assets/images/distance_line.svg'),
+        const VSpace(5),
+        SizedBox(
+          width: 200,
+          child: Row(
+            children: [
+              Expanded(
+                child: SizedBox(
+                  width: 100,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Pick up',
+                        style: GoogleFonts.poppins(
+                          color: Colors.black,
+                          fontSize: 8.78,
+                          fontWeight: FontWeight.w400,
+                          height: 0,
+                        ),
+                      ),
+                      ShaderMask(
+                        shaderCallback: (Rect bounds) {
+                          return darkGoldGradient.createShader(bounds);
+                        },
+                        child: Text(
+                          pickUpDetails,
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFFF59E0B),
+                            fontSize: 9.07,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+              const HSpace(41),
+              Expanded(
+                child: SizedBox(
+                  width: 100,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Destination',
+                        style: GoogleFonts.poppins(
+                          color: Colors.black,
+                          fontSize: 8.78,
+                          fontWeight: FontWeight.w400,
+                          height: 0,
+                        ),
+                      ),
+                      ShaderMask(
+                        shaderCallback: (Rect bounds) {
+                          return darkGoldGradient.createShader(bounds);
+                        },
+                        child: Text(
+                          destinationDetails,
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFFF59E0B),
+                            fontSize: 9.07,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              )
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class RiderContainerAndRideActions extends StatefulWidget {
+  const RiderContainerAndRideActions({
+    super.key,
+  });
+
+  @override
+  State<RiderContainerAndRideActions> createState() =>
+      _RiderContainerAndRideActionsState();
+}
+
+class _RiderContainerAndRideActionsState
+    extends State<RiderContainerAndRideActions> {
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(7, 8, 7, 8),
+        decoration: BoxDecoration(
+          color: fillColor2,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: Colors.white,
+          ),
+        ),
+        child: Row(
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 37,
+                  height: 37,
+                  padding: const EdgeInsets.only(left: 7),
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: Colors.white,
+                    ),
+                    borderRadius: BorderRadius.circular(7),
+                    image: const DecorationImage(
+                      image: AssetImage(
+                        'assets/images/rider_image.png',
+                      ),
+                    ),
+                  ),
+                ),
+                const HSpace(6),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Holland Chale ',
+                      style: GoogleFonts.poppins(
+                        color: Colors.black,
+                        fontSize: 10.89,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'Logistic',
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFF939393),
+                        fontSize: 10.89,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const Spacer(),
+            Row(
+              children: [
+                Container(
+                  height: 35.49,
+                  width: 35.49,
+                  padding: const EdgeInsets.fromLTRB(
+                    6.37,
+                    8.19,
+                    6.37,
+                    5.46,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(7.28),
+                  ),
+                  child: SvgPicture.asset(
+                    'assets/images/user_message_icon.svg',
+                  ),
+                ),
+                const SizedBox(width: 7.4), // Space between icons
+                // Second Icon
+                GestureDetector(
+                  onTap: () {
+                    final callId =
+                        'call_MWCHb02GD5m6_${DateTime.now().millisecondsSinceEpoch}';
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => AudioCallScreen(
+                          callId: callId,
+                          driverName: 'Holland Chale',
+                          driverPhoto: 'assets/images/rider_image.png',
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    height: 35.49,
+                    width: 35.49,
+                    padding: const EdgeInsets.fromLTRB(
+                      7.28,
+                      6.38,
+                      7.28,
+                      7.74,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.black,
+                      borderRadius: BorderRadius.circular(7.28),
+                    ),
+                    child: SvgPicture.asset(
+                      'assets/images/call_icon.svg',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class UserFloatingAccessBar extends StatelessWidget {
+  const UserFloatingAccessBar(
+      {required GlobalKey<ScaffoldState> scaffoldKey,
+      required this.state,
+      super.key})
+      : _scaffoldKey = scaffoldKey;
+  final GlobalKey<ScaffoldState> _scaffoldKey;
+  final LocationState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: 90,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 21),
+        child: Row(
+          children: [
+            IconButton(
+              onPressed: () {
+                _scaffoldKey.currentState?.openDrawer();
+              },
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(50),
+                ),
+              ),
+              icon: SvgPicture.asset('assets/images/menu_icon.svg'),
+            ),
+            const HSpace(28.91),
+            Container(
+              width: 206,
+              padding: const EdgeInsets.only(top: 5, left: 5, bottom: 5),
+              decoration: ShapeDecoration(
+                color: Colors.white,
+                shape: RoundedRectangleBorder(
+                  side: const BorderSide(
+                    strokeAlign: BorderSide.strokeAlignOutside,
+                    color: Color(0x23B0B0B0),
+                  ),
+                  borderRadius: BorderRadius.circular(18),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const BuildProfileImage(),
+                  const HSpace(5),
+                  Stack(
+                    children: [
+                      if (state.serviceStatus ==
+                              LocationServiceStatus.serviceDisabled ||
+                          state.serviceStatus ==
+                              LocationServiceStatus.permissionDenied)
+                        Stack(
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                context
+                                    .read<LocationCubit>()
+                                    .checkPermissionStatus(
+                                        requestPermissions: true);
+                              },
+                              child: SvgPicture.asset(
+                                  'assets/images/map_location_icon.svg'),
+                            ),
+                            Positioned(
+                              top: 0,
+                              right: 0,
+                              child: Container(
+                                height: 10,
+                                width: 10,
+                                decoration: const ShapeDecoration(
+                                  color: Colors.red,
+                                  shape: OvalBorder(
+                                    side: BorderSide(
+                                      strokeAlign:
+                                          BorderSide.strokeAlignOutside,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                child: SvgPicture.asset(
+                                  'assets/images/error_line.svg',
+                                  colorFilter: const ColorFilter.mode(
+                                      Colors.white, BlendMode.srcIn),
+                                  height: 10,
+                                  width: 10,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      else if (state.serviceStatus ==
+                          LocationServiceStatus.located)
+                        SvgPicture.asset('assets/images/map_location_icon.svg'),
+                    ],
+                  ),
+                  const HSpace(6),
+                  Flexible(
+                    child: Text(
+                      'Kumasi ,Ghana Kuwama',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(
+                        color: Colors.black,
+                        fontSize: 10.89,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const HSpace(27),
+            Container(
+              width: 47,
+              height: 47,
+              padding: const EdgeInsets.fromLTRB(12, 13, 12, 10),
+              decoration: const ShapeDecoration(
+                color: Color(0xFFEBECEB),
+                shape: OvalBorder(
+                  side: BorderSide(
+                    strokeAlign: BorderSide.strokeAlignOutside,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+              child: SvgPicture.asset('assets/images/user_position.svg'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class BuildProfileImage extends StatelessWidget {
+  const BuildProfileImage({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Hero(
+      tag: 'profileImage',
+      child: GestureDetector(
+        onTap: () {
+          context.read<MainActivityCubit>().navigateToScreen(3);
+        },
+        child: BlocBuilder<ProfileCubit, ProfileState>(
+          builder: (context, state) {
+            switch (state) {
+              case ProfileError():
+                return _buildEmptyImage();
+              case ProfileLoaded():
+                return CircleAvatar(
+                  radius: 20,
+                  backgroundImage:
+                      NetworkImage(state.user?.data.profilePicture ?? ''),
+                );
+              case ProfileLoading():
+                return _buildEmptyImage();
+              default:
+                return _buildEmptyImage();
+            }
+          },
+        ),
+      ),
+    );
+  }
+}
+
+Widget _buildEmptyImage() {
+  return Container(
+    decoration: BoxDecoration(
+      border: Border.all(
+        color: thickFillColor,
+      ),
+      borderRadius: BorderRadius.circular(50),
+    ),
+    child: CircleAvatar(
+      radius: 10,
+      backgroundColor: Colors.white,
+      child: SvgPicture.asset('assets/images/user.svg',
+          height: 15, width: 15, fit: BoxFit.contain),
+    ),
   );
 }

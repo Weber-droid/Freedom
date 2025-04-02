@@ -10,7 +10,7 @@ import 'package:freedom/feature/profile/view/profile_screen.dart';
 class MainActivityScreen extends StatelessWidget {
   const MainActivityScreen({super.key});
 
-  static const routeName = '/main_activity';
+  static const routeName = '/';
 
   @override
   Widget build(BuildContext context) {

@@ -2,12 +2,14 @@ import 'dart:developer';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:freedom/core/client/data_layer_exceptions.dart';
 import 'package:freedom/feature/auth/remote_data_source/models/models.dart';
 import 'package:freedom/feature/auth/repository/register_repository.dart';
 import 'package:freedom/shared/enums/enums.dart';
 import 'package:freedom/shared/network_helpers.dart';
 
 part 'registration_state.dart';
+
 class RegisterCubit extends Cubit<RegisterState> {
   RegisterCubit(this.registerRepository) : super(const RegisterState());
   final RegisterRepository registerRepository;
@@ -46,7 +48,8 @@ class RegisterCubit extends Cubit<RegisterState> {
             message: 'Success, please verify your number to login')),
       );
     } on Exception catch (_) {
-      emit(state.copyWith(formStatus: FormStatus.failure, message: state.message));
+      emit(state.copyWith(
+          formStatus: FormStatus.failure, message: state.message));
     }
   }
 
@@ -61,8 +64,13 @@ class RegisterCubit extends Cubit<RegisterState> {
             fullName: r?.displayName,
             message: 'Success, please verify your number to login')),
       );
-    } on Exception catch (_) {
-      emit(state.copyWith(formStatus: FormStatus.failure));
+    } on ServerException catch (e) {
+      emit(state.copyWith(formStatus: FormStatus.failure, message: e.message));
+    } on NetworkException catch (e) {
+      emit(state.copyWith(formStatus: FormStatus.failure, message: e.message));
+    } catch (e) {
+      emit(state.copyWith(
+          formStatus: FormStatus.failure, message: e.toString()));
     }
   }
 }

@@ -2,6 +2,8 @@ class Endpoints {
   static const String login = 'auth/login/request';
   static const String loginVerify = 'auth/login/verify';
   static const String register = 'auth/register';
+  static const String uploadImage = '/upload-profile-pictureimage';
+  static const String addGoogleUser = 'auth/mobile/social';
   static const String verify = 'auth/verify';
   static const String profile = 'getMyProfile';
   static const String preference = 'preference';

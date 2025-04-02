@@ -88,7 +88,7 @@ android {
     }
 
     flavorDimensions "default"
-    productFlavors { 
+    productFlavors {
         production {
             dimension "default"
             applicationIdSuffix ""
@@ -101,7 +101,7 @@ android {
         }
         development {
             dimension "default"
-            applicationIdSuffix ".dev"
+            applicationIdSuffix ""
             manifestPlaceholders = [appName: "[DEV] Freedom"]
         }
     }
@@ -124,4 +124,5 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.20"
+    implementation "com.google.firebase:firebase-analytics"
 }

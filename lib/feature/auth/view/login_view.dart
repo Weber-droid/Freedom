@@ -167,7 +167,7 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
                 const VSpace(29),
-                _buildLoginButton(context, state),
+                _buildLoginButton(context),
                 const VSpace(26),
                 Row(
                   children: [
@@ -245,26 +245,33 @@ class _LoginViewState extends State<LoginView> {
     );
   }
 
-  Widget _buildLoginButton(BuildContext context, LoginState state) {
+  Widget _buildLoginButton(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 17),
-      child: FreedomButton(
-        backGroundColor: Colors.black,
-        borderRadius: BorderRadius.circular(7),
-        width: double.infinity,
-        title: 'Continue',
-        buttonTitle: Text('Continue',
-            style: GoogleFonts.poppins(
-              fontSize: 17.4,
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
-            )),
-        onPressed: () {
-          if (fromKey.currentState!.validate()) {
-            final phoneNumber = getFullPhoneNumber();
-            context.read<LoginCubit>().setPhoneNumber(phoneNumber);
-            context.read<LoginCubit>().loginUserWithPhoneNumber();
+      child: BlocBuilder<LoginCubit, LoginState>(
+        builder: (context,state){
+          if(state.formStatus == FormStatus.submitting){
+           return const Center(child: CircularProgressIndicator());
           }
+          return  FreedomButton(
+            backGroundColor: Colors.black,
+            borderRadius: BorderRadius.circular(7),
+            width: double.infinity,
+            title: 'Continue',
+            buttonTitle: Text('Continue',
+                style: GoogleFonts.poppins(
+                  fontSize: 17.4,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                )),
+            onPressed: () {
+              if (fromKey.currentState!.validate()) {
+                final phoneNumber = getFullPhoneNumber();
+                context.read<LoginCubit>().setPhoneNumber(phoneNumber);
+                context.read<LoginCubit>().loginUserWithPhoneNumber();
+              }
+            },
+          );
         },
       ),
     );

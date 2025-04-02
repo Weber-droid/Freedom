@@ -9,4 +9,7 @@ class MainActivityCubit extends Cubit<MainActivityState> {
   void changeIndex(int index) {
     emit(state.copyWith(currentIndex: index));
   }
+  void navigateToScreen(int screenIndex) {
+    emit(state.copyWith(currentIndex: screenIndex));
+  }
 }

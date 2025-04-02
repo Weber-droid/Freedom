@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freedom/core/client/data_layer_exceptions.dart';
+import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/auth/repository/register_repository.dart';
@@ -37,6 +38,9 @@ class VerifyLoginCubit extends Cubit<VerifyLoginState> {
             await RegisterLocalDataSource.setIsFirstTimer(isFirstTimer: false);
             final dataSource = RegisterLocalDataSource();
             await dataSource.saveUser(r ?? User());
+            if(!getIt.isRegistered<User>()) {
+              getIt.registerSingleton<User>(r ?? User());
+            }
             emit(
               state.copyWith(
                 status: VerifyLoginStatus.success,

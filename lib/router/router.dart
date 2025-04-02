@@ -8,6 +8,7 @@ import 'package:freedom/feature/auth/view/register_form_screen.dart';
 import 'package:freedom/feature/emergency/view/emergency_activated.dart';
 import 'package:freedom/feature/emergency/view/emergency_chat.dart';
 import 'package:freedom/feature/emergency/view/location_sharing.dart';
+import 'package:freedom/feature/home/view/home_screen.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
 import 'package:freedom/feature/onboarding/view/carousel_view.dart';
 import 'package:freedom/feature/profile/view/address_screen.dart';
@@ -25,7 +26,7 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
   switch (settings.name) {
     case SplashPage.routeName:
       return _pageBuilder(
-        (context) => const SplashPage(),
+        (context) => const MainActivityScreen(),
         settings: settings,
       );
     case MainActivityScreen.routeName:
@@ -103,7 +104,6 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
             (context) => const VerifyLoginScreen(),
         settings: settings,
       );
-
     default:
       return _pageBuilder(
         (context) => const ErrorPage(),

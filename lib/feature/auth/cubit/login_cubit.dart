@@ -19,7 +19,6 @@ class LoginCubit extends Cubit<LoginState> {
   }
 
   Future<void> loginUserWithPhoneNumber() async {
-    // Use the phone number already stored in state
     final phoneNumber = state.phone;
 
     if (phoneNumber == null || phoneNumber.isEmpty) {

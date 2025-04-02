@@ -3,18 +3,17 @@ part 'local_user.g.dart';
 
 @HiveType(typeId: 0)
 class User {
-
-  User({
-    this.id,
-    this.name,
-    this.phone,
-    this.email,
-    this.role,
-    this.token,
-    this.success,
-    this.message,
-    this.userId,
-  });
+  User(
+      {this.id,
+      this.name,
+      this.phone,
+      this.email,
+      this.role,
+      this.token,
+      this.success,
+      this.message,
+      this.userId,
+      this.userImage});
 
   /// Factory constructor for creating a User from verification endpoint response
   factory User.fromVerificationResponse(Map<String, dynamic> json) {
@@ -79,6 +78,9 @@ class User {
   @HiveField(8)
   final String? userId;
 
+  @HiveField(9)
+  final String? userImage;
+
   /// Create a copy of this User but with the given fields replaced with the new values
   User copyWith({
     String? id,
@@ -90,18 +92,19 @@ class User {
     bool? success,
     String? message,
     String? userId,
+    String? userImage,
   }) {
     return User(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      phone: phone ?? this.phone,
-      email: email ?? this.email,
-      role: role ?? this.role,
-      token: token ?? this.token,
-      success: success ?? this.success,
-      message: message ?? this.message,
-      userId: userId ?? this.userId,
-    );
+        id: id ?? this.id,
+        name: name ?? this.name,
+        phone: phone ?? this.phone,
+        email: email ?? this.email,
+        role: role ?? this.role,
+        token: token ?? this.token,
+        success: success ?? this.success,
+        message: message ?? this.message,
+        userId: userId ?? this.userId,
+        userImage: userImage ?? this.userImage);
   }
 
   /// Convert User instance to a JSON map
@@ -116,6 +119,7 @@ class User {
       'success': success,
       'message': message,
       'userId': userId,
+      'userImage': userImage
     }..removeWhere((key, value) => value == null);
   }
 }

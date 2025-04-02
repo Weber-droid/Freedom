@@ -15,10 +15,12 @@ import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/toasts.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
+  static const String routeName = '/profile-screen';
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
 }
@@ -36,79 +38,83 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: BlocConsumer<ProfileCubit, ProfileState>(
-          listener: (context, state) {
-            if (state is ProfileError) {
-              context.showToast(
-                  message: state.message,
-                  type: ToastType.error,
-                  position: ToastPosition.top);
-            }
-          },
-          builder: (context, state) {
-            return Column(
-              children: [
-                Center(
-                  child: Text(
-                    'Profile',
-                    style: GoogleFonts.poppins(),
+    return Hero(
+      tag: 'profileImage',
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: BlocConsumer<ProfileCubit, ProfileState>(
+            listener: (context, state) {
+              if (state is ProfileError) {
+                context.showToast(
+                    message: state.message,
+                    type: ToastType.error,
+                    position: ToastPosition.top);
+              }
+            },
+            builder: (context, state) {
+              return Column(
+                children: [
+                  Center(
+                    child: Text(
+                      'Profile',
+                      style: GoogleFonts.poppins(),
+                    ),
                   ),
-                ),
-                const VSpace(35),
-                ProfileCard(userData: userData ?? User(), state: state),
-                const VSpace(10),
-                const Divider(
-                  thickness: 5,
-                  color: Color(0xFFF1F1F1),
-                ),
-                const VSpace(22.49),
-                PersonalDataSection(
-                  onProfileTap: () {
-                    Navigator.pushNamed(context, ProfileDetailsScreen.routeName);
-                  },
-                  onWalletTap: () {
-                    Navigator.pushNamed(context, WalletScreen.routeName);
-                  },
-                  paddingSection: const EdgeInsets.all(5),
-                ),
-                const VSpace(10.49),
-                MoreSection(
-                  onTapAddress: () => Navigator.pushNamed(
-                    context,
-                    AddressScreen.routeName,
+                  const VSpace(35),
+                  ProfileCard(userData: userData ?? User(), state: state),
+                  const VSpace(10),
+                  const Divider(
+                    thickness: 5,
+                    color: Color(0xFFF1F1F1),
                   ),
-                  onTapLogout: () async {
-                    // User? user;
-                    // RegisterLocalDataSource().getUser().then((val) {
-                    //   Future.delayed(const Duration(seconds: 1));
-                    //   user = val;
-                    //   log('user: ${user}');
-                    // });
+                  const VSpace(22.49),
+                  PersonalDataSection(
+                    onProfileTap: () {
+                      Navigator.pushNamed(
+                          context, ProfileDetailsScreen.routeName);
+                    },
+                    onWalletTap: () {
+                      Navigator.pushNamed(context, WalletScreen.routeName);
+                    },
+                    paddingSection: const EdgeInsets.all(5),
+                  ),
+                  const VSpace(10.49),
+                  MoreSection(
+                    onTapAddress: () => Navigator.pushNamed(
+                      context,
+                      AddressScreen.routeName,
+                    ),
+                    onTapLogout: () async {
+                      // User? user;
+                      // RegisterLocalDataSource().getUser().then((val) {
+                      //   Future.delayed(const Duration(seconds: 1));
+                      //   user = val;
+                      //   log('user: ${user}');
+                      // });
 
-                    await RegisterLocalDataSource.setJwtToken('');
-                    await RegisterLocalDataSource.setIsFirstTimer(
-                        isFirstTimer: true);
-                    RegisterLocalDataSource.invalidateCache();
-                    await Navigator.pushNamedAndRemoveUntil(
-                      context,
-                      LoginView.routeName,
-                          (route) => false,
-                    );
-                  },
-                  onTapSecurity: () {
-                    Navigator.pushNamed(
-                      context,
-                      SecurityScreen.routeName,
-                    );
-                  },
-                  paddingSection: const EdgeInsets.all(5),
-                ),
-              ],
-            );
-          },
+                      await RegisterLocalDataSource.setJwtToken('');
+                      await RegisterLocalDataSource.setIsFirstTimer(
+                          isFirstTimer: true);
+                      RegisterLocalDataSource.invalidateCache();
+                      await Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        LoginView.routeName,
+                        (route) => false,
+                      );
+                    },
+                    onTapSecurity: () {
+                      Navigator.pushNamed(
+                        context,
+                        SecurityScreen.routeName,
+                      );
+                    },
+                    paddingSection: const EdgeInsets.all(5),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -189,7 +195,7 @@ class ProfileCard extends StatelessWidget {
                   child: Stack(
                     clipBehavior: Clip.none,
                     children: [
-                      _buildProfileImage(),
+                      _buildProfileImage(context),
                       Positioned(
                         bottom: -2,
                         right: -8,
@@ -207,7 +213,7 @@ class ProfileCard extends StatelessWidget {
                     ],
                   ),
                 ),
-              _buildUserName(),
+                _buildUserName(),
                 const VSpace(10),
                 Container(
                   width: 132,
@@ -245,37 +251,130 @@ class ProfileCard extends StatelessWidget {
       ],
     );
   }
-  Widget _buildProfileImage() {
-    if (state is ProfileLoading) {
-      return  CircleAvatar(
-        radius: 50,
-        backgroundColor: Colors.grey[200],
-        child: const CircularProgressIndicator.adaptive(strokeWidth: 1),
-      );
-    } else if (state is ProfileLoaded) {
-      final profileData = (state as ProfileLoaded).user.data;
-      log('Profile image ${profileData.name}');
-      return CircleAvatar(
-        radius: 50,
-        backgroundImage: profileData.profilePicture.isNotEmpty
-            ? NetworkImage(profileData.profilePicture)
-            : const AssetImage('assets/images/user_profile.png') as ImageProvider,
-      );
-    } else {
-      return const CircleAvatar(
-        radius: 50,
-        backgroundImage: AssetImage('assets/images/user_profile.png'),
-      );
+
+  Widget _buildProfileImage(BuildContext context) {
+    return BlocBuilder<ProfileCubit, ProfileState>(
+      builder: (context, state) {
+        // For loading state
+        if (state is ProfileLoading || state is UploadingImage) {
+          return CircleAvatar(
+            radius: 50,
+            backgroundColor: Colors.grey[200],
+            child: const CircularProgressIndicator.adaptive(strokeWidth: 1),
+          );
+        }
+
+        // Handle ProfileLoaded state
+        if (state is ProfileLoaded) {
+          final profileData = state.user?.data;
+          // Safely handle potentially null profile data
+          return GestureDetector(
+            onTap: () => _showImagePickerOptions(context),
+            child: Stack(
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundImage: _getProfileImage(profileData?.profilePicture),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        if (state is ImageUploaded) {
+          final profileData = state.user?.data;
+          return GestureDetector(
+            onTap: () => _showImagePickerOptions(context),
+            child: Stack(
+              children: [
+                CircleAvatar(
+                  radius: 50,
+                  backgroundImage: _getProfileImage(profileData?.profilePicture),
+                ),
+                Positioned(
+                  bottom: 0,
+                  right: 0,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+        return GestureDetector(
+          onTap: () => _showImagePickerOptions(context),
+          child: CircleAvatar(
+            radius: 50,
+            backgroundImage: _getProfileImage(null),
+          ),
+        );
+      },
+    );
+  }
+
+// Helper method to get profile image
+  ImageProvider _getProfileImage(String? profilePicture) {
+    if (profilePicture != null && profilePicture.isNotEmpty) {
+      return NetworkImage(profilePicture);
     }
+    return const AssetImage('assets/images/user_profile.png');
+  }
+
+  void _showImagePickerOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.camera_alt),
+            title: const Text('Take a photo'),
+            onTap: () {
+              Navigator.of(context).pop();
+              context.read<ProfileCubit>().pickImage(source: ImageSource.camera);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library),
+            title: const Text('Choose from gallery'),
+            onTap: () {
+              Navigator.of(context).pop();
+              context.read<ProfileCubit>().pickImage(source: ImageSource.gallery);
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildUserName() {
     if (state is ProfileLoading) {
-      return Text('Loading...', style: GoogleFonts.poppins(fontSize: 10, color: Colors.white));
+      return Text('Loading...',
+          style: GoogleFonts.poppins(fontSize: 10, color: Colors.white));
     } else if (state is ProfileLoaded) {
-      final profileData = (state as ProfileLoaded).user.data;
+      final profileData = (state as ProfileLoaded).user?.data;
       return Text(
-        profileData.name,
+        profileData!.name,
         style: GoogleFonts.poppins(
           fontSize: 10,
           fontWeight: FontWeight.bold,
@@ -296,9 +395,10 @@ class ProfileCard extends StatelessWidget {
 
   Widget _buildContactInfo() {
     if (state is ProfileLoading) {
-      return Text('Loading...', style: GoogleFonts.poppins(fontSize: 10, color: Colors.white));
+      return Text('Loading...',
+          style: GoogleFonts.poppins(fontSize: 10, color: Colors.white));
     } else if (state is ProfileLoaded) {
-      final profileData = (state as ProfileLoaded).user.data;
+      final profileData = (state as ProfileLoaded).user!.data;
       return Text(
         profileData.phone,
         style: GoogleFonts.poppins(

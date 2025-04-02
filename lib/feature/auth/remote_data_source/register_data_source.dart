@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart' as firebase_auth;
+import 'package:flutter/cupertino.dart';
 import 'package:freedom/core/client/base_api_client.dart';
 import 'package:freedom/core/client/data_layer_exceptions.dart';
 import 'package:freedom/core/client/endpoints.dart';
@@ -80,35 +81,50 @@ class RegisterDataSource {
 
   Future<firebase_auth.UserCredential> registerOrLoginWithGoogle() async {
     try {
+      debugPrint('Starting Google sign-in process');
       final googleSignIn = GoogleSignIn();
+      debugPrint('Showing Google account picker...');
       final googleUser = await googleSignIn.signIn();
+
+      debugPrint('Google sign-in result: ${googleUser?.email ?? "NULL USER"}');
+
       if (googleUser != null) {
+        debugPrint('User selected account: ${googleUser.email}');
+        debugPrint('Getting authentication tokens...');
+
         final googleAuth = await googleUser.authentication;
+        debugPrint('Access token present: ${googleAuth.accessToken != null}');
+        debugPrint('ID token present: ${googleAuth.idToken != null}');
+
         final credential = firebase_auth.GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
+
+        debugPrint('Created Firebase credential for provider: ${credential.providerId}');
+        debugPrint('Attempting Firebase sign-in...');
+
         final val = await _firebaseAuth.signInWithCredential(credential);
+
+        debugPrint('Firebase sign-in completed');
+        debugPrint('User email: ${val.user?.email}');
+        debugPrint('User ID: ${val.user?.uid}');
+
+        if(val.user == null) {
+          debugPrint('ERROR: Firebase returned null user');
+          throw Exception('Google sign-in failed');
+        }
 
         return val;
       } else {
-        throw Exception('Google sign-in failed');
+        debugPrint('ERROR: User cancelled Google sign-in');
+        throw Exception('Google sign-in cancelled by user');
       }
-    } on firebase_auth.FirebaseAuthException catch (e) {
-      if (e.code == 'account-exists-with-different-credential') {
-        throw Exception('Account exists with different credential');
-      } else if (e.code == 'invalid-credential') {
-        throw Exception('Invalid credential');
-      } else {
-        throw Exception('Login failed: ${e.message}');
-      }
-    } on SocketException catch (e) {
-      throw NetworkException(e.message);
-    } on Exception catch (e) {
-      throw Exception('Login failed: $e');
+    } catch (e) {
+      debugPrint('ERROR during Google sign-in: $e');
+      rethrow;
     }
   }
-
   Future<LoginResponse> loginUser(String phoneNumber) async {
     try {
       final response = await client.post(
@@ -153,6 +169,38 @@ class RegisterDataSource {
               'Server error: ${response.statusCode} - ${response.body}');
         }
       }
+    } on NetworkException catch (e) {
+      throw NetworkException(e.message);
+    } catch (e) {
+      throw Exception('Failed to verify phone number: $e');
+    }
+  }
+
+  Future<void> addGoogleAuthUserToDatabase(firebase_auth.User user) async{
+    try {
+    final response = await client.post(Endpoints.addGoogleUser, body: {
+      'provider': 'google',
+      'providerUserId': user.uid,
+      'email': user.email,
+      'name': user.displayName,
+      'photo': user.photoURL
+    });
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final decoded = json.decode(response.body) as Map<String, dynamic>;
+      log('remote data source(): $decoded');
+    } else {
+      Map<String, dynamic> errorResponse;
+      try {
+        errorResponse = json.decode(response.body) as Map<String, dynamic>;
+        final errorMessage = errorResponse['message'] as String? ??
+            'Server error: ${response.statusCode}';
+        log('Error message: $errorMessage');
+        throw ServerException(errorMessage);
+      } catch (e) {
+        throw ServerException(
+            'Server error: ${response.statusCode} - ${response.body}');
+      }
+    }
     } on NetworkException catch (e) {
       throw NetworkException(e.message);
     } catch (e) {

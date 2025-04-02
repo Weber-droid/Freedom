@@ -50,19 +50,21 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBykruR6AFRKqZwcU3d5SYpBByknzwjSuI',
-    appId: '1:97698100461:android:bc8041643e3b165fdf08e4',
-    messagingSenderId: '97698100461',
-    projectId: 'freedom-users',
-    storageBucket: 'freedom-users.firebasestorage.app',
+    apiKey: 'AIzaSyC6cp6AKz68D6xy3WF-25l-My8hHUYU7ig',
+    appId: '1:1012165842416:android:5f3eb82e62b9555ce83935',
+    messagingSenderId: '1012165842416',
+    projectId: 'freedom-users-269a6',
+    storageBucket: 'freedom-users-269a6.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyB7Dqc8vHFcmqzruJ8iZ67lwyqGUDLFkcA',
-    appId: '1:97698100461:ios:3a4959fa934f3e44df08e4',
-    messagingSenderId: '97698100461',
-    projectId: 'freedom-users',
-    storageBucket: 'freedom-users.firebasestorage.app',
+    apiKey: 'AIzaSyC6uz_2D3gz1qP300kJ3i4N23EAHKpocp8',
+    appId: '1:1012165842416:ios:11e10288e1e0a793e83935',
+    messagingSenderId: '1012165842416',
+    projectId: 'freedom-users-269a6',
+    storageBucket: 'freedom-users-269a6.firebasestorage.app',
+    iosClientId: '1012165842416-2qussqt19nheogagdjtbnvoc17svcaoi.apps.googleusercontent.com',
     iosBundleId: 'com.freedom.app',
   );
+
 }
