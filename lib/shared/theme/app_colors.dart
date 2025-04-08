@@ -9,7 +9,7 @@ LinearGradient get gradient => const LinearGradient(
 LinearGradient get locationSearchFillGradient => const LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: [Color(0xFFFFFDF9A3), Color(0xffFFFFFF)],
+      colors: [Color(0xfffffdf9a3), Color(0xffFFFFFF)],
     );
 LinearGradient get redLinearGradient => const LinearGradient(
       begin: Alignment.topLeft,
@@ -28,6 +28,7 @@ LinearGradient get darkGoldGradient => const LinearGradient(
 
 Color get carouselActiveColor => const Color(0xFFF59E0B);
 Color get carouselInactiveColor => const Color(0xFFFFD790);
+Color get activeColor => const Color(0xFFFFD790);
 Color get colorRed => const Color(0xFFE61D2A);
 Color get colorBlack => const Color(0xFF102325);
 Color get fillColor => const Color(0x0CF59E0B);
@@ -43,3 +44,4 @@ Color get fillColor2 => const Color(0xA3FFFCF8);
 Color get hintTextColor => const Color(0xFFA6A39D);
 Color get darkGoldColor => const Color(0xffF59E0B);
 Color get greyColor => const Color(0x4CD9D9D9);
+Color get glassyWhite => const Color(0xffFFFDF9);

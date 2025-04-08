@@ -14,7 +14,7 @@ import 'package:freedom/feature/onboarding/view/carousel_view.dart';
 import 'package:freedom/feature/profile/view/address_screen.dart';
 import 'package:freedom/feature/profile/view/profile_details_screen.dart';
 import 'package:freedom/feature/profile/view/security_screen.dart';
-import 'package:freedom/feature/profile/view/wallet_screen.dart';
+import 'package:freedom/feature/wallet/view/wallet_screen.dart';
 import 'package:freedom/feature/splash/splash_screen.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_login_view.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';

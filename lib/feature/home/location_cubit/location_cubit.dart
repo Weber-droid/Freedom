@@ -16,13 +16,10 @@ class LocationCubit extends Cubit<LocationState> {
           currentLocation: LocationState.defaultInitialPosition,
         ));
 
-  // Method to get current location
   Future<void> getCurrentLocation() async {
-    // Always start with loading state
     emit(state.copyWith(serviceStatus: LocationServiceStatus.loading));
 
     try {
-      // Check location service availability
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         emit(state.copyWith(
@@ -32,7 +29,6 @@ class LocationCubit extends Cubit<LocationState> {
         return;
       }
 
-      // Check and request location permissions
       final permissionStatus = await Permission.location.request();
 
       if (!permissionStatus.isGranted) {
@@ -43,20 +39,16 @@ class LocationCubit extends Cubit<LocationState> {
         return;
       }
 
-      // Get current position with high accuracy
       final position = await Geolocator.getCurrentPosition(
           locationSettings:
               const LocationSettings(accuracy: LocationAccuracy.high));
 
       final currentLocation = LatLng(position.latitude, position.longitude);
-      log('My current-location: $currentLocation');
-      await getUserAddressFromLatLng(currentLocation);
       emit(state.copyWith(
         currentLocation: currentLocation,
         serviceStatus: LocationServiceStatus.located,
       ));
     } catch (e) {
-      // Handle location retrieval errors
       emit(state.copyWith(
         serviceStatus: LocationServiceStatus.error,
         errorMessage: 'Unable to retrieve location: ${e.toString()}',
@@ -66,35 +58,82 @@ class LocationCubit extends Cubit<LocationState> {
 
   Future<void> getUserAddressFromLatLng(LatLng? latLng) async {
     try {
-      final placeMarks = await placemarkFromCoordinates(
-          latLng?.latitude ?? 6.6667, latLng?.longitude ?? -1.616);
-      log('User address: ${placeMarks.first}');
-      emit(state.copyWith(
-          userAddress:
-              '${placeMarks.first.country} ${placeMarks.first.subLocality} ${placeMarks.first.thoroughfare}'));
+
+      double latitude;
+      double longitude;
+
+      if (latLng != null) {
+        latitude = latLng.latitude;
+        longitude = latLng.longitude;
+      } else {
+        latitude = 6.6667;
+        longitude = -1.616;
+      }
+
+      final placeMarks = await placemarkFromCoordinates(latitude, longitude);
+
+      final country = placeMarks.first.country ?? '';
+      final subLocality = placeMarks.first.subLocality ?? '';
+      final thoroughfare = placeMarks.first.thoroughfare ?? '';
+      final locality = placeMarks.first.locality ?? '';
+
+      final formattedAddress = [
+        thoroughfare,
+        subLocality,
+        locality,
+        country,
+      ].where((element) => element.isNotEmpty).join(', ');
+
+      emit(state.copyWith(userAddress: formattedAddress));
     } catch (e) {
       emit(state.copyWith(errorMessage: 'Failed to get user address: $e'));
     }
   }
 
-  // Method to manually check and update permission status
   Future<void> checkPermissionStatus({bool requestPermissions = false}) async {
-    final permissionStatus = await Permission.location.status;
-    if (permissionStatus.isDenied) {
-      emit(state.copyWith(
-        serviceStatus: LocationServiceStatus.permissionDenied,
-        errorMessage: 'Location permissions are required',
-      ));
-      if (requestPermissions) {
+    try {
+      final permissionStatus = await Permission.location.status;
+
+      if (permissionStatus.isDenied || permissionStatus.isPermanentlyDenied) {
+        emit(state.copyWith(
+          serviceStatus: LocationServiceStatus.permissionDenied,
+          errorMessage: 'Location permissions are required for accurate location',
+        ));
+
+        await getUserAddressFromLatLng(LocationState.defaultInitialPosition);
+
+        if (requestPermissions && permissionStatus.isDenied) {
+          final requestResult = await Permission.location.request();
+          if (requestResult.isGranted) {
+            await getCurrentLocation();
+            await getUserAddressFromLatLng(state.currentLocation);
+          }
+        }
+      } else if (permissionStatus.isGranted) {
+
+        final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          emit(state.copyWith(
+            serviceStatus: LocationServiceStatus.serviceDisabled,
+            errorMessage: 'Location services are disabled',
+          ));
+          await getUserAddressFromLatLng(LocationState.defaultInitialPosition);
+          return;
+        }
+
         await getCurrentLocation();
+        await getUserAddressFromLatLng(state.currentLocation);
+
+        emit(state.copyWith(
+          serviceStatus: LocationServiceStatus.permissionGranted,
+          errorMessage: '',
+        ));
       }
-    } else if (permissionStatus.isGranted) {
-      log('Location permissions are granted');
-      await getCurrentLocation();
+    } catch (e) {
       emit(state.copyWith(
-        serviceStatus: LocationServiceStatus.permissionGranted,
-        errorMessage: 'Location permissions are required',
+        errorMessage: 'Error checking location permissions: $e',
       ));
+      await getUserAddressFromLatLng(LocationState.defaultInitialPosition);
     }
   }
 }

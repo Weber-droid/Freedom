@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:freedom/core/services/audio_call_service/audio_call_service.dart';
+import 'package:freedom/feature/auth/auth_cubit/auth_cubit.dart';
 import 'package:freedom/feature/auth/cubit/login_cubit.dart';
 import 'package:freedom/feature/auth/cubit/registration_cubit.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
@@ -16,6 +17,8 @@ import 'package:freedom/feature/onboarding/cubit/onboarding_cubit.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_login_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_otp_cubit.dart';
+import 'package:freedom/feature/wallet/cubit/wallet_cubit.dart';
+import 'package:freedom/feature/wallet/repository/repository.dart';
 import 'package:freedom/l10n/l10n.dart';
 import 'package:freedom/router/router.dart';
 import 'package:freedom/shared/theme/dark_theme.dart';
@@ -54,6 +57,9 @@ class App extends StatelessWidget {
           BlocProvider(
             create: (context) => EmergencyCubit(),
           ),
+          BlocProvider(
+            create: (context) => AuthCubit(registerRepository: RegisterRepository()),
+          ),
           BlocProvider(create: (context) => ProfileCubit()),
           BlocProvider(
               create: (context) =>
@@ -63,6 +69,9 @@ class App extends StatelessWidget {
           BlocProvider(create: (context) => LocationCubit()),
           BlocProvider(
               create: (context) => CallCubit(callService: callService)),
+          BlocProvider(
+              create: (context) => WalletCubit(Repository()),
+          ),
         ],
         child: MaterialApp(
           debugShowCheckedModeBanner: false,

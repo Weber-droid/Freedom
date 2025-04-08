@@ -1386,7 +1386,6 @@ class UserFloatingAccessBar extends StatelessWidget {
                 ),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   const BuildProfileImage(),
                   const HSpace(5),
@@ -1445,7 +1444,7 @@ class UserFloatingAccessBar extends StatelessWidget {
                   const HSpace(6),
                   Flexible(
                     child: Text(
-                      state.userAddress,
+                      state?.userAddress ?? 'Loading...',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,

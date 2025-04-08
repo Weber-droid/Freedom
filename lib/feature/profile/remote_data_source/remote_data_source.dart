@@ -59,18 +59,20 @@ class ProfileRemoteDataSource {
       throw Exception('File path is empty');
     }
     try {
-      final url =
-          Uri.parse('${ApiConstants.baseUrl}upload-profile-picture');
+      final url = Uri.parse('${ApiConstants.baseUrl}upload-profile-picture');
       log('url: $url');
       final imageFormat = _getImageFormat(file.path);
+      log('Image format $imageFormat');
       final request = http.MultipartRequest('POST', url)
-      ..headers['Authorization'] = 'Bearer ${getIt<User>().token}'
+        ..headers['Authorization'] =
+            'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZWEwYjI2YWJmZGFmY2I3MTRiMTQzNSIsIm5hbWUiOiJKYW1iaXQgS2Fzb25nbyIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzQzNzYyNDExLCJleHAiOjE3NTI0MDI0MTF9.vRyh4sWbbPt2Nskvx8o3RERUDEQoqGhIiFtgzzlDVtE'
         ..files.add(await http.MultipartFile.fromPath(
-          'file',
+          'profile-picture',
           file.path,
-          contentType: MediaType('image', imageFormat),
+          contentType: MediaType('profile-picture', imageFormat),
         ));
 
+      log('my request ${request.files[0].filename}');
       final response = await request.send();
       final responseData = await response.stream.toBytes();
       final responseString = String.fromCharCodes(responseData);
@@ -81,11 +83,14 @@ class ProfileRemoteDataSource {
         Map<String, dynamic> errorResponse;
         try {
           errorResponse = json.decode(responseString) as Map<String, dynamic>;
-          final errorMessage = errorResponse['message'] as String? ??
+          final errorMessage = errorResponse['msg'] as String? ??
               'Server error: ${response.statusCode}';
+          log('Network exception: ${errorResponse}');
+          log('Network exception: ${response.statusCode}');
           throw ServerException(errorMessage);
         } catch (e) {
-          throw ServerException('Server error');
+          log('Network exception: ${e}');
+          throw ServerException('Error uploading image');
         }
       }
     } on NetworkException catch (e) {

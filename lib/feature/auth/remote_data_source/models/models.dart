@@ -28,3 +28,16 @@ class LoginResponse {
   final String message;
 
 }
+class AuthResult {
+  final bool success;
+  final String? message;
+  final String? userId;
+  final String? verificationId;
+
+  AuthResult({
+    required this.success,
+    this.message,
+    this.userId,
+    this.verificationId,
+  });
+}

@@ -5,11 +5,11 @@ class LocationState extends Equatable {
     this.currentLocation,
     this.serviceStatus = LocationServiceStatus.initial,
     this.errorMessage,
-    this.userAddress = '',
+    this.userAddress,
   });
   final LatLng? currentLocation;
   final LocationServiceStatus serviceStatus;
-  final String userAddress;
+  final String? userAddress;
   final String? errorMessage;
 
   static const LatLng defaultInitialPosition = LatLng(6.6667, -1.6167);

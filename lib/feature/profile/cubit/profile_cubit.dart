@@ -59,7 +59,6 @@ class ProfileCubit extends Cubit<ProfileState> {
 
       if (pickedFile != null) {
         final file = File(pickedFile.path);
-        // Remove redundant null check - file cannot be null here
         if (file.path.isNotEmpty) {
           final fileSize = file.lengthSync();
           final megabytes = fileSize / (1024 * 1024);

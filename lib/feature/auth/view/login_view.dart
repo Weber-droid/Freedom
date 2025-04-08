@@ -4,6 +4,7 @@ import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:freedom/feature/auth/auth_cubit/auth_cubit.dart';
 import 'package:freedom/feature/auth/cubit/login_cubit.dart';
 import 'package:freedom/feature/auth/cubit/registration_cubit.dart';
 import 'package:freedom/feature/auth/view/personal_detail_screen.dart';
@@ -29,6 +30,7 @@ class LoginView extends StatefulWidget {
 class _LoginViewState extends State<LoginView> {
   final fromKey = GlobalKey<FormState>();
   TextEditingController phoneController = TextEditingController();
+  String _verificationId = '';
 
   String countryCode = '+233';
   @override
@@ -62,18 +64,24 @@ class _LoginViewState extends State<LoginView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: BlocConsumer<LoginCubit, LoginState>(
+      body: BlocConsumer<AuthCubit, AuthState>(
         listener: (context, state) {
-          if (state.formStatus == FormStatus.failure) {
+          if (state is OtpSent) {
             context.showToast(
                 message: state.message,
-                type: ToastType.error,
-                position: ToastPosition.top);
-          } else if (state.formStatus == FormStatus.success) {
-            Navigator.pushNamed(context, VerifyLoginScreen.routeName);
+                position: ToastPosition.top,
+                type: ToastType.success);
+            Navigator.of(context).pushNamed(VerifyLoginScreen.routeName);
+          } else if(state is AuthFailure){
+            context.showToast(
+                message: state.message,
+                position: ToastPosition.top,
+                type: ToastType.error);
           }
         },
         builder: (context, state) {
+          final isOtpSent = state is OtpSent;
+          final isLoading = state is AuthLoading;
           Widget mainContent;
           mainContent = SingleChildScrollView(
             child: Column(
@@ -234,9 +242,9 @@ class _LoginViewState extends State<LoginView> {
               ],
             ),
           );
-          if (state.formStatus == FormStatus.submitting) {
+          if ( state is AuthLoading) {
             return BlurredLoadingOverlay(
-                isLoading: state.formStatus == FormStatus.submitting,
+                isLoading: state is AuthLoading,
                 child: mainContent);
           }
           return mainContent;
@@ -248,12 +256,9 @@ class _LoginViewState extends State<LoginView> {
   Widget _buildLoginButton(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 17),
-      child: BlocBuilder<LoginCubit, LoginState>(
-        builder: (context,state){
-          if(state.formStatus == FormStatus.submitting){
-           return const Center(child: CircularProgressIndicator());
-          }
-          return  FreedomButton(
+      child: BlocBuilder<AuthCubit, AuthState>(
+        builder: (context, state) {
+          return FreedomButton(
             backGroundColor: Colors.black,
             borderRadius: BorderRadius.circular(7),
             width: double.infinity,
@@ -267,8 +272,7 @@ class _LoginViewState extends State<LoginView> {
             onPressed: () {
               if (fromKey.currentState!.validate()) {
                 final phoneNumber = getFullPhoneNumber();
-                context.read<LoginCubit>().setPhoneNumber(phoneNumber);
-                context.read<LoginCubit>().loginUserWithPhoneNumber();
+                context.read<AuthCubit>().sendOtp(phoneNumber);
               }
             },
           );

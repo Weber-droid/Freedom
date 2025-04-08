@@ -82,4 +82,47 @@ class RegisterRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  Future<Either<Failure, AuthResult>> sendOtp(String phoneNumber) async {
+    try {
+      final val =
+          await _remoteDataSource.registerUserWithPhoneNumber(phoneNumber);
+      return Right(val);
+    } on ServerFailure catch (e) {
+      return Left(ServerFailure(e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(e.toString()));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Either<Failure, AuthResult>> verifyOtp(
+      String verificationId, String otp) async {
+    try {
+      final val = await _remoteDataSource.verifyOtp(verificationId, otp);
+      return Right(val);
+    } on ServerFailure catch (e) {
+      return Left(ServerFailure(e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(e.toString()));
+    } catch (e) {
+      rethrow;
+    }
+  }
+  Future<Either<Failure, AuthResult>> getCurrentUser() async {
+    try {
+      final val = await _remoteDataSource.getCurrentUser();
+      return Right(val);
+    } on ServerFailure catch (e) {
+      return Left(ServerFailure(e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(e.toString()));
+    } catch (e) {
+      rethrow;
+    }
+  }
+  Future<void> signOut() async {
+    await _remoteDataSource.signOut();
+  }
 }

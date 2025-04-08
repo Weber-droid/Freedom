@@ -17,39 +17,37 @@ class VerifyLoginCubit extends Cubit<VerifyLoginState> {
 
   void setPhoneNumber(String phoneNumber) {
     log('phoneNumber: $phoneNumber');
-    emit(state.copyWith(phoneNumber:  phoneNumber));
+    emit(state.copyWith(phoneNumber: phoneNumber));
   }
 
   Future<void> verifyLogin(String otp) async {
     emit(state.copyWith(status: VerifyLoginStatus.submitting));
-
     try {
-      final response = await registerRepository.verifyLogin(state.phoneNumber!, otp);
+      final response =
+          await registerRepository.verifyLogin(state.phoneNumber!, otp);
 
       response.fold(
-              (l) => emit(
-            state.copyWith(
-              status: VerifyLoginStatus.failure,
-              isError: true,
-              errorMessage: l.message,
-            ),
+          (l) => emit(
+                state.copyWith(
+                  status: VerifyLoginStatus.failure,
+                  isError: true,
+                  errorMessage: l.message,
+                ),
+              ), (r) async {
+        await RegisterLocalDataSource.setIsFirstTimer(isFirstTimer: false);
+        final dataSource = RegisterLocalDataSource();
+        await dataSource.saveUser(r ?? User());
+        if (!getIt.isRegistered<User>()) {
+          getIt.registerSingleton<User>(r ?? User());
+        }
+        emit(
+          state.copyWith(
+            status: VerifyLoginStatus.success,
+            isVerified: true,
+            user: r,
           ),
-              (r) async {
-            await RegisterLocalDataSource.setIsFirstTimer(isFirstTimer: false);
-            final dataSource = RegisterLocalDataSource();
-            await dataSource.saveUser(r ?? User());
-            if(!getIt.isRegistered<User>()) {
-              getIt.registerSingleton<User>(r ?? User());
-            }
-            emit(
-              state.copyWith(
-                status: VerifyLoginStatus.success,
-                isVerified: true,
-                user: r,
-              ),
-            );
-          }
-      );
+        );
+      });
     } on ServerException catch (e) {
       emit(
         state.copyWith(
