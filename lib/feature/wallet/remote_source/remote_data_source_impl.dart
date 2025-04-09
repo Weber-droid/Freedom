@@ -5,6 +5,7 @@ import 'package:freedom/core/client/base_api_client.dart';
 import 'package:freedom/core/client/data_layer_exceptions.dart';
 import 'package:freedom/core/client/endpoints.dart';
 import 'package:freedom/di/locator.dart';
+import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/wallet/remote_source/add_card_model.dart';
 import 'package:freedom/feature/wallet/remote_source/add_card_response.dart';
 import 'package:freedom/feature/wallet/remote_source/add_momo_card_model.dart';
@@ -12,22 +13,30 @@ import 'package:freedom/feature/wallet/remote_source/delete_card.dart';
 import 'package:freedom/feature/wallet/remote_source/payment_methods.dart';
 import 'package:freedom/feature/wallet/remote_source/remote_data_source.dart';
 
-
 class RemoteDataSourceImpl extends RemoteDataSource {
-  final client = getIt<BaseApiClients>();
+  RemoteDataSourceImpl({BaseApiClients? client})
+      : client = client ?? getIt<BaseApiClients>(),
+        super();
 
+  final BaseApiClients client;
+  final token = RegisterLocalDataSource.getJwtToken();
   @override
   Future<List<PaymentMethod>> getPaymentMethods() async {
     try {
       final response = await client.get(
         Endpoints.getPaymentMethods,
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZWEwYjI2YWJmZGFmY2I3MTRiMTQzNSIsIm5hbWUiOiJKYW1iaXQgS2Fzb25nbyIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzQzNzYyNDExLCJleHAiOjE3NTI0MDI0MTF9.vRyh4sWbbPt2Nskvx8o3RERUDEQoqGhIiFtgzzlDVtE'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $token'
+        },
       );
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body) as Map<String, dynamic>;
         log('remote data source(): $jsonData');
-        final userPaymentMethodsResponse = UserPaymentMethodsResponse.fromJson(jsonData);
+        final userPaymentMethodsResponse =
+            UserPaymentMethodsResponse.fromJson(jsonData);
         return userPaymentMethodsResponse.data;
       } else {
         Map<String, dynamic> errorResponse;
@@ -69,7 +78,12 @@ class RemoteDataSourceImpl extends RemoteDataSource {
             'expiryYear': addCardModel.cardDetails?.expiryYear,
           }
         },
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZWEwYjI2YWJmZGFmY2I3MTRiMTQzNSIsIm5hbWUiOiJKYW1iaXQgS2Fzb25nbyIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzQzNzYyNDExLCJleHAiOjE3NTI0MDI0MTF9.vRyh4sWbbPt2Nskvx8o3RERUDEQoqGhIiFtgzzlDVtE'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization':
+              'Bearer $token'
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -101,13 +115,18 @@ class RemoteDataSourceImpl extends RemoteDataSource {
     try {
       final response = await client.post(
         Endpoints.addNewCard,
-        body:{
+        body: {
           'type': addMomoCard.type,
           'momoProvider': addMomoCard.momoProvider,
           'momoNumber': addMomoCard.momoNumber,
           'isDefault': addMomoCard.isDefault
         },
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZWEwYjI2YWJmZGFmY2I3MTRiMTQzNSIsIm5hbWUiOiJKYW1iaXQgS2Fzb25nbyIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzQzNzYyNDExLCJleHAiOjE3NTI0MDI0MTF9.vRyh4sWbbPt2Nskvx8o3RERUDEQoqGhIiFtgzzlDVtE'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization':
+              'Bearer $token'
+        },
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -136,10 +155,15 @@ class RemoteDataSourceImpl extends RemoteDataSource {
 
   @override
   Future<DeleteCardResponse> removeCard(String cardId) async {
-    try{
+    try {
       final response = await client.delete(
         '${Endpoints.removeCard}/$cardId',
-        headers: {'Content-Type': 'application/json', 'Accept': 'application/json', 'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZWEwYjI2YWJmZGFmY2I3MTRiMTQzNSIsIm5hbWUiOiJKYW1iaXQgS2Fzb25nbyIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzQzNzYyNDExLCJleHAiOjE3NTI0MDI0MTF9.vRyh4sWbbPt2Nskvx8o3RERUDEQoqGhIiFtgzzlDVtE'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'Authorization':
+              'Bearer $token'
+        },
       );
       if (response.statusCode == 200 || response.statusCode == 201) {
         final json = jsonDecode(response.body) as Map<String, dynamic>;
@@ -164,5 +188,4 @@ class RemoteDataSourceImpl extends RemoteDataSource {
       throw Exception('Failed to remove card: $e');
     }
   }
-
 }

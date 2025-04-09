@@ -21,41 +21,41 @@ class AuthCubit extends Cubit<AuthState> {
     emit(state.copyWith(verId: verificationId));
   }
 
-  Future<void> sendOtp(String phoneNumber) async {
-    // Preserve verification ID if it exists in current state
-    final currentVerId = state.verificationId;
-
-    // Transition to loading state
-    emit(AuthLoading(
-      phoneNumber: phoneNumber,
-      verificationId: currentVerId,
-    ));
-
-    final result = await registerRepository.sendOtp(phoneNumber);
-
-    result.fold(
-            (f) => emit(AuthFailure(
-          message: f.message,
-          phoneNumber: phoneNumber,
-          verificationId: currentVerId, // Preserve verification ID in error state
-        )),
-            (s) {
-          if (s.success && s.verificationId != null) {
-            emit(OtpSent(
-              verificationId: s.verificationId!,
-              message: s.message ?? 'OTP sent successfully',
-              phoneNumber: phoneNumber,
-            ));
-          } else if (s.success && s.userId != null) {
-            emit(AuthSuccess(
-              userId: s.userId!,
-              phoneNumber: phoneNumber,
-              verificationId: s.verificationId ?? currentVerId,
-            ));
-          }
-        }
-    );
-  }
+  // Future<void> sendOtp(String phoneNumber) async {
+  //   // Preserve verification ID if it exists in current state
+  //   final currentVerId = state.verificationId;
+  //
+  //   // Transition to loading state
+  //   emit(AuthLoading(
+  //     phoneNumber: phoneNumber,
+  //     verificationId: currentVerId,
+  //   ));
+  //
+  //   final result = await registerRepository.sendOtp(phoneNumber);
+  //
+  //   result.fold(
+  //           (f) => emit(AuthFailure(
+  //         message: f.message,
+  //         phoneNumber: phoneNumber,
+  //         verificationId: currentVerId, // Preserve verification ID in error state
+  //       )),
+  //           (s) {
+  //         if (s.success && s.verificationId != null) {
+  //           emit(OtpSent(
+  //             verificationId: s.verificationId!,
+  //             message: s.message ?? 'OTP sent successfully',
+  //             phoneNumber: phoneNumber,
+  //           ));
+  //         } else if (s.success && s.userId != null) {
+  //           emit(AuthSuccess(
+  //             userId: s.userId!,
+  //             phoneNumber: phoneNumber,
+  //             verificationId: s.verificationId ?? currentVerId,
+  //           ));
+  //         }
+  //       }
+  //   );
+  // }
 
   Future<void> verifyOtp(String otp) async {
     // We need both phone number and verification ID from current state
@@ -80,14 +80,14 @@ class AuthCubit extends Cubit<AuthState> {
             (f) => emit(AuthFailure(
           message: f.message,
           phoneNumber: currentPhone,
-          verificationId: verificationId, // Keep verification ID in failure state
+          verificationId: verificationId,
         )),
             (s) {
           if (s.success && s.userId != null) {
             emit(AuthSuccess(
               userId: s.userId!,
               phoneNumber: currentPhone,
-              verificationId: verificationId, // Keep verification ID in success state
+              verificationId: verificationId,
             ));
           }
         }

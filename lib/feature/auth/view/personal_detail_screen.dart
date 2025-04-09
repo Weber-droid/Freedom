@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'dart:ui';
 
 import 'package:country_code_picker/country_code_picker.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:freedom/feature/auth/cubit/registration_cubit.dart';
+import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/shared/enums/enums.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
@@ -54,6 +56,7 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    log(RegisterLocalDataSource.getJwtToken());
     return Scaffold(
       backgroundColor: Colors.white,
       body: BlocConsumer<RegisterCubit, RegisterState>(
@@ -236,7 +239,7 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                             final regX = RegExp(
                                 r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$');
                             if (!regX.hasMatch(password)) {
-                              return 'Password must be at least 8 characters and include uppercase, lowercase, number and special character';
+                              return '''Password must be at least 8 characters and include uppercase, lowercase, number and special character''';
                             }
                             return null;
                           },
@@ -319,7 +322,7 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                               return 'Phone number must be at least 10 digits long';
                             }
 
-                            return null; // Valid input
+                            return null;
                           },
                         ),
                       ),
@@ -354,14 +357,13 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                                     emailKey.currentState!.validate() &&
                                     passwordKey.currentState!.validate() &&
                                     phoneNumberKey.currentState!.validate()) {
-                                  context
-                                      .read<RegisterCubit>()
-                                      .setUserDetails(
-                                          fullName: firstNameController.text,
-                                          password: passwordController.text,
-                                          email: emailController.text,
-                                          phone: phoneNumberController.text);
-                                  Future.delayed(Duration(milliseconds: 500),
+                                  context.read<RegisterCubit>().setUserDetails(
+                                      fullName: firstNameController.text,
+                                      password: passwordController.text,
+                                      email: emailController.text,
+                                      phone: phoneNumberController.text);
+                                  Future.delayed(
+                                      const Duration(milliseconds: 500),
                                       () async {
                                     await context
                                         .read<RegisterCubit>()

@@ -2,7 +2,6 @@ import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
-import 'package:freedom/feature/wallet/widgets/add_card_sheet.dart';
 import 'package:freedom/feature/wallet/cubit/wallet_cubit.dart';
 import 'package:freedom/feature/wallet/remote_source/payment_methods.dart';
 import 'package:freedom/feature/wallet/widgets/card_type_sheet.dart';
@@ -48,7 +47,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     ),
                   ),
                 ),
-                const Spacer()
+                const Spacer(),
               ],
             ),
             const VSpace(14.91),
@@ -59,139 +58,148 @@ class _WalletScreenState extends State<WalletScreen> {
                   fit: BoxFit.cover,
                 ),
                 Positioned(
-                  top: 30,
+                  top: 0,
                   left: 25,
                   right: 25,
+                  bottom: 40,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'Account Balance',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          color: Colors.white,
+                      BlocSelector<WalletCubit, WalletState, String>(
+                        selector: (state) {
+                          if (state is WalletLoaded) {
+                            final defaultPaymentMethod = state.paymentMethods
+                                .where((method) => method.isDefault == true)
+                                .firstOrNull;
+
+                            if (defaultPaymentMethod == null) {
+                              return 'card';
+                            }
+
+                            return defaultPaymentMethod.maybeMap(
+                              card: (cardMethod) => '****${cardMethod.type}',
+                              momo: (momoMethod) => momoMethod.type,
+                              orElse: () => 'card',
+                            );
+                          } else if (state is WalletLoading) {
+                            return 'Loading...';
+                          } else {
+                            return 'card';
+                          }
+                        },
+                        builder: (context, state) => Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                          ),
+                          child: SvgPicture.asset(
+                            state == 'visa'
+                                ? 'assets/images/visa_electron.svg'
+                                : state == 'momo'
+                                    ? 'assets/images/momo_icon.svg'
+                                    : 'assets/images/mastercard.svg',
+                          ),
                         ),
                       ),
-                      Text(
-                        'Momo Pay',
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
-                          color: Colors.white,
+                      BlocSelector<WalletCubit, WalletState, String>(
+                        selector: (state) {
+                          if (state is WalletLoaded) {
+                            final defaultPaymentMethod = state.paymentMethods
+                                .where((method) => method.isDefault == true)
+                                .firstOrNull;
+
+                            if (defaultPaymentMethod == null) {
+                              return 'card';
+                            }
+
+                            return defaultPaymentMethod.maybeMap(
+                              card: (cardMethod) => '****${cardMethod.type}',
+                              momo: (momoMethod) => momoMethod.type,
+                              orElse: () => 'card',
+                            );
+                          } else if (state is WalletLoading) {
+                            return 'Loading...';
+                          } else {
+                            return 'card';
+                          }
+                        },
+                        builder: (context, state) => Text(
+                          'Payment Method: $state',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
                 Positioned(
-                  top: 60,
+                  top: 80,
                   left: 25,
                   right: 25,
+                  bottom: 0,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        r'$0.00',
+                        'Card Number',
                         style: GoogleFonts.poppins(
-                            fontSize: 27,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600),
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       Container(
                         padding: const EdgeInsets.only(
-                            left: 10, right: 10, top: 3, bottom: 3),
+                          left: 10,
+                          right: 10,
+                          top: 3,
+                          bottom: 3,
+                        ),
                         decoration: BoxDecoration(
                           color: const Color(0xfff8c060),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Row(
                           children: [
-                            SvgPicture.asset(
-                                'assets/images/copy_button_icon.svg'),
-                            Text(
-                              '2627829012718',
-                              style: GoogleFonts.poppins(
+                            BlocSelector<WalletCubit, WalletState, String>(
+                              selector: (state) {
+                                if (state is WalletLoaded) {
+                                  final defaultPaymentMethod = state.paymentMethods
+                                      .where((method) => method.isDefault == true)
+                                      .firstOrNull;
+
+                                  if (defaultPaymentMethod == null) {
+                                    return '**********';
+                                  }
+
+                                  return defaultPaymentMethod.maybeMap(
+                                    card: (cardMethod) => '****${cardMethod.last4}',
+                                    momo: (momoMethod) => momoMethod.momoNumber,
+                                    orElse: () => 'Unknown payment method',
+                                  );
+                                } else if (state is WalletLoading) {
+                                  return 'Loading...';
+                                } else {
+                                  return '**********';
+                                }
+                              },
+                              builder: (context, paymentNumber) => Text(
+                                ' $paymentNumber',
+                                style: GoogleFonts.poppins(
                                   fontSize: 16,
                                   color: Colors.white,
-                                  fontWeight: FontWeight.w600),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                      )
+                      ),
                     ],
                   ),
                 ),
-                Positioned(
-                  top: 110,
-                  left: 25,
-                  right: 25,
-                  child: DottedBorder(
-                    radius: const Radius.circular(10),
-                    borderType: BorderType.RRect,
-                    color: Colors.white,
-                    child: Container(
-                      height: 80,
-                      width: MediaQuery.of(context).size.width,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xff8F5C06),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Row(
-                        children: [
-                          TextButton(
-                              onPressed: () {},
-                              style: TextButton.styleFrom(
-                                backgroundColor: Colors.black,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 13,
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  SvgPicture.asset(
-                                      'assets/images/arrow-left-down.svg'),
-                                  const HSpace(2),
-                                  Text(
-                                    'Add Money',
-                                    style: GoogleFonts.poppins(
-                                        color: Colors.white, fontSize: 16.9),
-                                  )
-                                ],
-                              )),
-                          const Spacer(),
-                          TextButton(
-                              style: TextButton.styleFrom(
-                                backgroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 13,
-                                ),
-                              ),
-                              onPressed: () {},
-                              child: Row(
-                                children: [
-                                  SvgPicture.asset(
-                                      'assets/images/transaction_icon.svg'),
-                                  const HSpace(2),
-                                  Text(
-                                    'Transaction',
-                                    style: GoogleFonts.poppins(
-                                        color: Colors.black, fontSize: 16.9),
-                                  )
-                                ],
-                              ))
-                        ],
-                      ),
-                    ),
-                  ),
-                )
               ],
             ),
             const VSpace(14.91),
@@ -231,7 +239,7 @@ class ManagePayment extends SectionFactory {
           case WalletCardAddError:
             log('WalletCardAddError: ${(state as WalletCardAddError).message}');
             context.showToast(
-              message: (state as WalletCardAddError).message,
+              message: state.message,
               type: ToastType.error,
               position: ToastPosition.top,
             );
@@ -336,7 +344,7 @@ class ManagePayment extends SectionFactory {
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                   offset: const Offset(0, 5),
                 ),
@@ -345,8 +353,8 @@ class ManagePayment extends SectionFactory {
             child: DottedBorder(
               borderType: BorderType.RRect,
               radius: const Radius.circular(12),
-              color: Theme.of(context).primaryColor.withOpacity(0.5),
-              dashPattern: [6, 4],
+              color: Theme.of(context).primaryColor.withValues(alpha: 0.5),
+              dashPattern: const [6, 4],
               child: Center(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -401,8 +409,18 @@ class ManagePayment extends SectionFactory {
         ),
         ...cards.map((card) {
           return card.when(
-            card: (id, userId, type, cardType, last4, expiryMonth, expiryYear,
-                isDefault, createdAt, token) {
+            card: (
+              id,
+              userId,
+              type,
+              cardType,
+              last4,
+              expiryMonth,
+              expiryYear,
+              isDefault,
+              createdAt,
+              token,
+            ) {
               return _buildCardItem(
                 context,
                 card: card,
@@ -412,8 +430,15 @@ class ManagePayment extends SectionFactory {
                 expiry: '$expiryMonth/$expiryYear',
               );
             },
-            momo: (String id, String userId, String type, String momoProvider,
-                String momoNumber, bool isDefault, DateTime createdAt) {
+            momo: (
+              String id,
+              String userId,
+              String type,
+              String momoProvider,
+              String momoNumber,
+              bool isDefault,
+              DateTime createdAt,
+            ) {
               return _buildCardItem(
                 context,
                 card: card,
@@ -437,15 +462,6 @@ class ManagePayment extends SectionFactory {
     required bool isDefault,
     required String expiry,
   }) {
-  final number =  card.when(
-        card: (_, __, ___, ____, _____, _______, ________, ______,
-            _________, ___________) =>
-        cardNumber,
-        momo: (id, userId, type, momoProvider, momoNumber, isDefault,
-            createdAt) =>
-        momoNumber);
-
-  log('cardNumber based on card type: $number');
     final iconPath = cardType.toLowerCase() == 'visa'
         ? 'assets/images/visa_electron.svg'
         : 'assets/images/mastercard.svg';
@@ -471,11 +487,28 @@ class ManagePayment extends SectionFactory {
         ),
         title: Text(
           card.when(
-            card: (_, __, ___, ____, _____, _______, ________, ______,
-                    _________, ___________) =>
+            card: (
+              _,
+              __,
+              ___,
+              ____,
+              _____,
+              _______,
+              ________,
+              ______,
+              _________,
+              ___________,
+            ) =>
                 cardNumber,
-            momo: (id, userId, type, momoProvider, momoNumber, isDefault,
-                    createdAt) =>
+            momo: (
+              id,
+              userId,
+              type,
+              momoProvider,
+              momoNumber,
+              isDefault,
+              createdAt,
+            ) =>
                 momoNumber,
           ),
           style: GoogleFonts.poppins(

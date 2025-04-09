@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:freedom/feature/wallet/cubit/wallet_cubit.dart';
 import 'package:freedom/feature/wallet/remote_source/add_momo_card_model.dart';
-import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/widgets/text_field_factory.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class MomoBottomSheet extends StatefulWidget {
   const MomoBottomSheet({super.key});

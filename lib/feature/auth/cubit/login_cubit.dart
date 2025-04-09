@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:equatable/equatable.dart';
@@ -30,12 +31,19 @@ class LoginCubit extends Cubit<LoginState> {
     }
 
     try {
+      emit(state.copyWith(formStatus: FormStatus.submitting));
       final response = await _registerRepository.loginUser(phoneNumber);
-      response.fold(
-              (l) => emit(state.copyWith(
-              message: l.message, formStatus: FormStatus.failure)),
-              (r) => emit(state.copyWith(
-              message: r?.message, formStatus: FormStatus.success)));
+      response.fold((fail) {
+        final message = json.decode(fail.message);
+        log('message $message');
+        final transformedMessage = message['msg'] as String;
+        emit(state.copyWith(
+            message: transformedMessage, formStatus: FormStatus.failure));
+      }, (r) {
+        emit(
+          state.copyWith(message: r?.message, formStatus: FormStatus.success),
+        );
+      });
     } on Exception catch (e) {
       emit(state.copyWith(
         message: e.toString(),

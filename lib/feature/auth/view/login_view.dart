@@ -30,7 +30,6 @@ class LoginView extends StatefulWidget {
 class _LoginViewState extends State<LoginView> {
   final fromKey = GlobalKey<FormState>();
   TextEditingController phoneController = TextEditingController();
-  String _verificationId = '';
 
   String countryCode = '+233';
   @override
@@ -64,24 +63,29 @@ class _LoginViewState extends State<LoginView> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: BlocConsumer<AuthCubit, AuthState>(
+      body: BlocConsumer<LoginCubit, LoginState>(
         listener: (context, state) {
-          if (state is OtpSent) {
+          if (state.formStatus == FormStatus.success) {
             context.showToast(
                 message: state.message,
                 position: ToastPosition.top,
-                type: ToastType.success);
+                type: ToastType.success
+            );
             Navigator.of(context).pushNamed(VerifyLoginScreen.routeName);
-          } else if(state is AuthFailure){
-            context.showToast(
-                message: state.message,
-                position: ToastPosition.top,
-                type: ToastType.error);
+          } else if (state.formStatus == FormStatus.failure) {
+            if (state.message.contains('Complete registration first.')) {
+              context.showToast(
+                  message: 'Please verify your phone number',
+                  position: ToastPosition.top,
+                  type: ToastType.warning
+              );
+              Future.delayed(const Duration(milliseconds: 1000), () {
+                Navigator.of(context).pushNamed(VerifyOtpScreen.routeName);
+              });
+            }
           }
         },
         builder: (context, state) {
-          final isOtpSent = state is OtpSent;
-          final isLoading = state is AuthLoading;
           Widget mainContent;
           mainContent = SingleChildScrollView(
             child: Column(
@@ -242,9 +246,9 @@ class _LoginViewState extends State<LoginView> {
               ],
             ),
           );
-          if ( state is AuthLoading) {
+          if (state.formStatus == FormStatus.submitting) {
             return BlurredLoadingOverlay(
-                isLoading: state is AuthLoading,
+                isLoading: state.formStatus == FormStatus.submitting,
                 child: mainContent);
           }
           return mainContent;
@@ -256,26 +260,23 @@ class _LoginViewState extends State<LoginView> {
   Widget _buildLoginButton(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 17),
-      child: BlocBuilder<AuthCubit, AuthState>(
-        builder: (context, state) {
-          return FreedomButton(
-            backGroundColor: Colors.black,
-            borderRadius: BorderRadius.circular(7),
-            width: double.infinity,
-            title: 'Continue',
-            buttonTitle: Text('Continue',
-                style: GoogleFonts.poppins(
-                  fontSize: 17.4,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w500,
-                )),
-            onPressed: () {
-              if (fromKey.currentState!.validate()) {
-                final phoneNumber = getFullPhoneNumber();
-                context.read<AuthCubit>().sendOtp(phoneNumber);
-              }
-            },
-          );
+      child: FreedomButton(
+        backGroundColor: Colors.black,
+        borderRadius: BorderRadius.circular(7),
+        width: double.infinity,
+        title: 'Continue',
+        buttonTitle: Text('Continue',
+            style: GoogleFonts.poppins(
+              fontSize: 17.4,
+              color: Colors.white,
+              fontWeight: FontWeight.w500,
+            )),
+        onPressed: () {
+          if (fromKey.currentState!.validate()) {
+            final phoneNumber = getFullPhoneNumber();
+            context.read<LoginCubit>().setPhoneNumber(phoneNumber);
+            context.read<LoginCubit>().loginUserWithPhoneNumber();
+          }
         },
       ),
     );

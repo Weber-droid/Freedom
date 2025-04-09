@@ -53,6 +53,7 @@ class RegisterCubit extends Cubit<RegisterState> {
     }
   }
 
+
   Future<void> registerOrLoginWithGoogle() async {
     emit(state.copyWith(formStatus: FormStatus.submitting));
     try {

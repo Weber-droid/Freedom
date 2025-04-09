@@ -34,4 +34,20 @@ class VerifyOtpCubit extends Cubit<VerifyOtpState> {
       );
     });
   }
+
+  Future<void> resendOtp(String phoneNumber) async {
+    emit(state.copyWith(status: VerifyOtpStatus.submitting));
+    try {
+      final response = await registerRepository.resendOtp(phoneNumber);
+      response.fold((l) {
+        emit(state.copyWith(
+            errorMessage: l.message, status: VerifyOtpStatus.failure));
+      }, (s) {
+        emit(state.copyWith(status: VerifyOtpStatus.success));
+      });
+    } on Exception catch (_) {
+      emit(state.copyWith(
+          status: VerifyOtpStatus.failure, errorMessage: state.errorMessage));
+    }
+  }
 }

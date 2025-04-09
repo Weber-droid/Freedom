@@ -6,6 +6,7 @@ class Endpoints {
   static const String addNewCard = 'payment-methods/addPaymentMethod';
   static const String getPaymentMethods = 'payment-methods/getPaymentMethods';
   static const String removeCard = 'payment-methods';
+  static const String resendOtp = 'auth/resend-verification';
   static const String addGoogleUser = 'auth/mobile/social';
   static const String verify = 'auth/verify';
   static const String profile = 'getMyProfile';

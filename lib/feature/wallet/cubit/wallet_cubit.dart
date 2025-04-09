@@ -60,7 +60,7 @@ class WalletCubit extends Cubit<WalletState> {
             last4: success.data.last4 ?? '',
             expiryMonth: success.data.expiryMonth ?? '',
             expiryYear: success.data.expiryYear ?? '',
-            isDefault: success.data.isDefault ?? false,
+            isDefault: true,
             createdAt: success.data.createdAt,
             token: success.data.token,
           );
@@ -96,6 +96,13 @@ class WalletCubit extends Cubit<WalletState> {
     emit(WalletAddingCard(currentCards));
 
     try {
+      if (addMomoCard.isDefault) {
+        currentCards = currentCards
+            .map(
+              (card) => card.copyWith(isDefault: false),
+        )
+            .toList();
+      }
       final result = await _repository.addMomoCard(addMomoCard);
       result.fold((failure) {
         return emit(WalletCardAddError(failure.message, currentCards));
@@ -104,7 +111,7 @@ class WalletCubit extends Cubit<WalletState> {
           id: success.data.id,
           userId: success.data.userId,
           type: success.data.type,
-          isDefault: success.data.isDefault ?? false,
+          isDefault: true,
           createdAt: success.data.createdAt,
           momoProvider: success.data.momoProvider ?? '',
           momoNumber: success.data.momoNumber ?? '',

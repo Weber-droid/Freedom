@@ -26,7 +26,7 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
   switch (settings.name) {
     case SplashPage.routeName:
       return _pageBuilder(
-        (context) => const MainActivityScreen(),
+        (context) => const SplashPage(),
         settings: settings,
       );
     case MainActivityScreen.routeName:

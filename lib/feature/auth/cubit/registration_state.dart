@@ -7,6 +7,7 @@ class RegisterState extends Equatable {
     this.email = '',
     this.password = '',
     this.message = '',
+    this.resendOtp = false,
     this.formStatus = FormStatus.initial,
   });
 
@@ -24,6 +25,7 @@ class RegisterState extends Equatable {
   final String email;
   final String password;
   final String message;
+  final bool resendOtp;
   final FormStatus formStatus;
 
   RegisterState copyWith({
@@ -32,6 +34,7 @@ class RegisterState extends Equatable {
     String? password,
     String? email,
     String? message,
+    bool? resendOtp,
     FormStatus? formStatus,
   }) {
     return RegisterState(
@@ -40,12 +43,14 @@ class RegisterState extends Equatable {
       password: password ?? this.password,
       email: email ?? this.email,
       message: message ?? this.message,
+      resendOtp: resendOtp ?? this.resendOtp,
       formStatus: formStatus ?? this.formStatus,
     );
   }
 
   @override
-  List<Object> get props => [phone, email, password, formStatus, message];
+  List<Object> get props =>
+      [phone, email, password, formStatus, message, resendOtp];
 
   Map<String, dynamic> toJson() => {
         'phone': phone,
