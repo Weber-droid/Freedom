@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:bloc/bloc.dart';
@@ -39,10 +40,15 @@ class RegisterCubit extends Cubit<RegisterState> {
           name: state.fullName, email: state.email, phoneNumber: state.phone));
 
       response.fold(
-        (l) => emit(state.copyWith(
-          formStatus: FormStatus.failure,
-          message: parseApiErrorMessage(l.message),
-        )),
+        (l) {
+          final message = json.decode(l.message);
+          log('message $message');
+          final transformedMessage = message['msg'] as String;
+          emit(state.copyWith(
+            formStatus: FormStatus.failure,
+            message: transformedMessage,
+          ));
+        },
         (r) => emit(state.copyWith(
             formStatus: FormStatus.success,
             message: 'Success, please verify your number to login')),

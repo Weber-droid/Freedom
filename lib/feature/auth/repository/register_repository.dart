@@ -83,10 +83,10 @@ class RegisterRepository {
     }
   }
 
-  Future<Either<Failure, bool>> resendOtp(String phoneNumber) async {
+  Future<Either<Failure, bool>> resendOtp(String phoneNumber, String purpose) async {
     try {
       final val =
-          await _remoteDataSource.resendOtp(phoneNumber);
+          await _remoteDataSource.resendOtp(phoneNumber,purpose);
       return Right(val);
     } on ServerFailure catch (e) {
       return Left(ServerFailure(e.message));

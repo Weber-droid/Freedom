@@ -22,6 +22,7 @@ class RemoteDataSourceImpl extends RemoteDataSource {
   final token = RegisterLocalDataSource.getJwtToken();
   @override
   Future<List<PaymentMethod>> getPaymentMethods() async {
+    log('My token $token');
     try {
       final response = await client.get(
         Endpoints.getPaymentMethods,
@@ -42,12 +43,10 @@ class RemoteDataSourceImpl extends RemoteDataSource {
         Map<String, dynamic> errorResponse;
         try {
           errorResponse = json.decode(response.body) as Map<String, dynamic>;
-          final errorMessage = errorResponse['message'] as String? ??
-              'Server error: ${response.statusCode}';
+          final errorMessage = errorResponse['message'] as String;
           throw ServerException(errorMessage);
         } catch (e) {
-          throw ServerException(
-              'Server error: ${response.statusCode} - ${response.body}');
+          throw ServerException(response.body);
         }
       }
     } on NetworkException catch (e) {
@@ -72,10 +71,10 @@ class RemoteDataSourceImpl extends RemoteDataSource {
           'expiryYear': addCardModel.expiryYear,
           'isDefault': true,
           'cardDetails': {
-            'number': addCardModel.cardDetails?.cardNumber ?? '',
-            'cvv': addCardModel.cardDetails?.cvv,
-            'expiryMonth': addCardModel.cardDetails?.expiryMonth,
-            'expiryYear': addCardModel.cardDetails?.expiryYear,
+            'number': addCardModel.cardDetails.cardNumber ?? '',
+            'cvv': addCardModel.cardDetails.cvv,
+            'expiryMonth': addCardModel.cardDetails.expiryMonth,
+            'expiryYear': addCardModel.cardDetails.expiryYear,
           }
         },
         headers: {
@@ -93,12 +92,10 @@ class RemoteDataSourceImpl extends RemoteDataSource {
         Map<String, dynamic> errorResponse;
         try {
           errorResponse = json.decode(response.body) as Map<String, dynamic>;
-          final errorMessage = errorResponse['message'] as String? ??
-              'Server error: ${response.statusCode}';
+          final errorMessage = errorResponse['message'] as String;
           throw ServerException(errorMessage);
         } catch (e) {
-          throw ServerException(
-              'Server error: ${response.statusCode} - ${response.body}');
+          throw ServerException(response.body);
         }
       }
     } on NetworkException catch (e) {
@@ -136,12 +133,10 @@ class RemoteDataSourceImpl extends RemoteDataSource {
         Map<String, dynamic> errorResponse;
         try {
           errorResponse = json.decode(response.body) as Map<String, dynamic>;
-          final errorMessage = errorResponse['message'] as String? ??
-              'Server error: ${response.statusCode}';
+          final errorMessage = errorResponse['message'] as String;
           throw ServerException(errorMessage);
         } catch (e) {
-          throw ServerException(
-              'Server error: ${response.statusCode} - ${response.body}');
+          throw ServerException(response.body);
         }
       }
     } on NetworkException catch (e) {
@@ -172,12 +167,10 @@ class RemoteDataSourceImpl extends RemoteDataSource {
         Map<String, dynamic> errorResponse;
         try {
           errorResponse = json.decode(response.body) as Map<String, dynamic>;
-          final errorMessage = errorResponse['message'] as String? ??
-              'Server error: ${response.statusCode}';
+          final errorMessage = errorResponse['message'] as String;
           throw ServerException(errorMessage);
         } catch (e) {
-          throw ServerException(
-              'Server error: ${response.statusCode} - ${response.body}');
+          throw ServerException(response.body);
         }
       }
     } on NetworkException catch (e) {

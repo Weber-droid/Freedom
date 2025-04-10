@@ -36,13 +36,11 @@ class RegisterDataSource {
         Map<String, dynamic> errorResponse;
         try {
           errorResponse = json.decode(response.body) as Map<String, dynamic>;
-          final errorMessage = errorResponse['msg'] as String? ??
-              'Server error: ${response.statusCode}';
+          final errorMessage = errorResponse['msg'] as String;
           log('Error message: $errorMessage');
           throw ServerException(errorMessage);
         } catch (e) {
-          throw ServerException(
-              'Server error: ${response.statusCode} - ${response.body}');
+          throw ServerException(response.body);
         }
       }
     } on NetworkException catch (e) {
@@ -68,12 +66,10 @@ class RegisterDataSource {
         Map<String, dynamic> errorResponse;
         try {
           errorResponse = json.decode(response.body) as Map<String, dynamic>;
-          final errorMessage = errorResponse['message'] as String? ??
-              'Server error: ${response.statusCode}';
+          final errorMessage = errorResponse['message'] as String;
           throw ServerException(errorMessage);
         } catch (e) {
-          throw ServerException(
-              'Server error: ${response.statusCode} - ${response.body}');
+          throw ServerException(response.body);
         }
       }
     } on NetworkException catch (e) {
@@ -144,13 +140,10 @@ class RegisterDataSource {
         Map<String, dynamic> errorResponse;
         try {
           errorResponse = json.decode(response.body) as Map<String, dynamic>;
-          log('Error body: ${response.body}');
-          final errorMessage = errorResponse['msg'] as String? ??
-              'Server error: ${response.statusCode}';
+          final errorMessage = errorResponse['msg'] as String;
           throw ServerException(errorMessage);
         } catch (e) {
-          throw ServerException(
-              'Server error: ${response.statusCode} - ${response.body}');
+          throw ServerException(response.body);
         }
       }
     } on NetworkException catch (e) {
@@ -176,8 +169,7 @@ class RegisterDataSource {
         Map<String, dynamic> errorResponse;
         try {
           errorResponse = json.decode(response.body) as Map<String, dynamic>;
-          final errorMessage = errorResponse['message'] as String? ??
-              'Server error: ${response.statusCode}';
+          final errorMessage = errorResponse['message'] as String;
           log('Error message: $errorMessage');
           throw ServerException(errorMessage);
         } catch (e) {
@@ -192,21 +184,15 @@ class RegisterDataSource {
     }
   }
 
-  Future<bool> resendOtp(String phoneNumber) async {
-    final body =  json.encode({
-      'phone': phoneNumber,
-      'purpose': 'registration'
-    });
+  Future<bool> resendOtp(String phoneNumber, String purpose) async {
     try {
-      final jsonBody = {'phone': phoneNumber, 'purpose': 'registration'};
-      log('resend otp: $jsonBody');
+      final jsonBody = {'phone': phoneNumber, 'purpose': purpose};
       final response = await client.post(Endpoints.resendOtp,
           headers: {'Content-Type': 'application/json'},
           body: jsonBody
       );
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = json.decode(response.body) as Map<String, dynamic>;
-        log('remote data source(): $decoded');
         final otpSent = decoded['success'] as bool;
         return otpSent;
       } else {

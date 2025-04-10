@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:bloc/bloc.dart';
@@ -21,8 +22,12 @@ class ProfileCubit extends Cubit<ProfileState> {
     emit(ProfileLoading());
     try {
       final response = await _profileRepository.fetchUserProfile();
-      response.fold(
-              (l) => emit(ProfileError(l.message)),
+      await response.fold(
+              (l) {
+                final message = json.decode(l.message);
+                final transformedMessage = message['msg'] as String;
+                emit(ProfileError(transformedMessage));
+              },
               (profile) async {
             try {
               final currentUser = await RegisterLocalDataSource().getUser();

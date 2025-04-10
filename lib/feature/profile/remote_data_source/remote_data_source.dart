@@ -15,7 +15,7 @@ import 'package:http_parser/http_parser.dart';
 
 class ProfileRemoteDataSource {
   final client = getIt<BaseApiClients>();
-
+  final token = RegisterLocalDataSource.getJwtToken();
   Future<ProfileModel> fetchUserProfile() async {
     try {
       final user = await RegisterLocalDataSource().getUser();
@@ -33,23 +33,18 @@ class ProfileRemoteDataSource {
         Map<String, dynamic> errorResponse;
         try {
           errorResponse = json.decode(response.body) as Map<String, dynamic>;
-          final errorMessage = errorResponse['message'] as String? ??
-              'Server error: ${response.statusCode}';
-          log('Error message: $errorMessage');
+          final errorMessage = errorResponse['message'] as String;
           throw ServerException(errorMessage);
         } catch (e) {
-          throw ServerException(
-              'Server error: ${response.statusCode} - ${response.body}');
+          throw ServerException(response.body);
         }
       }
     } on NetworkException catch (e) {
-      log('Network exception: ${e.message}');
+
       throw NetworkException(e.message);
     } on ServerException catch (e) {
-      log('Server exception: ${e.message}');
       throw ServerException(e.message);
     } catch (e) {
-      log('Unexpected error: $e');
       throw ServerException('An unexpected error occurred: $e');
     }
   }
@@ -60,16 +55,15 @@ class ProfileRemoteDataSource {
     }
     try {
       final url = Uri.parse('${ApiConstants.baseUrl}upload-profile-picture');
-      log('url: $url');
       final imageFormat = _getImageFormat(file.path);
       log('Image format $imageFormat');
       final request = http.MultipartRequest('POST', url)
         ..headers['Authorization'] =
-            'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3ZWEwYjI2YWJmZGFmY2I3MTRiMTQzNSIsIm5hbWUiOiJKYW1iaXQgS2Fzb25nbyIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzQzNzYyNDExLCJleHAiOjE3NTI0MDI0MTF9.vRyh4sWbbPt2Nskvx8o3RERUDEQoqGhIiFtgzzlDVtE'
+            'Bearer $token'
         ..files.add(await http.MultipartFile.fromPath(
-          'profile-picture',
+          'profileImage',
           file.path,
-          contentType: MediaType('profile-picture', imageFormat),
+          contentType: MediaType('profileImage', imageFormat),
         ));
 
       log('my request ${request.files[0].filename}');
@@ -78,29 +72,21 @@ class ProfileRemoteDataSource {
       final responseString = String.fromCharCodes(responseData);
       if (response.statusCode == 200 || response.statusCode == 201) {
         final jsonData = jsonDecode(responseString);
-        log('Image uploaded successfully: $jsonData');
       } else {
         Map<String, dynamic> errorResponse;
         try {
           errorResponse = json.decode(responseString) as Map<String, dynamic>;
-          final errorMessage = errorResponse['msg'] as String? ??
-              'Server error: ${response.statusCode}';
-          log('Network exception: ${errorResponse}');
-          log('Network exception: ${response.statusCode}');
+          final errorMessage = errorResponse['msg'] as String;
           throw ServerException(errorMessage);
         } catch (e) {
-          log('Network exception: ${e}');
           throw ServerException('Error uploading image');
         }
       }
     } on NetworkException catch (e) {
-      log('Network exception: ${e.message}');
       throw NetworkException(e.message);
     } on ServerException catch (e) {
-      log('Server exception: ${e.message}');
       throw ServerException(e.message);
     } catch (e) {
-      log('Unexpected error: $e');
       throw ServerException('An unexpected error occurred: $e');
     }
   }
@@ -118,7 +104,7 @@ class ProfileRemoteDataSource {
       case 'webp':
         return 'webp';
       default:
-        return 'jpeg'; // Default to jpeg if unknown
+        return 'jpeg';
     }
   }
 }

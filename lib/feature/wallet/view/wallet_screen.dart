@@ -243,6 +243,12 @@ class ManagePayment extends SectionFactory {
               type: ToastType.error,
               position: ToastPosition.top,
             );
+          case WalletError:
+          context.showToast(
+            message: (state as DeleteCardError).message,
+            type: ToastType.error,
+            position: ToastPosition.top,
+          );
           case DeleteCardError:
             context.showToast(
               message: (state as DeleteCardError).message,
@@ -462,10 +468,15 @@ class ManagePayment extends SectionFactory {
     required bool isDefault,
     required String expiry,
   }) {
-    final iconPath = cardType.toLowerCase() == 'visa'
-        ? 'assets/images/visa_electron.svg'
-        : 'assets/images/mastercard.svg';
 
+    String? iconPath;
+    if(cardType.toLowerCase() == 'visa'){
+      iconPath = 'assets/images/visa_electron.svg';
+    } else if(cardType.toLowerCase() == 'mastercard'){
+      iconPath = 'assets/images/mastercard.svg';
+    } else{
+     iconPath = 'assets/images/momo_icon.svg';
+    }
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(

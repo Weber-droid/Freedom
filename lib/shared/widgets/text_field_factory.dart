@@ -5,35 +5,36 @@ import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class TextFieldFactory extends StatefulWidget {
-  const TextFieldFactory({
-    super.key,
-    required this.controller,
-    this.suffixIcon,
-    this.onChanged,
-    this.hinText,
-    this.validator,
-    this.autovalidateMode,
-    this.errorText,
-    this.maxLines,
-    this.textAlign,
-    this.textAlignVertical,
-    this.contentPadding,
-    this.hintTextStyle,
-    this.fontStyle,
-    this.prefixText,
-    this.focusNode,
-    this.keyboardType,
-    this.initialBorderColor,
-    this.fieldActiveBorderColor,
-    this.inputFormatters,
-    this.enabledBorderColor,
-    this.focusedBorderColor,
-    this.hintText,
-    this.fillColor,
-    this.borderRadius,
-    this.enabledBorderRadius,
-    this.focusedBorderRadius,
-  });
+  const TextFieldFactory(
+      {super.key,
+      required this.controller,
+      this.suffixIcon,
+      this.onChanged,
+      this.hinText,
+      this.validator,
+      this.autovalidateMode,
+      this.errorText,
+      this.maxLines,
+      this.textAlign,
+      this.textAlignVertical,
+      this.contentPadding,
+      this.hintTextStyle,
+      this.fontStyle,
+      this.prefixText,
+      this.focusNode,
+      this.keyboardType,
+      this.initialBorderColor,
+      this.fieldActiveBorderColor,
+      this.inputFormatters,
+      this.enabledBorderColor,
+      this.focusedBorderColor,
+      this.hintText,
+      this.fillColor,
+      this.borderRadius,
+      this.enabledBorderRadius,
+      this.focusedBorderRadius,
+      this.obscureText = false,
+      this.textCapitalization = TextCapitalization.none});
   factory TextFieldFactory.name({
     required TextEditingController controller,
     TextStyle? hintTextStyle,
@@ -134,7 +135,7 @@ class TextFieldFactory extends StatefulWidget {
     Color? fieldActiveBorderColor,
     String? Function(String?)? validator,
     List<TextInputFormatter>? inputFormatters,
-    String ? hinText,
+    String? hinText,
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -150,7 +151,7 @@ class TextFieldFactory extends StatefulWidget {
         fieldActiveBorderColor: fieldActiveBorderColor,
         inputFormatters: inputFormatters,
         validator: validator,
-        hinText:hinText ,
+        hinText: hinText,
       );
   factory TextFieldFactory.email({
     required TextEditingController controller,
@@ -252,6 +253,9 @@ class TextFieldFactory extends StatefulWidget {
     int? maxLines,
     BorderRadius? focusedBorderRadius,
     Widget? suffixIcon,
+    void Function(String)? onChanged,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    bool obscureText = false,
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -275,6 +279,9 @@ class TextFieldFactory extends StatefulWidget {
         maxLines: maxLines,
         focusedBorderRadius: focusedBorderRadius,
         suffixIcon: suffixIcon,
+        onChanged: onChanged,
+        textCapitalization: textCapitalization,
+        obscureText: obscureText,
       );
   final TextEditingController controller;
   final Widget? suffixIcon;
@@ -302,6 +309,8 @@ class TextFieldFactory extends StatefulWidget {
   final BorderRadius? borderRadius;
   final BorderRadius? enabledBorderRadius;
   final BorderRadius? focusedBorderRadius;
+  final TextCapitalization textCapitalization;
+  final bool obscureText;
 
   @override
   State<TextFieldFactory> createState() => _TextFieldFactoryState();
@@ -311,7 +320,8 @@ class _TextFieldFactoryState extends State<TextFieldFactory> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
-      inputFormatters: [],
+      inputFormatters: widget.inputFormatters,
+      textCapitalization: widget.textCapitalization,
       controller: widget.controller,
       keyboardType: widget.keyboardType ?? TextInputType.text,
       textAlign: widget.textAlign ?? TextAlign.start,
@@ -321,6 +331,7 @@ class _TextFieldFactoryState extends State<TextFieldFactory> {
       maxLines: widget.maxLines ?? 1,
       cursorColor: Colors.black,
       onChanged: widget.onChanged,
+      obscureText: widget.obscureText,
       style: widget.fontStyle ??
           GoogleFonts.poppins(
             fontSize: 12.sp,

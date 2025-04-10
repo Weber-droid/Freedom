@@ -64,7 +64,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
       return;
     }
 
-    context.read<VerifyOtpCubit>().resendOtp(phoneNumber).then((_) {
+    context.read<VerifyOtpCubit>().resendOtp(phoneNumber,'registration').then((_) {
       _start = 600;
       _startTimer();
     });

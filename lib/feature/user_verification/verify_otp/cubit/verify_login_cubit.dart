@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:equatable/equatable.dart';
@@ -26,14 +27,19 @@ class VerifyLoginCubit extends Cubit<VerifyLoginState> {
       final response =
           await registerRepository.verifyLogin(state.phoneNumber!, otp);
 
-      response.fold(
-          (l) => emit(
-                state.copyWith(
-                  status: VerifyLoginStatus.failure,
-                  isError: true,
-                  errorMessage: l.message,
-                ),
-              ), (r) async {
+      await response.fold(
+          (l) {
+            final message = json.decode(l.message);
+            log('message $message');
+            final transformedMessage = message['msg'] as String;
+            emit(
+              state.copyWith(
+                status: VerifyLoginStatus.failure,
+                isError: true,
+                errorMessage:transformedMessage,
+              ),
+            );
+          }, (r) async {
         await RegisterLocalDataSource.setIsFirstTimer(isFirstTimer: false);
         final dataSource = RegisterLocalDataSource();
         await dataSource.saveUser(r ?? User());

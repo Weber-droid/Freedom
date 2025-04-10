@@ -69,16 +69,14 @@ class _LoginViewState extends State<LoginView> {
             context.showToast(
                 message: state.message,
                 position: ToastPosition.top,
-                type: ToastType.success
-            );
+                type: ToastType.success);
             Navigator.of(context).pushNamed(VerifyLoginScreen.routeName);
           } else if (state.formStatus == FormStatus.failure) {
             if (state.message.contains('Complete registration first.')) {
               context.showToast(
                   message: 'Please verify your phone number',
                   position: ToastPosition.top,
-                  type: ToastType.warning
-              );
+                  type: ToastType.warning);
               Future.delayed(const Duration(milliseconds: 1000), () {
                 Navigator.of(context).pushNamed(VerifyOtpScreen.routeName);
               });
@@ -136,6 +134,13 @@ class _LoginViewState extends State<LoginView> {
                             child: Stack(
                               children: [
                                 CountryCodePicker(
+                                  textStyle: GoogleFonts.poppins(
+                                      fontSize: 12, color: Colors.black),
+                                  dialogTextStyle: GoogleFonts.poppins(
+                                      fontSize: 12, color: Colors.black),
+                                  countryFilter: const ['GH', 'NG'],
+                                  dialogSize: const Size(300, 200),
+                                  hideSearch: true,
                                   onChanged: (value) {
                                     setState(() {
                                       countryCode = value.dialCode ?? '+233';

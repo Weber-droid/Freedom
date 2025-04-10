@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:freedom/feature/wallet/cubit/wallet_cubit.dart';
 import 'package:freedom/feature/wallet/remote_source/add_card_model.dart';
 import 'package:freedom/shared/formatters/date_formatter.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:freedom/shared/widgets/text_field_factory.dart';
 
 class AddCardBottomSheet extends StatefulWidget {
   const AddCardBottomSheet({super.key});
@@ -57,7 +56,6 @@ class _AddCardBottomSheetState extends State<AddCardBottomSheet>
   }
 
   String getCardType(String cardNumber) {
-    // Remove any non-digit characters
     final cleanNumber = cardNumber.replaceAll(RegExp(r'\D'), '');
 
     // Check Visa
@@ -99,11 +97,11 @@ class _AddCardBottomSheetState extends State<AddCardBottomSheet>
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(24),
-            topRight: Radius.circular(24),
+        decoration:  BoxDecoration(
+         gradient: whiteAmberGradient,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
           ),
         ),
         child: SingleChildScrollView(
@@ -153,49 +151,30 @@ class _AddCardBottomSheetState extends State<AddCardBottomSheet>
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _cardNumberController,
-                    decoration: InputDecoration(
-                      hintText: '0000 0000 0000 0000',
-                      prefixIcon: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: SvgPicture.asset(
-                          getCardType(_cardNumber) == 'visa'
-                              ? 'assets/images/visa_electron.svg'
-                              : 'assets/images/mastercard.svg',
-                          height: 24,
-                          width: 24,
-                        ),
+                  TextFieldFactory.itemField(
+                      controller: _cardNumberController,
+                    hinText: '0000 0000 0000 0000',
+                    prefixText: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: SvgPicture.asset(
+                        getCardType(_cardNumber) == 'visa'
+                            ? 'assets/images/visa_electron.svg'
+                            : 'assets/images/mastercard.svg',
+                        height: 24,
+                        width: 24,
                       ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            BorderSide(color: Theme.of(context).primaryColor),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
-                    keyboardType: TextInputType.number,
+                    ) ,
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
                       LengthLimitingTextInputFormatter(16),
                       CardNumberInputFormatter(),
                     ],
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter card number';
                       }
-
-                      // Remove spaces
                       final cleanNumber = value.replaceAll(' ', '');
-
                       if (cleanNumber.length < 16) {
                         return 'Please enter a valid 16-digit card number';
                       }
@@ -215,48 +194,29 @@ class _AddCardBottomSheetState extends State<AddCardBottomSheet>
                     style: GoogleFonts.poppins(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _nameController,
-                    decoration: InputDecoration(
-                      hintText: 'John Doe',
-                      prefixIcon: const Icon(Icons.person_outline),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            BorderSide(color: Theme.of(context).primaryColor),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
+
+                  TextFieldFactory.itemField(
                     textCapitalization: TextCapitalization.words,
+                    controller:_nameController,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter cardholder name';
                       }
                       return null;
                     },
-                    onChanged: (value) {
+                    onChanged: (value){
                       setState(() {
                         _cardHolderName = value;
                       });
                     },
                   ),
                   const SizedBox(height: 16),
-
-                  // Expiry Date and CVV
                   Row(
                     children: [
-                      // Expiry Date
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -266,38 +226,16 @@ class _AddCardBottomSheetState extends State<AddCardBottomSheet>
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            TextFormField(
+                            TextFieldFactory.itemField(
                               controller: _expiryDateController,
-                              decoration: InputDecoration(
-                                hintText: 'MM/YYYY',
-                                prefixIcon: const Icon(Icons.calendar_today_outlined),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide:
-                                      BorderSide(color: Colors.grey.shade300),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide:
-                                      BorderSide(color: Colors.grey.shade300),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(
-                                      color: Theme.of(context).primaryColor),
-                                ),
-                                contentPadding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                              ),
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(6),
-                                ExpiryDateInputFormatter(),
-                              ],
+                              hinText:'02/2006' ,
+                              prefixText:  const Icon(Icons.calendar_today_outlined),
+                              contentPadding:
+                              const EdgeInsets.symmetric(vertical: 16),
                               validator: (value) {
                                 if (value == null || value.isEmpty) {
                                   return 'Please enter expiry date';
@@ -306,8 +244,6 @@ class _AddCardBottomSheetState extends State<AddCardBottomSheet>
                                 if (!value.contains('/') || value.length < 7) {
                                   return 'Invalid format (MM/YYYY)';
                                 }
-
-                                // Check if card is expired
                                 final parts = value.split('/');
                                 final month = int.tryParse(parts[0]);
                                 final year = int.tryParse(parts[1]);
@@ -318,7 +254,6 @@ class _AddCardBottomSheetState extends State<AddCardBottomSheet>
                                     month > 12) {
                                   return 'Invalid expiry date';
                                 }
-
                                 final now = DateTime.now();
                                 if (year < now.year ||
                                     (year == now.year && month < now.month)) {
@@ -327,6 +262,11 @@ class _AddCardBottomSheetState extends State<AddCardBottomSheet>
 
                                 return null;
                               },
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(6),
+                                ExpiryDateInputFormatter(),
+                              ],
                               onChanged: (value) {
                                 setState(() {
                                   _expiryDate = value;
@@ -348,32 +288,14 @@ class _AddCardBottomSheetState extends State<AddCardBottomSheet>
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w500,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 8),
-                            TextFormField(
-                              controller: _cvvController,
-                              decoration: InputDecoration(
-                                hintText: 'XXX',
-                                prefixIcon: const Icon(Icons.lock_outline),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide:
-                                      BorderSide(color: Colors.grey.shade300),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide:
-                                      BorderSide(color: Colors.grey.shade300),
-                                ),
-                                focusedBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                  borderSide: BorderSide(
-                                      color: Theme.of(context).primaryColor),
-                                ),
-                                contentPadding:
-                                    const EdgeInsets.symmetric(vertical: 16),
-                              ),
+                            TextFieldFactory.itemField(
+                                controller: _cvvController,
+                              hinText: 'XXX',
+                              prefixText: const Icon(Icons.lock_outline),
                               keyboardType: TextInputType.number,
                               inputFormatters: [
                                 FilteringTextInputFormatter.digitsOnly,
@@ -396,6 +318,7 @@ class _AddCardBottomSheetState extends State<AddCardBottomSheet>
                                 });
                               },
                               obscureText: true,
+
                             ),
                           ],
                         ),
@@ -403,31 +326,22 @@ class _AddCardBottomSheetState extends State<AddCardBottomSheet>
                     ],
                   ),
                   const SizedBox(height: 24),
-
                   // Add Card Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 50,
-                    child: ElevatedButton(
+                  FreedomButton(
                       onPressed: _isProcessing ? null : () => _addCard(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).primaryColor,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        disabledBackgroundColor: Colors.grey,
+                    useGradient: true,
+                    gradient: redLinearGradient,
+                    title: 'Add Card',
+                    buttonTitle: _isProcessing
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                      'Add Card',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
                       ),
-                      child: _isProcessing
-                          ? const CircularProgressIndicator(color: Colors.white)
-                          : Text(
-                              'Add Card',
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white,
-                              ),
-                            ),
-                    ),
+                    ) ,
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -524,7 +438,6 @@ class CardNumberInputFormatter extends TextInputFormatter {
     );
   }
 }
-
 
 class VirtualCardDisplay extends StatelessWidget {
   const VirtualCardDisplay({

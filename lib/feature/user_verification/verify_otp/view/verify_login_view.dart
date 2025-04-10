@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:freedom/feature/auth/auth_cubit/auth_cubit.dart';
 import 'package:freedom/feature/auth/cubit/login_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_login_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
+import 'package:freedom/shared/formatters/count_down_formatter.dart';
 
 class VerifyLoginScreen extends StatefulWidget {
   const VerifyLoginScreen({super.key});
@@ -18,7 +18,7 @@ class _VerifyOtpScreenState extends State<VerifyLoginScreen> {
   final _otpFocusNode = FocusNode();
 
   Timer? _timer;
-  int _start = 10;
+  int _start = 600;
   @override
   void initState() {
     super.initState();
@@ -46,25 +46,48 @@ class _VerifyOtpScreenState extends State<VerifyLoginScreen> {
       });
     });
   }
+  void resendOtp() {
+    final loginCubit = BlocProvider.of<LoginCubit>(context);
+    final registerCubit = BlocProvider.of<RegisterCubit>(context);
+
+    var phoneNumber = '';
+    if (loginCubit.state.phone.isNotEmpty) {
+      phoneNumber = loginCubit.state.phone;
+    } else if (registerCubit.state.phone.isNotEmpty) {
+      phoneNumber = registerCubit.state.phone;
+    } else {
+      context.showToast(
+          message: 'Phone number not found. Please go back and try again.',
+          position: ToastPosition.top,
+          type: ToastType.error
+      );
+      return;
+    }
+
+    context.read<VerifyOtpCubit>().resendOtp(phoneNumber, 'login').then((_) {
+      _start = 600;
+      _startTimer();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final loginCubit = BlocProvider.of<AuthCubit>(context);
+    final loginCubit = BlocProvider.of<LoginCubit>(context);
     return Scaffold(
       backgroundColor: Colors.white,
-      body: BlocConsumer<AuthCubit, AuthState>(
+      body: BlocConsumer<VerifyLoginCubit, VerifyLoginState>(
         listener: (context, state) {
-          if (state is AuthSuccess) {
+          if (state.isVerified) {
             context.showToast(
                 message: 'Login successful', type: ToastType.success);
             Navigator.pushNamedAndRemoveUntil(
               context,
               MainActivityScreen.routeName,
-              (route) => false,
+                  (route) => false,
             );
-          } else if (state is AuthFailure){
+          } else {
             context.showToast(
-                message: state.message,
+                message: state.errorMessage ?? 'Something went wrong',
                 position: ToastPosition.top,
                 type: ToastType.error);
           }
@@ -102,7 +125,7 @@ class _VerifyOtpScreenState extends State<VerifyLoginScreen> {
                   ),
                   const VSpace(5.3),
                   Text(
-                    loginCubit.state.phoneNumber ?? '',
+                    loginCubit.state.phone,
                     style: GoogleFonts.poppins(
                       fontSize: 19.5,
                       fontWeight: FontWeight.w600,
@@ -173,7 +196,7 @@ class _VerifyOtpScreenState extends State<VerifyLoginScreen> {
                   ),
                   if (_start != 0)
                     Text(
-                      'Resend code in 0:$_start',
+                      'Resend code in 0:${formatTimeLeft(_start)}',
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         color: Colors.black,
@@ -182,10 +205,7 @@ class _VerifyOtpScreenState extends State<VerifyLoginScreen> {
                     )
                   else if (_start == 0)
                     InkWell(
-                      onTap: () {
-                        _start = 10;
-                        _startTimer();
-                      },
+                      onTap: resendOtp,
                       child: Text(
                         'Resend Code',
                         style: GoogleFonts.poppins(
@@ -201,24 +221,24 @@ class _VerifyOtpScreenState extends State<VerifyLoginScreen> {
                     useLoader: true,
                     borderRadius: BorderRadius.circular(10),
                     width: double.infinity,
-                    title: state is AuthLoading
+                    title: state.status == VerifyLoginStatus.submitting
                         ? 'Loading'
                         : 'Verify',
-                    child: state is AuthLoading
+                    child: state.status == VerifyLoginStatus.submitting
                         ? const CircularProgressIndicator(
-                            strokeWidth: 2,
-                          )
+                      strokeWidth: 2,
+                    )
                         : null,
                     onPressed: () =>
-                        _onVerifyPressed(context, state, loginCubit),
+                        _onVerifyPressed(context, state.status, loginCubit),
                   ),
                 ],
               ),
             ),
           );
-          if (state is AuthLoading) {
+          if (state.status == VerifyLoginStatus.submitting) {
             return BlurredLoadingOverlay(
-              isLoading: state is AuthLoading,
+              isLoading: state.status == VerifyLoginStatus.submitting,
               child: mainContent,
             );
           }
@@ -229,10 +249,10 @@ class _VerifyOtpScreenState extends State<VerifyLoginScreen> {
   }
 
   void _onVerifyPressed(
-      BuildContext context, AuthState state, AuthCubit authCubit) {
+      BuildContext context, VerifyLoginStatus state, LoginCubit loginCubit) {
     if (_otpFormKey.currentState!.validate()) {
-      context.read<AuthCubit>().setPhoneNumber(authCubit.state.phoneNumber ?? '');
-      context.read<AuthCubit>().verifyOtp(_otpController.text);
+      context.read<VerifyLoginCubit>().setPhoneNumber(loginCubit.state.phone);
+      context.read<VerifyLoginCubit>().verifyLogin(_otpController.text);
     }
   }
 
@@ -261,7 +281,7 @@ class DecoratedBackButton extends StatelessWidget {
         height: 38.09,
         width: 38.09,
         decoration:
-            const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+        const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8.86, 8.86, 9.74, 9.74),
           child: SvgPicture.asset('assets/images/back_button.svg'),

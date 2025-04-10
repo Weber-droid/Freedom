@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
@@ -14,14 +16,18 @@ class VerifyOtpCubit extends Cubit<VerifyOtpState> {
     emit(state.copyWith(status: VerifyOtpStatus.submitting));
     final response = await registerRepository.verifyPhoneNumber(phone, otp);
 
-    response.fold(
-        (l) => emit(
-              state.copyWith(
-                status: VerifyOtpStatus.failure,
-                isError: true,
-                errorMessage: l.message,
-              ),
-            ), (r) async {
+    await response.fold(
+        (l) {
+          final message = json.decode(l.message);
+          final transformedMessage = message['msg'] as String;
+          emit(
+            state.copyWith(
+              status: VerifyOtpStatus.failure,
+              isError: true,
+              errorMessage: transformedMessage,
+            ),
+          );
+        }, (r) async {
       await RegisterLocalDataSource.setIsFirstTimer(isFirstTimer: false);
       final dataSource = RegisterLocalDataSource();
       await dataSource.saveUser(r);
@@ -35,10 +41,10 @@ class VerifyOtpCubit extends Cubit<VerifyOtpState> {
     });
   }
 
-  Future<void> resendOtp(String phoneNumber) async {
+  Future<void> resendOtp(String phoneNumber, String purpose) async {
     emit(state.copyWith(status: VerifyOtpStatus.submitting));
     try {
-      final response = await registerRepository.resendOtp(phoneNumber);
+      final response = await registerRepository.resendOtp(phoneNumber, purpose);
       response.fold((l) {
         emit(state.copyWith(
             errorMessage: l.message, status: VerifyOtpStatus.failure));
