@@ -8,3 +8,13 @@ flutter_native_splash:
     image: assets/images/native_android.png
     icon_background_color: "#ffffff"
     icon_background_color_dark: "#121212"
+
+  # Add flavor-specific configurations
+  development:
+    android: true
+    ios: true
+    background_image: "assets/images/freedom_native.png"
+    android_12:
+      image: assets/images/native_android.png
+      icon_background_color: "#ffffff"
+      icon_background_color_dark: "#121212"

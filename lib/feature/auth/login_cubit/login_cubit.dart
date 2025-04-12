@@ -3,6 +3,7 @@ import 'dart:developer';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:freedom/app_preference.dart';
 import 'package:freedom/feature/auth/repository/register_repository.dart';
 import 'package:freedom/shared/enums/enums.dart';
 

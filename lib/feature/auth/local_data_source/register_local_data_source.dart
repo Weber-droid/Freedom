@@ -142,16 +142,20 @@ class RegisterLocalDataSource {
     if (_cachedIsFirstTimer != null) return _cachedIsFirstTimer!;
 
     _cachedIsFirstTimer =
-        _userPreferencesBox.get(isFirstTimerKey, defaultValue: true) as bool;
+    _userPreferencesBox.get(isFirstTimerKey, defaultValue: true) as bool;
     return _cachedIsFirstTimer!;
   }
 
-  static Future<void> setIsFirstTimer({bool? isFirstTimer}) async {
+  static Future<void> setIsFirstTimer({required bool isFirstTimer}) async {
     try {
+      log('ATTEMPTING to set isFirstTimer to: $isFirstTimer');
       await _userPreferencesBox.put(isFirstTimerKey, isFirstTimer);
       _cachedIsFirstTimer = isFirstTimer;
+      // Verify the value was actually set
+      final verifyValue = _userPreferencesBox.get(isFirstTimerKey, defaultValue: true);
+      log('VERIFICATION - isFirstTimer now set to: $verifyValue');
     } catch (e) {
-      log('Error setting first timer status: $e');
+      log('ERROR setting first timer status: $e');
       rethrow;
     }
   }
@@ -179,7 +183,9 @@ class RegisterLocalDataSource {
   // User data operations
   Future<void> saveUser(User user) async {
     try {
-      await _userBox.put(userKey, user);
+      log('verifyLogin() saving user');
+     final check = await _userBox.put(userKey, user);
+     log('verifyLogin() user saved successfully');
       _cachedUser = user;
     } catch (e) {
       log('Error saving user data: $e');

@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:freedom/app_preference.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/auth/repository/register_repository.dart';
@@ -28,9 +29,12 @@ class VerifyOtpCubit extends Cubit<VerifyOtpState> {
             ),
           );
         }, (r) async {
-      await RegisterLocalDataSource.setIsFirstTimer(isFirstTimer: false);
-      final dataSource = RegisterLocalDataSource();
-      await dataSource.saveUser(r);
+      await AppPreferences.setFirstTimer(false);
+      if (r != null) {
+        await AppPreferences.setToken(r.token!);
+        final dataSource = RegisterLocalDataSource();
+        await dataSource.saveUser(r);
+      }
       emit(
         state.copyWith(
           status: VerifyOtpStatus.success,

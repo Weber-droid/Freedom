@@ -200,8 +200,12 @@ class ChooseServiceTextDetailsUi2 extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SvgPicture.asset(
-          'assets/images/choose_bike.svg',
+        SizedBox(
+          height: 27,
+          width: 27,
+          child: SvgPicture.asset(
+            'assets/images/choose_bike.svg',
+          ),
         ),
         const VSpace(9),
         ShaderMask(
@@ -217,7 +221,7 @@ class ChooseServiceTextDetailsUi2 extends StatelessWidget {
             ),
           ),
           child: Text(
-            'Motorcycle',
+            'Okada (motor)',
             style: GoogleFonts.poppins(
               fontSize: 10.89,
               fontWeight: FontWeight.w600,
@@ -248,8 +252,12 @@ class ChooseServiceTextDetailsUi extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SvgPicture.asset(
-          'assets/images/choose_logistics.svg',
+        SizedBox(
+          height: 27,
+          width: 27,
+          child: SvgPicture.asset(
+            'assets/images/choose_logistics.svg',
+          ),
         ),
         const VSpace(9),
         ShaderMask(
@@ -265,7 +273,7 @@ class ChooseServiceTextDetailsUi extends StatelessWidget {
             ),
           ),
           child: Text(
-            'Logistic',
+            'Delivery',
             style: GoogleFonts.poppins(
               fontSize: 10.89,
               fontWeight: FontWeight.w600,
@@ -274,7 +282,7 @@ class ChooseServiceTextDetailsUi extends StatelessWidget {
         ),
         const VSpace(4),
         Text(
-          'Ride with your favorite logistics',
+          'Deliver your goods and services nationwide',
           style: GoogleFonts.poppins(
             color: Colors.black,
             fontSize: 10.89,
@@ -294,7 +302,6 @@ class ChooseServiceBox extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 170,
       decoration: BoxDecoration(
         color: Colors.white,
         border: isSelected

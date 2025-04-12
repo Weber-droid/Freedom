@@ -1,18 +1,21 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart' as fb;
-import 'package:flutter/cupertino.dart';
+import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/client/base_api_client.dart';
 import 'package:freedom/core/client/data_layer_exceptions.dart';
 import 'package:freedom/core/client/endpoints.dart';
+import 'package:freedom/core/config/api_constants.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/auth/remote_data_source/models/models.dart';
+import 'package:freedom/feature/auth/remote_data_source/models/social_response_model.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-
+import 'package:http/http.dart' as http;
 class RegisterDataSource {
   final client = getIt<BaseApiClients>();
   final fb.FirebaseAuth _firebaseAuth = fb.FirebaseAuth.instance;
@@ -79,7 +82,8 @@ class RegisterDataSource {
     }
   }
 
-  Future<fb.UserCredential> registerOrLoginWithGoogle() async {
+  // Main function for Google authentication
+  Future<SocialResponseModel> registerOrLoginWithGoogle() async {
     try {
       final googleSignIn = GoogleSignIn();
       final googleUser = await googleSignIn.signIn();
@@ -96,12 +100,61 @@ class RegisterDataSource {
         if (val.user == null) {
           throw Exception('Google sign-in failed');
         }
-        return val;
+
+        try {
+
+          final jsonVal = json.encode({
+            "provider": "google",
+            "providerUserId": val.user!.uid.trim(),
+            "email": val.user!.email?.trim(),
+            "name": val.user!.displayName?.trim(),
+            "photo": val.user!.photoURL?.trim(),
+          });
+          log('jsonVal: $jsonVal');
+          final response = await http.post(
+            Uri.parse('https://api-freedom.com/api/v2/user/auth/mobile/social'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonVal,
+          );
+
+          log("Status: ${response.statusCode}");
+          log("Body: ${response.body}");
+
+          if (response.statusCode == 200) {
+            return SocialResponseModel.fromJson({});
+          } else {
+            throw ServerException('Server error: ${response.statusCode} - ${response.reasonPhrase}');
+          }
+        } on NetworkException catch (e) {
+          throw NetworkException(e.message);
+        } on ServerException catch (e) {
+          throw ServerException(e.message);
+        } catch (e) {
+          rethrow;
+        }
       } else {
         throw Exception('Google sign-in cancelled by user');
       }
     } catch (e) {
       rethrow;
+    }
+  }
+
+  Future<bool> checkSocialAuthPhoneStatus() async {
+    try {
+      final token = await AppPreferences.getToken();
+      log('token: $token');
+      final response = await client.get(Endpoints.checkPhoneStatus);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final body = response.body;
+        final decoded = json.decode(body) as Map<String, dynamic>;
+        return decoded['success'] as bool;
+      }
+      return false;
+    } on SocketException catch (e) {
+      throw NetworkException(e.message);
+    } on ServerException catch (e) {
+      throw ServerException(e.message);
     }
   }
 
@@ -188,9 +241,7 @@ class RegisterDataSource {
     try {
       final jsonBody = {'phone': phoneNumber, 'purpose': purpose};
       final response = await client.post(Endpoints.resendOtp,
-          headers: {'Content-Type': 'application/json'},
-          body: jsonBody
-      );
+          headers: {'Content-Type': 'application/json'}, body: jsonBody);
       if (response.statusCode == 200 || response.statusCode == 201) {
         final decoded = json.decode(response.body) as Map<String, dynamic>;
         final otpSent = decoded['success'] as bool;

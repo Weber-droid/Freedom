@@ -66,7 +66,7 @@ android {
         applicationId "com.freedom.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
-        minSdkVersion 32    
+        minSdkVersion 24
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
@@ -74,7 +74,6 @@ android {
     MAPS_API_KEY: dartEnvironmentVariables.MAPS_API_KEY ?: localProperties.getProperty('MAPS_API_KEY')
 ]
         multiDexEnabled true
-
     }
 
     signingConfigs {

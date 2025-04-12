@@ -3,6 +3,7 @@ import 'dart:developer';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/client/data_layer_exceptions.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
@@ -26,25 +27,24 @@ class VerifyLoginCubit extends Cubit<VerifyLoginState> {
     try {
       final response =
           await registerRepository.verifyLogin(state.phoneNumber!, otp);
-
-      await response.fold(
-          (l) {
-            final message = json.decode(l.message);
-            log('message $message');
-            final transformedMessage = message['msg'] as String;
-            emit(
-              state.copyWith(
-                status: VerifyLoginStatus.failure,
-                isError: true,
-                errorMessage:transformedMessage,
-              ),
-            );
-          }, (r) async {
-        await RegisterLocalDataSource.setIsFirstTimer(isFirstTimer: false);
-        final dataSource = RegisterLocalDataSource();
-        await dataSource.saveUser(r ?? User());
-        if (!getIt.isRegistered<User>()) {
-          getIt.registerSingleton<User>(r ?? User());
+      await Future.delayed(Duration(seconds: 2));
+      await response.fold((l) {
+        final message = json.decode(l.message);
+        log('message $message');
+        final transformedMessage = message['msg'] as String;
+        emit(
+          state.copyWith(
+            status: VerifyLoginStatus.failure,
+            isError: true,
+            errorMessage: transformedMessage,
+          ),
+        );
+      }, (r) async {
+        await AppPreferences.setFirstTimer(false);
+        if (r != null) {
+          await AppPreferences.setToken(r.token!);
+          final dataSource = RegisterLocalDataSource();
+          await dataSource.saveUser(r);
         }
         emit(
           state.copyWith(

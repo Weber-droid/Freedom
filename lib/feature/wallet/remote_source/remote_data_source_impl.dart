@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 
+import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/client/base_api_client.dart';
 import 'package:freedom/core/client/data_layer_exceptions.dart';
 import 'package:freedom/core/client/endpoints.dart';
@@ -19,10 +20,10 @@ class RemoteDataSourceImpl extends RemoteDataSource {
         super();
 
   final BaseApiClients client;
-  final token = RegisterLocalDataSource.getJwtToken();
+  // final token = RegisterLocalDataSource.getJwtToken();
   @override
   Future<List<PaymentMethod>> getPaymentMethods() async {
-    log('My token $token');
+    final token = await AppPreferences.getToken();
     try {
       final response = await client.get(
         Endpoints.getPaymentMethods,
@@ -60,6 +61,7 @@ class RemoteDataSourceImpl extends RemoteDataSource {
 
   @override
   Future<AddCardResponse> addNewCard(AddCardModel addCardModel) async {
+    final token = await AppPreferences.getToken();
     try {
       final response = await client.post(
         Endpoints.addNewCard,
@@ -109,6 +111,7 @@ class RemoteDataSourceImpl extends RemoteDataSource {
 
   @override
   Future<AddCardResponse> addMomoCard(AddMomoCardModel addMomoCard) async {
+    final token = await AppPreferences.getToken();
     try {
       final response = await client.post(
         Endpoints.addNewCard,
@@ -150,6 +153,7 @@ class RemoteDataSourceImpl extends RemoteDataSource {
 
   @override
   Future<DeleteCardResponse> removeCard(String cardId) async {
+    final token = await AppPreferences.getToken();
     try {
       final response = await client.delete(
         '${Endpoints.removeCard}/$cardId',

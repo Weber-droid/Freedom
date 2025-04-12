@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:freedom/feature/auth/cubit/login_cubit.dart';
+import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_login_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:freedom/shared/formatters/count_down_formatter.dart';

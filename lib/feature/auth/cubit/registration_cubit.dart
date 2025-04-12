@@ -59,25 +59,77 @@ class RegisterCubit extends Cubit<RegisterState> {
     }
   }
 
-
   Future<void> registerOrLoginWithGoogle() async {
     emit(state.copyWith(formStatus: FormStatus.submitting));
     try {
       final response = await registerRepository.registerOrLoginWithGoogle();
-      response.fold(
-        (l) => emit(state.copyWith(formStatus: FormStatus.failure)),
-        (r) => emit(state.copyWith(
+
+      await response.fold(
+            (failure) {
+          // Properly handle the failure here
+          emit(state.copyWith(
+            formStatus: FormStatus.failure,
+            message: failure.message,
+          ));
+        },
+            (success) async {
+          // Check if there's an error message in the success response
+          if (success?.message?.contains("Duplicate value") == true ||
+              success?.message?.contains("error") == true) {
+            emit(state.copyWith(
+              formStatus: FormStatus.failure,
+              message: success?.message,
+            ));
+            return; // Stop execution to prevent proceeding to phone status check
+          }
+
+          emit(state.copyWith(
             formStatus: FormStatus.success,
-            fullName: r?.displayName,
-            message: 'Success, please verify your number to login')),
+            fullName: success?.data?.name,
+            phone: '',
+            message: success?.message,
+          ));
+
+          // Only check phone status if authentication was actually successful
+          await _checkPhoneStatus();
+        },
       );
-    } on ServerException catch (e) {
-      emit(state.copyWith(formStatus: FormStatus.failure, message: e.message));
-    } on NetworkException catch (e) {
-      emit(state.copyWith(formStatus: FormStatus.failure, message: e.message));
     } catch (e) {
       emit(state.copyWith(
-          formStatus: FormStatus.failure, message: e.toString()));
+        formStatus: FormStatus.failure,
+        message: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _checkPhoneStatus() async {
+    emit(state.copyWith(phoneStatus: PhoneStatus.submitting));
+    try {
+      final response = await registerRepository.checkSocialAuthPhoneStatus();
+
+      response.fold(
+            (failure) {
+          // Clear any previous success status
+          emit(state.copyWith(
+            phoneStatus: PhoneStatus.failure,
+            message: failure.message,
+            formStatus: FormStatus.initial, // Reset to initial state
+          ));
+        },
+            (needsVerification) {
+          emit(state.copyWith(
+            phoneStatus: PhoneStatus.success,
+            needsVerification: needsVerification,
+          ));
+        },
+      );
+    } catch (e) {
+      // Reset form status on exception
+      emit(state.copyWith(
+        phoneStatus: PhoneStatus.failure,
+        message: e.toString(),
+        formStatus: FormStatus.initial,
+      ));
     }
   }
 }

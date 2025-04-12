@@ -61,7 +61,6 @@ class _HomeScreenState extends State<HomeScreen> {
         },
         builder: (context, state) {
           final Widget mapWidget = GoogleMap(
-            mapType: MapType.normal,
             initialCameraPosition: LocationState.initialCameraPosition,
             myLocationEnabled:
                 state.serviceStatus == LocationServiceStatus.located,

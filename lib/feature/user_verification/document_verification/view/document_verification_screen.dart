@@ -18,7 +18,7 @@ class _DocumentVerificationScreenState
       body: Center(
         child: ElevatedButton(
             onPressed: () {
-              context.read<DocumentationVerificationCubit>().verifyDocuments();
+              // context.read<DocumentationVerificationCubit>().verifyDocuments();
             },
             child: const Text('Verify users document')),
       ),

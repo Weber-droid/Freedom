@@ -245,7 +245,7 @@ class ManagePayment extends SectionFactory {
             );
           case WalletError:
           context.showToast(
-            message: (state as DeleteCardError).message,
+            message: (state as WalletError).message,
             type: ToastType.error,
             position: ToastPosition.top,
           );
@@ -524,6 +524,7 @@ class ManagePayment extends SectionFactory {
           ),
           style: GoogleFonts.poppins(
             fontSize: 16,
+            color: Colors.black,
             fontWeight: FontWeight.w500,
           ),
         ),
@@ -544,13 +545,13 @@ class ManagePayment extends SectionFactory {
             }
           },
           itemBuilder: (context) => [
-            const PopupMenuItem(
+             PopupMenuItem(
               value: 'set_default',
               child: Row(
                 children: [
-                  Icon(Icons.check_circle_outline),
-                  SizedBox(width: 8),
-                  Text('Set as Default'),
+                  const Icon(Icons.check_circle_outline),
+                  const SizedBox(width: 8),
+                  Text('Set as Default', style: GoogleFonts.poppins(color: Colors.black,),),
                 ],
               ),
             ),

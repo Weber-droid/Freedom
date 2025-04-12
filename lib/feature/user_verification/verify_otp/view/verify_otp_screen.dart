@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:freedom/feature/auth/cubit/login_cubit.dart';
+import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:freedom/shared/formatters/count_down_formatter.dart';
 
@@ -26,8 +26,8 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _otpFocusNode.requestFocus();
+      _sendInitialOtp();
     });
-   _sendInitialOtp();
   }
 
   void _startTimer() {

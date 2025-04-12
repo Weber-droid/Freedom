@@ -1,6 +1,10 @@
+import 'dart:developer';
+
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:freedom/app_preference.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/auth/view/login_view.dart';
@@ -9,6 +13,7 @@ import 'package:freedom/feature/profile/view/address_screen.dart';
 import 'package:freedom/feature/profile/view/profile_details_screen.dart';
 import 'package:freedom/feature/profile/view/security_screen.dart';
 import 'package:freedom/feature/wallet/view/wallet_screen.dart';
+import 'package:freedom/shared/constants/hive_constants.dart';
 import 'package:freedom/shared/sections_tiles.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
@@ -178,6 +183,7 @@ class ProfileCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.black,
               borderRadius: BorderRadius.circular(4),
+              image:  const DecorationImage(image: AssetImage('assets/images/profile_background.png'), fit: BoxFit.cover,),
             ),
             height: 187,
             width: 372,
@@ -263,10 +269,8 @@ class ProfileCard extends StatelessWidget {
           );
         }
 
-        // Handle ProfileLoaded state
         if (state is ProfileLoaded) {
           final profileData = state.user?.data;
-          // Safely handle potentially null profile data
           return GestureDetector(
             onTap: () => _showImagePickerOptions(context),
             child: Stack(
@@ -274,7 +278,7 @@ class ProfileCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 50,
                   backgroundImage:
-                      _getProfileImage(profileData?.profilePicture),
+                  _getProfileImage(profileData?.profilePicture),
                 ),
                 Positioned(
                   bottom: 0,
@@ -300,7 +304,7 @@ class ProfileCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 50,
                   backgroundImage:
-                      _getProfileImage(profileData?.profilePicture),
+                  _getProfileImage(profileData?.profilePicture),
                 ),
                 Positioned(
                   bottom: 0,
@@ -333,7 +337,6 @@ class ProfileCard extends StatelessWidget {
     );
   }
 
-// Helper method to get profile image
   ImageProvider _getProfileImage(String? profilePicture) {
     if (profilePicture != null && profilePicture.isNotEmpty) {
       return NetworkImage(profilePicture);
@@ -420,4 +423,3 @@ class ProfileCard extends StatelessWidget {
     }
   }
 }
-

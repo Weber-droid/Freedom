@@ -4,10 +4,11 @@ import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:freedom/feature/auth/auth_cubit/auth_cubit.dart';
-import 'package:freedom/feature/auth/cubit/login_cubit.dart';
+import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
 import 'package:freedom/feature/auth/cubit/registration_cubit.dart';
 import 'package:freedom/feature/auth/view/personal_detail_screen.dart';
+import 'package:freedom/feature/auth/view/phone_number_screen.dart';
+import 'package:freedom/feature/main_activity/main_activity_screen.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_login_view.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/shared/enums/enums.dart';
@@ -178,7 +179,7 @@ class _LoginViewState extends State<LoginView> {
                           return 'Phone number must be at least 10 digits long';
                         }
 
-                        return null; // Valid input
+                        return null;
                       },
                     ),
                   ),
@@ -291,35 +292,55 @@ class _LoginViewState extends State<LoginView> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 17),
       child: BlocConsumer<RegisterCubit, RegisterState>(
+          listenWhen: (previous, current) =>
+              previous.formStatus != current.formStatus ||
+              previous.phoneStatus != current.phoneStatus,
           listener: (context, state) {
-        if (state.formStatus == FormStatus.success) {
-          Navigator.pushNamed(context, VerifyOtpScreen.routeName);
-        }
-        if (state.formStatus == FormStatus.failure) {
-          log('state.message: ${state.message}');
-          context.showToast(message: state.message, type: ToastType.error);
-        }
-      }, builder: (context, state) {
-        if (state.formStatus == FormStatus.submitting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        return FreedomButton(
-          backGroundColor: socialLoginColor,
-          leadingIcon: 'google_icon',
-          borderRadius: BorderRadius.circular(7),
-          buttonTitle: Text('Login with Google',
-              style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black)),
-          titleColor: Colors.black,
-          fontSize: 16,
-          width: double.infinity,
-          onPressed: () {
-            context.read<RegisterCubit>().registerOrLoginWithGoogle();
+            if (state.phoneStatus == PhoneStatus.success &&
+                state.needsVerification == true) {
+              Navigator.pushReplacementNamed(
+                  context, PhoneNumberScreen.routeName);
+            }
+
+            if (state.formStatus == FormStatus.failure) {
+              context.showToast(message: state.message, type: ToastType.error);
+            }
+
+            if (state.phoneStatus == PhoneStatus.failure) {
+              context.showToast(message: state.message, type: ToastType.error);
+            }
+
+            if (state.formStatus == FormStatus.success &&
+                state.phoneStatus == PhoneStatus.success &&
+                state.needsVerification == false) {
+              Navigator.pushReplacementNamed(
+                  context, MainActivityScreen.routeName);
+            }
           },
-        );
-      }),
+          buildWhen: (previous, current) =>
+              previous.formStatus != current.formStatus,
+          builder: (context, state) {
+            if (state.formStatus == FormStatus.submitting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            return FreedomButton(
+              backGroundColor: socialLoginColor,
+              leadingIcon: 'google_icon',
+              borderRadius: BorderRadius.circular(7),
+              buttonTitle: Text('Login with Google',
+                  style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black)),
+              titleColor: Colors.black,
+              fontSize: 16,
+              width: double.infinity,
+              onPressed: () {
+                context.read<RegisterCubit>().registerOrLoginWithGoogle();
+              },
+            );
+          }),
     );
   }
 

@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'dart:io';
 
+import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/client/base_api_client.dart';
 import 'package:freedom/core/client/data_layer_exceptions.dart';
 import 'package:freedom/core/client/endpoints.dart';
@@ -15,7 +16,8 @@ import 'package:http_parser/http_parser.dart';
 
 class ProfileRemoteDataSource {
   final client = getIt<BaseApiClients>();
-  final token = RegisterLocalDataSource.getJwtToken();
+
+
   Future<ProfileModel> fetchUserProfile() async {
     try {
       final user = await RegisterLocalDataSource().getUser();
@@ -50,47 +52,78 @@ class ProfileRemoteDataSource {
   }
 
   Future<void> uploadImage(File file) async {
+    final token = await AppPreferences.getToken();
+    log('$token');
     if (file.path.isEmpty) {
       throw Exception('File path is empty');
     }
+
     try {
+      // Check if file exists and has content
+      if (!await file.exists()) {
+        throw Exception('File does not exist: ${file.path}');
+      }
+
+      final fileSize = await file.length();
+      if (fileSize == 0) {
+        throw Exception('File is empty: ${file.path}');
+      }
+      log('File size: $fileSize bytes');
+
       final url = Uri.parse('${ApiConstants.baseUrl}upload-profile-picture');
       final imageFormat = _getImageFormat(file.path);
-      log('Image format $imageFormat');
-      final request = http.MultipartRequest('POST', url)
-        ..headers['Authorization'] =
-            'Bearer $token'
-        ..files.add(await http.MultipartFile.fromPath(
-          'profileImage',
-          file.path,
-          contentType: MediaType('profileImage', imageFormat),
-        ));
+      log('Image format: $imageFormat');
 
-      log('my request ${request.files[0].filename}');
-      final response = await request.send();
-      final responseData = await response.stream.toBytes();
+      final request = http.MultipartRequest('POST', url);
+
+      // Add headers
+      request.headers['Authorization'] = 'Bearer $token';
+      // Sometimes servers also require Content-Type header
+      request.headers['Content-Type'] = 'multipart/form-data';
+
+      // Add file
+      request.files.add(await http.MultipartFile.fromPath(
+        'profileImage',  // This must match exactly what the server expects
+        file.path,
+        contentType: MediaType('image', imageFormat),
+      ));
+
+      log('Request prepared with file: ${request.files[0].filename}');
+
+      // Send request
+      final streamedResponse = await request.send();
+      final responseData = await streamedResponse.stream.toBytes();
       final responseString = String.fromCharCodes(responseData);
-      if (response.statusCode == 200 || response.statusCode == 201) {
+
+      log('Response status: ${streamedResponse.statusCode}');
+      log('Response body: $responseString');
+
+      if (streamedResponse.statusCode == 200 || streamedResponse.statusCode == 201) {
         final jsonData = jsonDecode(responseString);
+        log('Upload successful: $jsonData');
+        return; // Successfully uploaded
       } else {
         Map<String, dynamic> errorResponse;
         try {
           errorResponse = json.decode(responseString) as Map<String, dynamic>;
-          final errorMessage = errorResponse['msg'] as String;
+          final errorMessage = errorResponse['msg'] as String? ?? 'Unknown server error';
           throw ServerException(errorMessage);
         } catch (e) {
-          throw ServerException('Error uploading image');
+          log('Error parsing response: $e');
+          throw ServerException('Error uploading image: ${streamedResponse.statusCode}');
         }
       }
     } on NetworkException catch (e) {
+      log('Network exception: ${e.message}');
       throw NetworkException(e.message);
     } on ServerException catch (e) {
+      log('Server exception: ${e.message}');
       throw ServerException(e.message);
     } catch (e) {
+      log('Unexpected error: $e');
       throw ServerException('An unexpected error occurred: $e');
     }
   }
-
   String _getImageFormat(String path) {
     final extension = path.split('.').last.toLowerCase();
     switch (extension) {

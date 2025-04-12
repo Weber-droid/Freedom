@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:freedom/core/services/audio_call_service/audio_call_service.dart';
-import 'package:freedom/feature/auth/auth_cubit/auth_cubit.dart';
-import 'package:freedom/feature/auth/cubit/login_cubit.dart';
 import 'package:freedom/feature/auth/cubit/registration_cubit.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
+import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
 import 'package:freedom/feature/auth/repository/register_repository.dart';
 import 'package:freedom/feature/emergency/cubit/emergency_cubit.dart';
 import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
@@ -56,9 +55,6 @@ class App extends StatelessWidget {
           ),
           BlocProvider(
             create: (context) => EmergencyCubit(),
-          ),
-          BlocProvider(
-            create: (context) => AuthCubit(registerRepository: RegisterRepository()),
           ),
           BlocProvider(create: (context) => ProfileCubit()),
           BlocProvider(

@@ -6,6 +6,7 @@ import 'package:freedom/core/client/data_layer_exceptions.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/auth/remote_data_source/models/models.dart';
+import 'package:freedom/feature/auth/remote_data_source/models/social_response_model.dart';
 import 'package:freedom/feature/auth/remote_data_source/register_data_source.dart';
 import 'package:freedom/feature/auth/repository/repository_exceptions.dart';
 import 'package:freedom/shared/network_helpers.dart';
@@ -26,7 +27,6 @@ class RegisterRepository {
       final response = await _remoteDataSource.registerUser(user.toJson());
       return Right(response);
     } on ServerException catch (e) {
-      log('from repository: ${e.message}');
       return Left(ServerFailure(e.message));
     } on NetworkException catch (e) {
       return Left(NetworkFailure(e.message));
@@ -49,10 +49,22 @@ class RegisterRepository {
     }
   }
 
-  Future<Either<Failure, fa.User?>> registerOrLoginWithGoogle() async {
+  Future<Either<Failure, SocialResponseModel?>>
+      registerOrLoginWithGoogle() async {
     try {
       final response = await _remoteDataSource.registerOrLoginWithGoogle();
-      return Right(response.user);
+      return Right(response);
+    } on ServerFailure catch (e) {
+      return Left(ServerFailure(e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  Future<Either<Failure, bool?>> checkSocialAuthPhoneStatus() async {
+    try {
+      final response = await _remoteDataSource.checkSocialAuthPhoneStatus();
+      return Right(response);
     } on ServerFailure catch (e) {
       return Left(ServerFailure(e.message));
     } on Exception catch (e) {
@@ -83,10 +95,10 @@ class RegisterRepository {
     }
   }
 
-  Future<Either<Failure, bool>> resendOtp(String phoneNumber, String purpose) async {
+  Future<Either<Failure, bool>> resendOtp(
+      String phoneNumber, String purpose) async {
     try {
-      final val =
-          await _remoteDataSource.resendOtp(phoneNumber,purpose);
+      final val = await _remoteDataSource.resendOtp(phoneNumber, purpose);
       return Right(val);
     } on ServerFailure catch (e) {
       return Left(ServerFailure(e.message));
@@ -110,6 +122,7 @@ class RegisterRepository {
       rethrow;
     }
   }
+
   Future<Either<Failure, AuthResult>> getCurrentUser() async {
     try {
       final val = await _remoteDataSource.getCurrentUser();
@@ -122,6 +135,7 @@ class RegisterRepository {
       rethrow;
     }
   }
+
   Future<void> signOut() async {
     await _remoteDataSource.signOut();
   }

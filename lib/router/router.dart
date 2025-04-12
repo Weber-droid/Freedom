@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:freedom/feature/History/view/history_detailed_screen.dart';
 import 'package:freedom/feature/auth/view/login_view.dart';
 import 'package:freedom/feature/auth/view/personal_detail_screen.dart';
+import 'package:freedom/feature/auth/view/phone_number_screen.dart';
 import 'package:freedom/feature/auth/view/register_form_screen.dart';
 import 'package:freedom/feature/emergency/view/emergency_activated.dart';
 import 'package:freedom/feature/emergency/view/emergency_chat.dart';
@@ -102,6 +103,11 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     case VerifyLoginScreen.routeName:
       return _pageBuilder(
             (context) => const VerifyLoginScreen(),
+        settings: settings,
+      );
+    case PhoneNumberScreen.routeName:
+      return _pageBuilder(
+            (context) => const PhoneNumberScreen(),
         settings: settings,
       );
     default:
