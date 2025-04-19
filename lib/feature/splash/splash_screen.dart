@@ -39,27 +39,17 @@ class _SplashPageState extends State<SplashPage> {
 
   Future<void> _navigateUser() async {
     await Future<void>.delayed(const Duration(seconds: 2));
-
-    // Get all values asynchronously
     final isFirstTimer = await AppPreferences.isFirstTimer();
     final onboardingCompleted = await AppPreferences.isOnboardingCompleted();
     final token = await AppPreferences.getToken();
-
-    log('NAVIGATION CHECK - isFirstTimer: $isFirstTimer, onboardingCompleted: $onboardingCompleted, token: $token');
-
     if (!isFirstTimer && onboardingCompleted && token.isNotEmpty) {
-      log('Navigating to MainActivityScreen - authenticated user');
       await Navigator.pushReplacementNamed(context, MainActivityScreen.routeName);
     } else if (!isFirstTimer && !onboardingCompleted) {
-      log('Navigating to CarouselViewer - returning user who needs to complete onboarding');
       await Navigator.pushReplacementNamed(context, CarouselViewer.routeName);
     } else if (isFirstTimer) {
-      log('Navigating to CarouselViewer - first time user');
       await AppPreferences.setFirstTimer(false);
-      log('isFirstTimer flag set to false');
       await Navigator.pushReplacementNamed(context, CarouselViewer.routeName);
     } else {
-      log('Navigating to LoginView - fallback case');
       await Navigator.pushReplacementNamed(context, LoginView.routeName);
     }
   }

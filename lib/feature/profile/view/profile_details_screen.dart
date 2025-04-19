@@ -28,36 +28,41 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
   final emailFormKey = GlobalKey<FormState>();
   final phoneNumberFormKey = GlobalKey<FormState>();
 
+  // Default country code, will be updated with user's number
   String countryCode = '+233';
 
-  // Track which field is being edited
+  // Track which field is being edited - null by default
   String? activeField;
   // Store original values to detect changes
   String? originalEmail;
   String? originalPhone;
+  // Flag to track if country code has been set from user data
+  bool hasLoadedCountryCode = false;
 
   @override
   void initState() {
     super.initState();
-    phoneController
-      ..text = countryCode
+    phoneController.addListener(() {
+      // Skip auto-formatting if we're displaying a verified number
+      // or if the user explicitly changed the country code
+      if (hasLoadedCountryCode) {
+        return;
+      }
 
-      // Only setup the formatter listener without setState calls
-      ..addListener(() {
-        // Just handle the country code formatting without setState
-        if (!phoneController.text.startsWith(countryCode) && mounted) {
-          final currentPosition = phoneController.selection.baseOffset;
-          phoneController
-            ..text = countryCode +
-                phoneController.text.replaceAll(RegExp(r'^\+\d+'), '')
-            ..selection = TextSelection.fromPosition(
-              TextPosition(
-                  offset: currentPosition < 0
-                      ? phoneController.text.length
-                      : currentPosition),
-            );
-        }
-      });
+      // Only format unverified numbers or actively editing numbers
+      if (!phoneController.text.startsWith(countryCode) && mounted && activeField == 'phone') {
+        final currentPosition = phoneController.selection.baseOffset;
+        phoneController
+          ..text = countryCode +
+              phoneController.text.replaceAll(RegExp(r'^\+\d+'), '')
+          ..selection = TextSelection.fromPosition(
+            TextPosition(
+                offset: currentPosition < 0
+                    ? phoneController.text.length
+                    : currentPosition),
+          );
+      }
+    });
   }
 
   @override
@@ -112,8 +117,8 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                         message: state is NumberUpdated
                             ? state.message
                             : state is EmailUpdated
-                                ? state.message
-                                : '',
+                            ? state.message
+                            : '',
                         type: ToastType.success,
                         position: ToastPosition.top);
                     Future.delayed(const Duration(milliseconds: 1000));
@@ -191,43 +196,38 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                   // Only set the controller values if the state is ProfileLoaded
                   // and the controllers are not disposed
                   if (state is ProfileLoaded && mounted) {
-                    // Store original values if not already set
-                    if (originalEmail == null) {
-                      originalEmail = state.user!.data.email;
-                    }
-                    if (originalPhone == null) {
-                      originalPhone = state.user!.data.phone;
-                    }
+                    // Store original values
+                    originalEmail = state.user!.data.email;
+                    originalPhone = state.user!.data.phone;
 
                     nameController.text =
-                        '${state.user!.data.firstName} ${state.user!.data.surname}';
+                    '${state.user!.data.firstName} ${state.user!.data.surname}';
 
                     // Only set controller text if it's not the active field to avoid cursor jump
                     if (activeField != 'email') {
                       emailController.text = state.user!.data.email;
                     }
-                    if (activeField != 'phone') {
-                      phoneController.text = state.user!.data.phone;
-                    }
 
-                    // Check if fields have changed after setting their values
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (emailController.text != originalEmail &&
-                          activeField == null) {
-                        if (mounted) {
-                          setState(() {
-                            activeField = 'email';
-                          });
+                    // Handle phone number with verified data
+                    if (activeField != 'phone') {
+                      if (state.user!.data.isPhoneVerified && state.user!.data.phone.isNotEmpty) {
+                        // For verified numbers, use the exact number from user data
+                        phoneController.text = state.user!.data.phone;
+
+                        // Extract country code from verified phone
+                        if (state.user!.data.phone.startsWith('+')) {
+                          // Find the country code by matching the pattern of a plus sign followed by digits
+                          final countryCodeMatch = RegExp(r'^\+\d+').firstMatch(state.user!.data.phone);
+                          if (countryCodeMatch != null) {
+                            countryCode = countryCodeMatch.group(0) ?? '+233';
+                            hasLoadedCountryCode = true;
+                          }
                         }
-                      } else if (phoneController.text != originalPhone &&
-                          activeField == null) {
-                        if (mounted) {
-                          setState(() {
-                            activeField = 'phone';
-                          });
-                        }
+                      } else {
+                        // For unverified or empty numbers, use the default country code
+                        phoneController.text = state.user!.data.phone.isEmpty ? countryCode : state.user!.data.phone;
                       }
-                    });
+                    }
                   }
 
                   return Padding(
@@ -255,7 +255,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                                 : 'Full name',
                             focusedBorderColor: Colors.black,
                             hintTextStyle:
-                                GoogleFonts.poppins(color: Colors.black),
+                            GoogleFonts.poppins(color: Colors.black),
                             // Read-only since name update isn't implemented
                             readOnly: true,
                           ),
@@ -273,15 +273,15 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                           ),
                           const VSpace(10),
                           TextFieldFactory.name(
-                            controller: nameController,
+                            controller: surnameController,
                             fillColor: Colors.white,
                             enabledColorBorder: const Color(0xFFE1E1E1),
                             hinText: state is ProfileLoaded
-                                ? '${state.user!.data.firstName} ${state.user!.data.surname}'
+                                ? state.user!.data.surname
                                 : 'surname',
                             focusedBorderColor: Colors.black,
                             hintTextStyle:
-                                GoogleFonts.poppins(color: Colors.black),
+                            GoogleFonts.poppins(color: Colors.black),
                             // Read-only since name update isn't implemented
                             readOnly: true,
                           ),
@@ -339,7 +339,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                           Form(
                             key: emailFormKey,
                             autovalidateMode:
-                                AutovalidateMode.onUserInteraction,
+                            AutovalidateMode.onUserInteraction,
                             child: TextFieldFactory.email(
                               controller: emailController,
                               fillColor: Colors.white,
@@ -371,7 +371,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                               },
                               // Disable if another field is being edited
                               readOnly:
-                                  activeField != null && activeField != 'email',
+                              activeField != null && activeField != 'email',
                             ),
                           ),
 
@@ -390,24 +390,24 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                                 ),
                               ),
                               const HSpace(10),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 5, vertical: 5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xffBFFF9F),
-                                  borderRadius: BorderRadius.circular(20),
+                              if (state is ProfileLoaded)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 5, vertical: 5),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xffBFFF9F),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    state.user!.data.isPhoneVerified
+                                        ? 'Verified'
+                                        : 'Unverified',
+                                    textAlign: TextAlign.center,
+                                    style: GoogleFonts.poppins(
+                                        fontSize: 11.9,
+                                        color: const Color(0xff52C01B)),
+                                  ),
                                 ),
-                                child: Text(
-                                  state is ProfileLoaded &&
-                                          state.user!.data.isPhoneVerified
-                                      ? 'verified'
-                                      : 'unverified',
-                                  textAlign: TextAlign.center,
-                                  style: GoogleFonts.poppins(
-                                      fontSize: 11.9,
-                                      color: const Color(0xff52C01B)),
-                                ),
-                              ),
                               // Show active indicator
                               if (activeField == 'phone')
                                 Container(
@@ -431,7 +431,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                           Form(
                             key: phoneNumberFormKey,
                             autovalidateMode:
-                                AutovalidateMode.onUserInteraction,
+                            AutovalidateMode.onUserInteraction,
                             child: TextFieldFactory.phone(
                               controller: phoneController,
                               fillColor: Colors.white,
@@ -461,7 +461,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                               },
                               // Disable if another field is being edited
                               readOnly:
-                                  activeField != null && activeField != 'phone',
+                              activeField != null && activeField != 'phone',
                               prefixText: Transform.translate(
                                 offset: const Offset(0, -5),
                                 child: Padding(
@@ -490,21 +490,36 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                                           hideSearch: true,
                                           onChanged: (value) {
                                             if (mounted) {
-                                              countryCode =
-                                                  value.dialCode ?? '+233';
-                                              phoneController.text =
-                                                  countryCode;
+                                              final newCountryCode = value.dialCode ?? '+233';
 
-                                              // Use post-frame callback to avoid setState during build
-                                              WidgetsBinding.instance
-                                                  .addPostFrameCallback((_) {
-                                                if (mounted) {
-                                                  setState(() {
-                                                    // Set active field to phone when changing country code
-                                                    activeField = 'phone';
-                                                  });
+                                              // Only update if country code changed
+                                              if (countryCode != newCountryCode) {
+                                                countryCode = newCountryCode;
+
+                                                // If phone field is already active, just update the prefix
+                                                if (activeField == 'phone') {
+                                                  // Remove old country code and add new one
+                                                  final phoneWithoutCode = phoneController.text
+                                                      .replaceAll(RegExp(r'^\+\d+'), '');
+                                                  phoneController.text = countryCode + phoneWithoutCode;
+                                                } else {
+                                                  // Otherwise, activate the field and set to just the country code
+                                                  phoneController.text = countryCode;
                                                 }
-                                              });
+
+                                                // Use post-frame callback to avoid setState during build
+                                                WidgetsBinding.instance
+                                                    .addPostFrameCallback((_) {
+                                                  if (mounted) {
+                                                    setState(() {
+                                                      // Set active field to phone when changing country code
+                                                      activeField = 'phone';
+                                                      // Reset the flag to allow formatting with new country code
+                                                      hasLoadedCountryCode = false;
+                                                    });
+                                                  }
+                                                });
+                                              }
                                             }
                                           },
                                           padding: EdgeInsets.zero,
@@ -515,12 +530,12 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                                         ),
                                         Positioned(
                                           top: MediaQuery.of(context)
-                                                  .size
-                                                  .height *
+                                              .size
+                                              .height *
                                               0.014,
                                           left: MediaQuery.of(context)
-                                                  .size
-                                                  .width *
+                                              .size
+                                              .width *
                                               0.11,
                                           child: SvgPicture.asset(
                                               'assets/images/drop_down.svg'),
@@ -535,7 +550,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                                   return 'Phone number is required';
                                 }
                                 final cleanedNumber =
-                                    val.replaceAll(RegExp(r'\D'), '');
+                                val.replaceAll(RegExp(r'\D'), '');
 
                                 if (cleanedNumber.isEmpty) {
                                   return 'Please enter digits only';
@@ -558,33 +573,33 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                               onPressed: activeField == null
                                   ? null // Disable if no field is active
                                   : () {
-                                      if (activeField == 'phone') {
-                                        if (phoneNumberFormKey.currentState !=
-                                                null &&
-                                            phoneNumberFormKey.currentState!
-                                                .validate()) {
-                                          context
-                                              .read<ProfileCubit>()
-                                              .setPhoneNumber(
-                                                  phoneController.text.trim());
-                                          log('Updating phone number: ${phoneController.text.trim()}');
-                                          context
-                                              .read<ProfileCubit>()
-                                              .requestNumberUpdate(
-                                                  phoneController.text.trim());
-                                        }
-                                      } else if (activeField == 'email') {
-                                        if (emailFormKey.currentState != null &&
-                                            emailFormKey.currentState!
-                                                .validate()) {
-                                          log('Updating email: ${emailController.text.trim()}');
-                                          context
-                                              .read<ProfileCubit>()
-                                              .requestEmailUpdate(
-                                                  emailController.text.trim());
-                                        }
-                                      }
-                                    },
+                                if (activeField == 'phone') {
+                                  if (phoneNumberFormKey.currentState !=
+                                      null &&
+                                      phoneNumberFormKey.currentState!
+                                          .validate()) {
+                                    context
+                                        .read<ProfileCubit>()
+                                        .setPhoneNumber(
+                                        phoneController.text.trim());
+                                    log('Updating phone number: ${phoneController.text.trim()}');
+                                    context
+                                        .read<ProfileCubit>()
+                                        .requestNumberUpdate(
+                                        phoneController.text.trim());
+                                  }
+                                } else if (activeField == 'email') {
+                                  if (emailFormKey.currentState != null &&
+                                      emailFormKey.currentState!
+                                          .validate()) {
+                                    log('Updating email: ${emailController.text.trim()}');
+                                    context
+                                        .read<ProfileCubit>()
+                                        .requestEmailUpdate(
+                                        emailController.text.trim());
+                                  }
+                                }
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.black,
                                 foregroundColor: Colors.white,
@@ -598,8 +613,8 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                                 activeField == null
                                     ? 'No Changes'
                                     : activeField == 'phone'
-                                        ? 'Update Phone Number'
-                                        : 'Update Email',
+                                    ? 'Update Phone Number'
+                                    : 'Update Email',
                                 style: GoogleFonts.poppins(),
                               ),
                             ),

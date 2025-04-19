@@ -7,6 +7,7 @@ import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
 import 'package:freedom/feature/auth/repository/register_repository.dart';
+import 'package:freedom/feature/auth/social_auth_cubit/google_auth_cubit.dart';
 import 'package:freedom/feature/emergency/cubit/emergency_cubit.dart';
 import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
@@ -67,6 +68,9 @@ class App extends StatelessWidget {
               create: (context) => CallCubit(callService: callService)),
           BlocProvider(
               create: (context) => WalletCubit(Repository()),
+          ),
+          BlocProvider(
+            create: (context) => GoogleAuthCubit(RegisterRepository()),
           ),
         ],
         child: MaterialApp(

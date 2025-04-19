@@ -14,8 +14,8 @@ part 'registration_state.dart';
 class RegisterCubit extends Cubit<RegisterState> {
   RegisterCubit(this.registerRepository) : super(const RegisterState());
   final RegisterRepository registerRepository;
+
   void setPhoneNumber(String phoneNumber) {
-    log('phoneNumber: $phoneNumber');
     emit(state.copyWith(phone: phoneNumber));
   }
 
@@ -35,32 +35,43 @@ class RegisterCubit extends Cubit<RegisterState> {
     ));
   }
 
-  Future<void> registerUser() async {
+  Future<void> registerUser(
+      String firstName, String surName, String email, String phone) async {
     emit(state.copyWith(formStatus: FormStatus.submitting));
     try {
-      final response = await registerRepository.registerUser(UserModel(
-          firstName: state.firstName,
-          surName: state.surname,
-          email: state.email,
-          phoneNumber: state.phone));
+      final response = await registerRepository.registerUser(
+        UserModel(
+          firstName: firstName,
+          surName: surName,
+          email: email,
+          phoneNumber: phone,
+        ),
+      );
 
       response.fold((l) {
         log('message: ${l.message}');
-        emit(state.copyWith(
-          formStatus: FormStatus.failure,
-          message: l.message,
-        ));
+        emit(
+          state.copyWith(
+            formStatus: FormStatus.failure,
+            message: l.message,
+          ),
+        );
       }, (r) {
         log('message: ${r.toJson()}');
-        emit(state.copyWith(
+        emit(
+          state.copyWith(
             formStatus: FormStatus.success,
-            message: r.message!.isEmpty
-                ? 'Check your phone for a verification code'
-                : r.message));
+            message: r.message,
+          ),
+        );
       });
     } on Exception catch (_) {
-      emit(state.copyWith(
-          formStatus: FormStatus.failure, message: state.message));
+      emit(
+        state.copyWith(
+          formStatus: FormStatus.failure,
+          message: state.message,
+        ),
+      );
     }
   }
 
@@ -93,34 +104,34 @@ class RegisterCubit extends Cubit<RegisterState> {
     }
   }
 
-  Future<void> checkPhoneStatus() async {
-    emit(state.copyWith(phoneStatus: PhoneStatus.submitting));
-    try {
-      final response = await registerRepository.checkSocialAuthPhoneStatus();
-
-      response.fold(
-        (failure) {
-          log(failure.message);
-          emit(state.copyWith(
-            phoneStatus: PhoneStatus.failure,
-            message: failure.message,
-            formStatus: FormStatus.initial,
-          ));
-        },
-        (needsVerification) {
-          log('needs verifaction: $needsVerification');
-          emit(state.copyWith(
-            phoneStatus: PhoneStatus.success,
-            needsVerification: needsVerification,
-          ));
-        },
-      );
-    } catch (e) {
-      emit(state.copyWith(
-        phoneStatus: PhoneStatus.failure,
-        message: e.toString(),
-        formStatus: FormStatus.initial,
-      ));
-    }
-  }
+// Future<void> checkPhoneStatus() async {
+//   emit(state.copyWith(phoneStatus: PhoneStatus.submitting));
+//   try {
+//     final response = await registerRepository.checkSocialAuthPhoneStatus();
+//
+//     response.fold(
+//       (failure) {
+//         log(failure.message);
+//         emit(state.copyWith(
+//           phoneStatus: PhoneStatus.failure,
+//           message: failure.message,
+//           formStatus: FormStatus.initial,
+//         ));
+//       },
+//       (needsVerification) {
+//         log('needs verifaction: $needsVerification');
+//         emit(state.copyWith(
+//           phoneStatus: PhoneStatus.success,
+//           needsVerification: needsVerification,
+//         ));
+//       },
+//     );
+//   } catch (e) {
+//     emit(state.copyWith(
+//       phoneStatus: PhoneStatus.failure,
+//       message: e.toString(),
+//       formStatus: FormStatus.initial,
+//     ));
+//   }
+// }
 }

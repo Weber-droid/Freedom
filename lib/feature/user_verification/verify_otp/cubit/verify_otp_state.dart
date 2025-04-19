@@ -5,13 +5,13 @@ class VerifyOtpState extends Equatable {
     this.status = VerifyOtpStatus.initial,
     this.isError = false,
     this.errorMessage,
-    this.isVerified = false,
+    this.isVerified,
     this.user,
   });
   final VerifyOtpStatus status;
   final bool isError;
   final String? errorMessage;
-  final bool isVerified;
+  final bool? isVerified;
   final User? user;
 
   VerifyOtpState copyWith({

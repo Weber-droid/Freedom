@@ -45,8 +45,7 @@ class RegisterRepository {
       }
       return Right(response);
     } on ServerFailure catch (e) {
-      final failure = handleException(e);
-      return Left(failure);
+      return Left(ServerFailure(e.message));
     }
   }
 

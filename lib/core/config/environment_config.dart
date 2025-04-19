@@ -29,21 +29,21 @@ class EnvironmentConfig {
       case Environment.development:
         _instance = EnvironmentConfig(
           baseUrl: ApiConstants.baseUrl,
-          appName: '[DEV] Freedom Driver',
+          appName: '[DEV] Freedom',
           enableLogging: true,
           logEnvironment: _instance.logInUseEnvironment,
         );
       case Environment.staging:
         _instance = EnvironmentConfig(
           baseUrl: ApiConstants.baseUrl,
-          appName: '[STG] Freedom Driver',
+          appName: '[STG] Freedom',
           enableLogging: true,
           logEnvironment: _instance.logInUseEnvironment,
         );
       case Environment.production:
         _instance = EnvironmentConfig(
           baseUrl: ApiConstants.baseUrl,
-          appName: '[PROD] Freedom Driver',
+          appName: '[PROD] Freedom',
           enableLogging: true,
           logEnvironment: _instance.logInUseEnvironment,
         );

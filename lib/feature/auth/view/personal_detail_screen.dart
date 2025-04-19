@@ -1,12 +1,8 @@
-import 'dart:developer';
-import 'dart:ui';
-
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:freedom/feature/auth/cubit/registration_cubit.dart';
-import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/shared/enums/enums.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
@@ -19,6 +15,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 class PersonalDetailScreen extends StatefulWidget {
   const PersonalDetailScreen({super.key});
+
   static const routeName = '/personal_details';
 
   @override
@@ -58,7 +55,6 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    log(RegisterLocalDataSource.getJwtToken());
     return Scaffold(
       backgroundColor: Colors.white,
       body: BlocConsumer<RegisterCubit, RegisterState>(
@@ -73,7 +69,7 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                 type: ToastType.success,
                 message: state.message,
                 position: ToastPosition.top);
-            Navigator.pushNamed(context, VerifyOtpScreen.routeName);
+           Navigator.of(context).pushNamed(VerifyOtpScreen.routeName);
           }
         },
         builder: (context, state) {
@@ -384,17 +380,25 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                                     emailKey.currentState!.validate() &&
                                     phoneNumberKey.currentState!.validate()) {
                                   context.read<RegisterCubit>().setUserDetails(
-                                      firstName: firstNameController.text,
-                                      surName: surNameController.text,
-                                      password: passwordController.text,
-                                      email: emailController.text,
-                                      phone: phoneNumberController.text);
+                                        firstName: firstNameController.text,
+                                        surName: surNameController.text,
+                                        password: passwordController.text,
+                                        email: emailController.text,
+                                        phone: phoneNumberController.text,
+                                      );
                                   Future.delayed(
                                       const Duration(milliseconds: 500),
                                       () async {
-                                    await context
-                                        .read<RegisterCubit>()
-                                        .registerUser();
+                                    if (context.mounted) {
+                                      await context
+                                          .read<RegisterCubit>()
+                                          .registerUser(
+                                            firstNameController.text.trim(),
+                                            surNameController.text.trim(),
+                                            emailController.text.trim(),
+                                            phoneNumberController.text.trim(),
+                                          );
+                                    }
                                   });
                                 }
                               }

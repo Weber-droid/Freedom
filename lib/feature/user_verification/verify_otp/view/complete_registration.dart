@@ -77,7 +77,7 @@ class _CompleteRegistrationState extends State<CompleteRegistration> {
       backgroundColor: Colors.white,
       body: BlocConsumer<VerifyOtpCubit, VerifyOtpState>(
         listener: (context, state) {
-          if (state.isVerified) {
+          if (state.isVerified!) {
             context.showToast(
                 message: state.user!.message!, type: ToastType.success);
             Navigator.pushNamedAndRemoveUntil(
@@ -85,6 +85,10 @@ class _CompleteRegistrationState extends State<CompleteRegistration> {
               MainActivityScreen.routeName,
                   (route) => false,
             );
+          }
+          if (state.isError!) {
+            context.showToast(
+                message: state.errorMessage!, type: ToastType.error);
           }
         },
         builder: (context, state) {

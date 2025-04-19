@@ -18,30 +18,27 @@ class VerifyOtpCubit extends Cubit<VerifyOtpState> {
     final response = await registerRepository.verifyPhoneNumber(phone, otp);
 
     await response.fold(
-        (l) {
-          final message = json.decode(l.message);
-          final transformedMessage = message['msg'] as String;
+            (l) {
           emit(
             state.copyWith(
               status: VerifyOtpStatus.failure,
               isError: true,
-              errorMessage: transformedMessage,
+              errorMessage: l.message,
+              isVerified: false,
             ),
           );
         }, (r) async {
       await AppPreferences.setFirstTimer(false);
-      if (r != null) {
-        await AppPreferences.setToken(r.token!);
-        final dataSource = RegisterLocalDataSource();
-        await dataSource.saveUser(r);
-      }
-      emit(
-        state.copyWith(
-          status: VerifyOtpStatus.success,
-          isVerified: true,
-          user: r,
-        ),
-      );
+      await AppPreferences.setToken(r.token!);
+      final dataSource = RegisterLocalDataSource();
+      await dataSource.saveUser(r);
+      // emit(
+      //   state.copyWith(
+      //     status: VerifyOtpStatus.success,
+      //     isVerified: r.success,
+      //     user: r,
+      //   ),
+      // );
     });
   }
 

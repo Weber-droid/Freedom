@@ -108,7 +108,7 @@ class RegisterDataSource {
             'email': val.user!.email?.trim(),
             'firstName': firstName,
             'surname': surname,
-            'otherName': '', // You could use middle names here if needed
+            'otherName': '',
             'photo': val.user!.photoURL?.trim(),
           });
           log('jsonVal: $jsonVal');

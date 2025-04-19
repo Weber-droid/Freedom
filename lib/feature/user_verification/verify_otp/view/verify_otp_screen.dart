@@ -76,7 +76,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
       backgroundColor: Colors.white,
       body: BlocConsumer<VerifyOtpCubit, VerifyOtpState>(
         listener: (context, state) {
-          if (state.isVerified) {
+          if (state.isVerified!) {
             context.showToast(
                 message: state.user!.message!, type: ToastType.success);
             Navigator.pushNamedAndRemoveUntil(

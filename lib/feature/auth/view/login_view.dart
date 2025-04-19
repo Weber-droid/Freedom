@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:freedom/feature/auth/cubit/registration_cubit.dart';
 import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
+import 'package:freedom/feature/auth/social_auth_cubit/google_auth_cubit.dart';
 import 'package:freedom/feature/auth/view/personal_detail_screen.dart';
 import 'package:freedom/feature/auth/view/phone_number_screen.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
@@ -290,7 +291,7 @@ class _LoginViewState extends State<LoginView> {
   Widget _buildGoogleLoginButton() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 17),
-      child: BlocConsumer<RegisterCubit, RegisterState>(
+      child: BlocConsumer<GoogleAuthCubit, GoogleAuthState>(
           listener: (context, state) {
             if (state.formStatus == FormStatus.failure) {
               context.showToast(
@@ -317,8 +318,6 @@ class _LoginViewState extends State<LoginView> {
               });
             }
           },
-          buildWhen: (previous, current) =>
-          previous.formStatus != current.formStatus,
           builder: (context, state) {
             if (state.formStatus == FormStatus.submitting) {
               return const Center(child: CircularProgressIndicator());
@@ -337,7 +336,7 @@ class _LoginViewState extends State<LoginView> {
               fontSize: 16,
               width: double.infinity,
               onPressed: () {
-                context.read<RegisterCubit>().registerOrLoginWithGoogle();
+                context.read<GoogleAuthCubit>().registerOrLoginWithGoogle();
               },
             );
           }),
