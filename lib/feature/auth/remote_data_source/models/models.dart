@@ -1,14 +1,16 @@
 class UserModel {
   UserModel(
-      {required this.name, required this.email, required this.phoneNumber});
+      {required this.surName, required this.firstName, required this.email, required this.phoneNumber});
 
   Map<String, dynamic> toJson() => {
-    'name': name,
+    'firstName': firstName,
+    'surname': surName,
     'email': email,
     'phone': phoneNumber,
   };
 
-  final String name;
+  final String firstName;
+  final String surName;
   final String email;
   final String phoneNumber;
 }
@@ -29,10 +31,6 @@ class LoginResponse {
 
 }
 class AuthResult {
-  final bool success;
-  final String? message;
-  final String? userId;
-  final String? verificationId;
 
   AuthResult({
     required this.success,
@@ -40,4 +38,8 @@ class AuthResult {
     this.userId,
     this.verificationId,
   });
+  final bool success;
+  final String? message;
+  final String? userId;
+  final String? verificationId;
 }

@@ -1,17 +1,34 @@
-import 'package:flutter/material.dart';
-import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
-import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
-import 'package:freedom/shared/formatters/count_down_formatter.dart';
+import 'dart:async';
+import 'dart:developer';
 
-class VerifyOtpScreen extends StatefulWidget {
-  const VerifyOtpScreen({super.key});
-  static const routeName = '/verify_otp';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
+import 'package:freedom/feature/main_activity/main_activity_screen.dart';
+import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
+import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_otp_cubit.dart';
+import 'package:freedom/shared/formatters/count_down_formatter.dart';
+import 'package:freedom/shared/theme/app_colors.dart';
+import 'package:freedom/shared/utilities.dart';
+import 'package:freedom/shared/widgets/buttons.dart';
+import 'package:freedom/shared/widgets/loading_overlay.dart';
+import 'package:freedom/shared/widgets/toasts.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
+
+class PhoneUpdateVerificationScreen extends StatefulWidget {
+  const PhoneUpdateVerificationScreen({super.key});
+  static const routeName = '/phone_update_verification_screen';
 
   @override
-  State<VerifyOtpScreen> createState() => _VerifyOtpScreenState();
+  State<PhoneUpdateVerificationScreen> createState() =>
+      _PhoneUpdateVerificationScreenState();
 }
 
-class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
+class _PhoneUpdateVerificationScreenState
+    extends State<PhoneUpdateVerificationScreen> {
   final _otpFormKey = GlobalKey<FormState>();
   final _otpController = TextEditingController();
   final _otpFocusNode = FocusNode();
@@ -46,23 +63,25 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   }
 
   void _resendOtp() {
-    final loginCubit = BlocProvider.of<LoginCubit>(context);
-    final registerCubit = BlocProvider.of<RegisterCubit>(context);
+    final profileCubit = BlocProvider.of<ProfileCubit>(context);
 
-    var phoneNumber = '';
-    if (loginCubit.state.phone.isNotEmpty) {
-      phoneNumber = loginCubit.state.phone;
-    } else if (registerCubit.state.phone.isNotEmpty) {
-      phoneNumber = registerCubit.state.phone;
-    } else {
+    String? phoneNumber;
+    if (profileCubit.state is NumberUpdated) {
+      phoneNumber = (profileCubit.state as NumberUpdated).phoneNumber;
+    }
+
+    if (phoneNumber == null || phoneNumber.isEmpty) {
       context.showToast(
-          message: 'Phone number not found. Please go back and try again.',
+          message: 'Phone number not found in profile. Please try again.',
           position: ToastPosition.top,
-          type: ToastType.error
-      );
+          type: ToastType.error);
       return;
     }
-    context.read<VerifyOtpCubit>().resendOtp(phoneNumber,'registration').then((_) {
+
+    context
+        .read<VerifyOtpCubit>()
+        .resendOtp(phoneNumber, 'registration')
+        .then((_) {
       _start = 600;
       _startTimer();
     });
@@ -70,20 +89,28 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final formCubit = BlocProvider.of<RegisterCubit>(context);
-    final loginCubit = BlocProvider.of<LoginCubit>(context);
+    final profileCubit = BlocProvider.of<ProfileCubit>(context);
     return Scaffold(
       backgroundColor: Colors.white,
-      body: BlocConsumer<VerifyOtpCubit, VerifyOtpState>(
+      body: BlocConsumer<ProfileCubit, ProfileState>(
         listener: (context, state) {
-          if (state.isVerified) {
+          if (state is OtpVerified) {
             context.showToast(
-                message: state.user!.message!, type: ToastType.success);
+                message: state.isVerified ? 'Verified' : 'Not verified',
+                type: ToastType.success,
+                position: ToastPosition.top);
             Navigator.pushNamedAndRemoveUntil(
               context,
               MainActivityScreen.routeName,
               (route) => false,
             );
+          }
+
+          if (state is OtpVerificationError) {
+            context.showToast(
+                message: state.message,
+                type: ToastType.error,
+                position: ToastPosition.top);
           }
         },
         builder: (context, state) {
@@ -119,9 +146,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                   ),
                   const VSpace(5.3),
                   Text(
-                    formCubit.state.phone.isEmpty
-                        ? loginCubit.state.phone
-                        : formCubit.state.phone,
+                    profileCubit.phoneNumber,
                     style: GoogleFonts.poppins(
                       fontSize: 19.5,
                       fontWeight: FontWeight.w600,
@@ -151,6 +176,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                       obscuringCharacter: '*',
                       blinkWhenObscuring: true,
                       animationType: AnimationType.fade,
+                      autoDisposeControllers: false,
                       pinTheme: PinTheme(
                         shape: PinCodeFieldShape.box,
                         borderRadius: BorderRadius.circular(5).w,
@@ -217,24 +243,21 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                     useLoader: true,
                     borderRadius: BorderRadius.circular(10),
                     width: double.infinity,
-                    title: state.status == VerifyOtpStatus.submitting
-                        ? 'Loading'
-                        : 'Verify',
-                    child: state.status == VerifyOtpStatus.submitting
+                    title: state is VerifyingOtp ? 'Loading' : 'Verify',
+                    child: state is VerifyingOtp
                         ? const CircularProgressIndicator(
                             strokeWidth: 2,
                           )
                         : null,
-                    onPressed: () =>
-                        _onVerifyPressed(context, state, formCubit, loginCubit),
+                    onPressed: () => _onVerifyPressed(context),
                   ),
                 ],
               ),
             ),
           );
-          if (state.status == VerifyOtpStatus.submitting) {
+          if (state is VerifyingOtp) {
             return BlurredLoadingOverlay(
-              isLoading: state.status == VerifyOtpStatus.submitting,
+              isLoading: state is VerifyingOtp,
               child: mainContent,
             );
           }
@@ -244,24 +267,11 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     );
   }
 
-  void _onVerifyPressed(BuildContext context, VerifyOtpState state,
-      RegisterCubit formCubit, LoginCubit loginCubit) {
-    log('Loading state: ${state.status}');
-
+  void _onVerifyPressed(
+    BuildContext context,
+  ) {
     if (_otpFormKey.currentState!.validate()) {
-      if (loginCubit.state.phone.isNotEmpty) {
-        context
-            .read<VerifyOtpCubit>()
-            .verifyOtp(loginCubit.state.phone, _otpController.text);
-      } else {
-        context
-            .read<VerifyOtpCubit>()
-            .verifyOtp(formCubit.state.phone, _otpController.text);
-      }
-
-      // Log states after the verify action
-      log('Verification in progress...');
-      log('isVerified: ${state.isVerified}, isLoading: ${state.status}');
+      context.read<ProfileCubit>().verifyPhoneNumberUpdate(_otpController.text);
     }
   }
 

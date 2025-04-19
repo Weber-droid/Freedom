@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart' as fa;
 import 'package:freedom/core/client/data_layer_exceptions.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
+import 'package:freedom/feature/auth/remote_data_source/models/add_phone_to_social_model.dart';
 import 'package:freedom/feature/auth/remote_data_source/models/models.dart';
 import 'package:freedom/feature/auth/remote_data_source/models/social_response_model.dart';
 import 'package:freedom/feature/auth/remote_data_source/register_data_source.dart';
@@ -113,6 +114,20 @@ class RegisterRepository {
       String verificationId, String otp) async {
     try {
       final val = await _remoteDataSource.verifyOtp(verificationId, otp);
+      return Right(val);
+    } on ServerFailure catch (e) {
+      return Left(ServerFailure(e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(e.toString()));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Either<Failure, AddPhoneToSocialModel>> addPhoneToSocial(
+      String phoneNumber) async {
+    try {
+      final val = await _remoteDataSource.addPhoneToSocial(phoneNumber);
       return Right(val);
     } on ServerFailure catch (e) {
       return Left(ServerFailure(e.message));

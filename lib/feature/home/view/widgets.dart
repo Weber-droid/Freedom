@@ -229,12 +229,15 @@ class ChooseServiceTextDetailsUi2 extends StatelessWidget {
           ),
         ),
         const VSpace(4),
-        Text(
-          'Ride with your favourite Motorcycle',
-          style: GoogleFonts.poppins(
-            color: Colors.black,
-            fontSize: 10.89,
-            fontWeight: FontWeight.w300,
+        SizedBox(
+          width: MediaQuery.of(context).size.width * 0.6,
+          child: Text(
+            'Ride with your favourite Motorcycle',
+            style: GoogleFonts.poppins(
+              color: Colors.black,
+              fontSize: 10.89,
+              fontWeight: FontWeight.w300,
+            ),
           ),
         ),
       ],
@@ -281,12 +284,15 @@ class ChooseServiceTextDetailsUi extends StatelessWidget {
           ),
         ),
         const VSpace(4),
-        Text(
-          'Deliver your goods and services nationwide',
-          style: GoogleFonts.poppins(
-            color: Colors.black,
-            fontSize: 10.89,
-            fontWeight: FontWeight.w300,
+        SizedBox(
+          width: MediaQuery.of(context).size.width * 0.6,
+          child: Text(
+            'Deliver your goods and services nationwide',
+            style: GoogleFonts.poppins(
+              color: Colors.black,
+              fontSize: 10.89,
+              fontWeight: FontWeight.w300,
+            ),
           ),
         ),
       ],
@@ -1451,7 +1457,7 @@ class UserFloatingAccessBar extends StatelessWidget {
                   const HSpace(6),
                   Flexible(
                     child: Text(
-                      state?.userAddress ?? 'Loading...',
+                      state.userAddress ?? 'Loading...',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,

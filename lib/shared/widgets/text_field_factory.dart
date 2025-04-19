@@ -34,6 +34,8 @@ class TextFieldFactory extends StatefulWidget {
       this.enabledBorderRadius,
       this.focusedBorderRadius,
       this.obscureText = false,
+        this.readOnly = false,
+        this.onTap,
       this.textCapitalization = TextCapitalization.none});
   factory TextFieldFactory.name({
     required TextEditingController controller,
@@ -55,6 +57,8 @@ class TextFieldFactory extends StatefulWidget {
     void Function(String)? onChanged,
     Color? enabledColorBorder,
     Color? focusedBorderColor,
+    bool readOnly = false,
+    void Function()? onTap
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -76,6 +80,8 @@ class TextFieldFactory extends StatefulWidget {
         onChanged: onChanged,
         enabledBorderColor: enabledColorBorder,
         focusedBorderColor: focusedBorderColor,
+        readOnly: readOnly,
+        onTap: onTap
       );
   factory TextFieldFactory.phone({
     required TextEditingController controller,
@@ -98,6 +104,8 @@ class TextFieldFactory extends StatefulWidget {
     String? hintText,
     Widget? suffixIcon,
     Color? focusedBorderColor,
+    bool readOnly = false,
+    void Function()? onTap
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -120,6 +128,8 @@ class TextFieldFactory extends StatefulWidget {
         hinText: hintText,
         suffixIcon: suffixIcon,
         focusedBorderColor: focusedBorderColor,
+        readOnly: readOnly,
+        onTap: onTap
       );
   factory TextFieldFactory.password({
     required TextEditingController controller,
@@ -171,6 +181,8 @@ class TextFieldFactory extends StatefulWidget {
     Color? fillColor,
     Color? enabledColorBorder,
     Color? focusedBorderColor,
+    bool readOnly = false,
+    void Function()? onTap
   }) =>
       TextFieldFactory(
         controller: controller,
@@ -190,6 +202,8 @@ class TextFieldFactory extends StatefulWidget {
         fillColor: fillColor,
         enabledBorderColor: enabledColorBorder,
         focusedBorderColor: focusedBorderColor,
+        readOnly: readOnly,
+        onTap: onTap,
       );
   factory TextFieldFactory.location({
     required TextEditingController controller,
@@ -311,6 +325,8 @@ class TextFieldFactory extends StatefulWidget {
   final BorderRadius? focusedBorderRadius;
   final TextCapitalization textCapitalization;
   final bool obscureText;
+  final bool readOnly;
+  final void Function()? onTap;
 
   @override
   State<TextFieldFactory> createState() => _TextFieldFactoryState();
@@ -323,6 +339,8 @@ class _TextFieldFactoryState extends State<TextFieldFactory> {
       inputFormatters: widget.inputFormatters,
       textCapitalization: widget.textCapitalization,
       controller: widget.controller,
+      readOnly: widget.readOnly,
+      onTap: widget.onTap,
       keyboardType: widget.keyboardType ?? TextInputType.text,
       textAlign: widget.textAlign ?? TextAlign.start,
       textAlignVertical: widget.textAlignVertical,

@@ -30,13 +30,11 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  User? userData;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await context.read<ProfileCubit>().getUserProfile();
-      userData = await RegisterLocalDataSource().getUser();
     });
   }
 
@@ -66,7 +64,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                   const VSpace(35),
-                  ProfileCard(userData: userData ?? User(), state: state),
+                  ProfileCard(userData: User(), state: state),
                   const VSpace(10),
                   const Divider(
                     thickness: 5,
@@ -90,22 +88,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       AddressScreen.routeName,
                     ),
                     onTapLogout: () async {
-                      // User? user;
-                      // RegisterLocalDataSource().getUser().then((val) {
-                      //   Future.delayed(const Duration(seconds: 1));
-                      //   user = val;
-                      //   log('user: ${user}');
-                      // });
-
-                      await RegisterLocalDataSource.setJwtToken('');
-                      await RegisterLocalDataSource.setIsFirstTimer(
-                          isFirstTimer: true);
-                      RegisterLocalDataSource.invalidateCache();
-                      await Navigator.pushNamedAndRemoveUntil(
-                        context,
-                        LoginView.routeName,
-                        (route) => false,
-                      );
+                      await AppPreferences.clearAll().then((_) {
+                        Navigator.pushNamedAndRemoveUntil(
+                          context,
+                          LoginView.routeName,
+                          (route) => false,
+                        );
+                      });
                     },
                     onTapSecurity: () {
                       Navigator.pushNamed(
@@ -183,7 +172,10 @@ class ProfileCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.black,
               borderRadius: BorderRadius.circular(4),
-              image:  const DecorationImage(image: AssetImage('assets/images/profile_background.png'), fit: BoxFit.cover,),
+              image: const DecorationImage(
+                image: AssetImage('assets/images/profile_background.png'),
+                fit: BoxFit.cover,
+              ),
             ),
             height: 187,
             width: 372,
@@ -278,7 +270,7 @@ class ProfileCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 50,
                   backgroundImage:
-                  _getProfileImage(profileData?.profilePicture),
+                      _getProfileImage(profileData?.profilePicture),
                 ),
                 Positioned(
                   bottom: 0,
@@ -304,7 +296,7 @@ class ProfileCard extends StatelessWidget {
                 CircleAvatar(
                   radius: 50,
                   backgroundImage:
-                  _getProfileImage(profileData?.profilePicture),
+                      _getProfileImage(profileData?.profilePicture),
                 ),
                 Positioned(
                   bottom: 0,
@@ -380,7 +372,7 @@ class ProfileCard extends StatelessWidget {
     } else if (state is ProfileLoaded) {
       final profileData = (state as ProfileLoaded).user?.data;
       return Text(
-        profileData!.name,
+        '${profileData!.firstName}',
         style: GoogleFonts.poppins(
           fontSize: 10,
           fontWeight: FontWeight.bold,
@@ -389,7 +381,7 @@ class ProfileCard extends StatelessWidget {
       );
     } else {
       return Text(
-        userData.name ?? 'User Name',
+        'User Name',
         style: GoogleFonts.poppins(
           fontSize: 10,
           color: Colors.white,
@@ -406,7 +398,9 @@ class ProfileCard extends StatelessWidget {
     } else if (state is ProfileLoaded) {
       final profileData = (state as ProfileLoaded).user!.data;
       return Text(
-        profileData.phone,
+        profileData.isPhoneVerified
+            ? profileData.phone
+            : 'Phone not verified',
         style: GoogleFonts.poppins(
           fontSize: 10,
           color: Colors.white,
@@ -414,7 +408,7 @@ class ProfileCard extends StatelessWidget {
       );
     } else {
       return Text(
-        userData.phone ?? 'User Phone',
+        'User Phone',
         style: GoogleFonts.poppins(
           fontSize: 10,
           color: Colors.white,

@@ -27,10 +27,12 @@ class PersonalDetailScreen extends StatefulWidget {
 
 class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
   final firstNameController = TextEditingController();
+  final surNameController = TextEditingController();
   final phoneNumberController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   final firstNameKey = GlobalKey<FormState>();
+  final surnameKey = GlobalKey<FormState>();
   final emailKey = GlobalKey<FormState>();
   final phoneNumberKey = GlobalKey<FormState>();
   final passwordKey = GlobalKey<FormState>();
@@ -67,7 +69,10 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                 position: ToastPosition.top,
                 message: state.message);
           } else if (state.formStatus == FormStatus.success) {
-            context.showToast(type: ToastType.success, message: state.message);
+            context.showToast(
+                type: ToastType.success,
+                message: state.message,
+                position: ToastPosition.top);
             Navigator.pushNamed(context, VerifyOtpScreen.routeName);
           }
         },
@@ -118,7 +123,7 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                       ),
                       const VSpace(26.85),
                       Text(
-                        'Full name ',
+                        'Name',
                         style: GoogleFonts.poppins(
                           color: Colors.black,
                           fontSize: 15.06,
@@ -131,7 +136,7 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                         key: firstNameKey,
                         autovalidateMode: AutovalidateMode.onUserInteraction,
                         child: TextFieldFactory.name(
-                          hinText: 'Your name',
+                          hinText: 'name',
                           hintTextStyle: GoogleFonts.poppins(
                             fontSize: 15.06,
                             fontWeight: FontWeight.w400,
@@ -155,6 +160,61 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                           validator: (val) {
                             if (val!.isEmpty) {
                               return 'Please enter your name';
+                            }
+                            if (val.contains(' ')) {
+                              return 'Spaces are not allowed';
+                            }
+                            final regX = RegExp(r'^[a-zA-Z\s]+$');
+                            if (!regX.hasMatch(val)) {
+                              return 'Please enter a valid name';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                      const VSpace(9),
+                      Text(
+                        'Surname',
+                        style: GoogleFonts.poppins(
+                          color: Colors.black,
+                          fontSize: 15.06,
+                          fontWeight: FontWeight.w500,
+                          height: 0,
+                        ),
+                      ),
+                      const VSpace(6.82),
+                      Form(
+                        key: surnameKey,
+                        autovalidateMode: AutovalidateMode.onUserInteraction,
+                        child: TextFieldFactory.name(
+                          hinText: 'surname',
+                          hintTextStyle: GoogleFonts.poppins(
+                            fontSize: 15.06,
+                            fontWeight: FontWeight.w400,
+                            color: const Color(0x42F59E0B),
+                          ),
+                          contentPadding: const EdgeInsets.only(
+                            top: 21.06,
+                            left: 8.06,
+                            bottom: 21.06,
+                          ),
+                          controller: surNameController,
+                          prefixText: Padding(
+                            padding: const EdgeInsets.only(
+                                top: 21, left: 8.06, bottom: 21),
+                            child: SvgPicture.asset(
+                              'assets/images/user_icon.svg',
+                              colorFilter: ColorFilter.mode(
+                                  thickFillColor, BlendMode.srcIn),
+                            ),
+                          ),
+                          validator: (val) {
+                            if (val!.isEmpty) {
+                              return 'Please enter your name';
+                            }
+
+                            if (val.contains(' ')) {
+                              return 'Spaces are not allowed';
                             }
                             final regX = RegExp(r'^[a-zA-Z\s]+$');
                             if (!regX.hasMatch(val)) {
@@ -206,47 +266,6 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                       ),
                       const VSpace(9),
                       Text(
-                        'Password',
-                        style: GoogleFonts.poppins(
-                          color: Colors.black,
-                          fontSize: 15.06,
-                          fontWeight: FontWeight.w500,
-                          height: 0,
-                        ),
-                      ),
-                      const VSpace(6.82),
-                      Form(
-                        key: passwordKey,
-                        autovalidateMode: AutovalidateMode.onUserInteraction,
-                        child: TextFieldFactory.password(
-                          controller: passwordController,
-                          hintTextStyle: GoogleFonts.poppins(
-                            fontSize: 15.06,
-                            fontWeight: FontWeight.w400,
-                            color: const Color(0x42F59E0B),
-                          ),
-                          prefixText: Padding(
-                            padding: const EdgeInsets.only(
-                                top: 21, left: 8.06, bottom: 21),
-                            child: SvgPicture.asset(
-                                'assets/images/freedom_password_icon.svg'), // Consider using a lock icon instead
-                          ),
-                          hinText: 'Enter a password',
-                          validator: (password) {
-                            if (password!.isEmpty) {
-                              return 'Please enter a password';
-                            }
-                            final regX = RegExp(
-                                r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$');
-                            if (!regX.hasMatch(password)) {
-                              return '''Password must be at least 8 characters and include uppercase, lowercase, number and special character''';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                      const VSpace(9),
-                      Text(
                         'Phone number',
                         style: GoogleFonts.poppins(
                           color: Colors.black,
@@ -282,6 +301,13 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                                 child: Stack(
                                   children: [
                                     CountryCodePicker(
+                                      textStyle: GoogleFonts.poppins(
+                                          fontSize: 12, color: Colors.black),
+                                      dialogTextStyle: GoogleFonts.poppins(
+                                          fontSize: 12, color: Colors.black),
+                                      countryFilter: const ['GH', 'NG'],
+                                      dialogSize: const Size(300, 200),
+                                      hideSearch: true,
                                       onChanged: (value) {
                                         setState(() {
                                           countryCode =
@@ -354,11 +380,12 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                         onPressed: termAccepted == true
                             ? () {
                                 if (firstNameKey.currentState!.validate() &&
+                                    surnameKey.currentState!.validate() &&
                                     emailKey.currentState!.validate() &&
-                                    passwordKey.currentState!.validate() &&
                                     phoneNumberKey.currentState!.validate()) {
                                   context.read<RegisterCubit>().setUserDetails(
-                                      fullName: firstNameController.text,
+                                      firstName: firstNameController.text,
+                                      surName: surNameController.text,
                                       password: passwordController.text,
                                       email: emailController.text,
                                       phone: phoneNumberController.text);

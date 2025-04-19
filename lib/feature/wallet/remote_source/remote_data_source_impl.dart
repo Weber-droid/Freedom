@@ -6,7 +6,6 @@ import 'package:freedom/core/client/base_api_client.dart';
 import 'package:freedom/core/client/data_layer_exceptions.dart';
 import 'package:freedom/core/client/endpoints.dart';
 import 'package:freedom/di/locator.dart';
-import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/wallet/remote_source/add_card_model.dart';
 import 'package:freedom/feature/wallet/remote_source/add_card_response.dart';
 import 'package:freedom/feature/wallet/remote_source/add_momo_card_model.dart';
@@ -129,19 +128,11 @@ class RemoteDataSourceImpl extends RemoteDataSource {
         },
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
-        return AddCardResponse.fromJson(body);
-      } else {
-        Map<String, dynamic> errorResponse;
-        try {
-          errorResponse = json.decode(response.body) as Map<String, dynamic>;
-          final errorMessage = errorResponse['message'] as String;
-          throw ServerException(errorMessage);
-        } catch (e) {
-          throw ServerException(response.body);
-        }
+      final decode = jsonDecode(response.body) as Map<String, dynamic>;
+      if(decode['success'] as bool == false){
+        throw ServerException(decode['message'] as String);
       }
+      return AddCardResponse.fromJson(decode);
     } on NetworkException catch (e) {
       throw NetworkException(e.message);
     } on ServerException catch (e) {
@@ -164,19 +155,11 @@ class RemoteDataSourceImpl extends RemoteDataSource {
               'Bearer $token'
         },
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        return DeleteCardResponse.fromJson(json);
-      } else {
-        Map<String, dynamic> errorResponse;
-        try {
-          errorResponse = json.decode(response.body) as Map<String, dynamic>;
-          final errorMessage = errorResponse['message'] as String;
-          throw ServerException(errorMessage);
-        } catch (e) {
-          throw ServerException(response.body);
-        }
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      if(decoded['success'] as bool == false){
+        throw ServerException(decoded['message'] as String);
       }
+      return DeleteCardResponse.fromJson(decoded);
     } on NetworkException catch (e) {
       throw NetworkException(e.message);
     } on ServerException catch (e) {

@@ -9,6 +9,11 @@ class Endpoints {
   static const String resendOtp = 'auth/resend-verification';
   static const String addGoogleUser = 'auth/mobile/social';
   static const String checkPhoneStatus = 'auth/phone-status';
+  static const String addPhoneToGoogle = 'auth/add-phone';
+  static const String requestEmailUpdate = 'request-email-update';
+  static const String verifyPhoneUpdate = 'verify-phone-update';
+  static const String verifyEmailUpdate = 'verify-email-update';
+  static const String requestPhoneNumberUpdate = 'request-phone-update';
   static const String verify = 'auth/verify';
   static const String profile = 'getMyProfile';
   static const String preference = 'preference';

@@ -64,15 +64,10 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
                 type: ToastType.success);
             Navigator.of(context).pushNamed(VerifyLoginScreen.routeName);
           } else if (state.formStatus == FormStatus.failure) {
-            if (state.message.contains('Complete registration first.')) {
-              context.showToast(
-                  message: 'Please verify your phone number',
-                  position: ToastPosition.top,
-                  type: ToastType.warning);
-              Future.delayed(const Duration(milliseconds: 1000), () {
-                Navigator.of(context).pushNamed(VerifyOtpScreen.routeName);
-              });
-            }
+            context.showToast(
+                message: state.message,
+                position: ToastPosition.top,
+                type: ToastType.warning);
           }
         }, builder: (context, state) {
           Widget mainContent;
@@ -209,7 +204,7 @@ class _PhoneNumberScreenState extends State<PhoneNumberScreen> {
           if (fromKey.currentState!.validate()) {
             final phoneNumber = getFullPhoneNumber();
             context.read<LoginCubit>().setPhoneNumber(phoneNumber);
-            context.read<LoginCubit>().loginUserWithPhoneNumber();
+            context.read<LoginCubit>().addPhoneToSocial(phoneNumber);
           }
         },
       ),

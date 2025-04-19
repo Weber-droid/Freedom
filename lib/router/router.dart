@@ -13,8 +13,10 @@ import 'package:freedom/feature/home/view/home_screen.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
 import 'package:freedom/feature/onboarding/view/carousel_view.dart';
 import 'package:freedom/feature/profile/view/address_screen.dart';
+import 'package:freedom/feature/profile/view/phone_update_verification_screen.dart';
 import 'package:freedom/feature/profile/view/profile_details_screen.dart';
 import 'package:freedom/feature/profile/view/security_screen.dart';
+import 'package:freedom/feature/user_verification/verify_otp/view/complete_registration.dart';
 import 'package:freedom/feature/wallet/view/wallet_screen.dart';
 import 'package:freedom/feature/splash/splash_screen.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_login_view.dart';
@@ -108,6 +110,16 @@ Route<dynamic> onGenerateRoute(RouteSettings settings) {
     case PhoneNumberScreen.routeName:
       return _pageBuilder(
             (context) => const PhoneNumberScreen(),
+        settings: settings,
+      );
+    case CompleteRegistration.routeName:
+      return _pageBuilder(
+            (context) => const CompleteRegistration(),
+        settings: settings,
+      );
+    case PhoneUpdateVerificationScreen.routeName:
+      return _pageBuilder(
+            (context) => const PhoneUpdateVerificationScreen(),
         settings: settings,
       );
     default:

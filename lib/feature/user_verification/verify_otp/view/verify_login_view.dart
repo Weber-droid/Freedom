@@ -229,8 +229,10 @@ class _VerifyOtpScreenState extends State<VerifyLoginScreen> {
                       strokeWidth: 2,
                     )
                         : null,
-                    onPressed: () =>
-                        _onVerifyPressed(context, state.status, loginCubit),
+                    onPressed: () {
+                      _onVerifyPressed(context, state.status, loginCubit);
+                    }
+
                   ),
                 ],
               ),

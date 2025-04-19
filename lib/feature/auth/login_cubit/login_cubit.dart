@@ -23,7 +23,7 @@ class LoginCubit extends Cubit<LoginState> {
   Future<void> loginUserWithPhoneNumber() async {
     final phoneNumber = state.phone;
 
-    if (phoneNumber == null || phoneNumber.isEmpty) {
+    if (phoneNumber.isEmpty) {
       emit(state.copyWith(
         message: 'Phone number is required',
         formStatus: FormStatus.failure,
@@ -42,7 +42,7 @@ class LoginCubit extends Cubit<LoginState> {
             message: transformedMessage, formStatus: FormStatus.failure));
       }, (r) {
         emit(
-          state.copyWith(message: r?.message, formStatus: FormStatus.success),
+          state.copyWith(message: r.message, formStatus: FormStatus.success),
         );
       });
     } on Exception catch (e) {
@@ -51,5 +51,19 @@ class LoginCubit extends Cubit<LoginState> {
         formStatus: FormStatus.failure,
       ));
     }
+  }
+
+  Future<void> addPhoneToSocial(String phoneNumber) async {
+    final response = await _registerRepository.addPhoneToSocial(phoneNumber);
+    response.fold((fail) {
+      emit(state.copyWith(
+          message: fail.message, formStatus: FormStatus.failure));
+    }, (r) {
+      emit(
+        state.copyWith(message: r.success == true
+            ? 'Check your phone for a verification code'
+            : '', formStatus: FormStatus.success),
+      );
+    });
   }
 }

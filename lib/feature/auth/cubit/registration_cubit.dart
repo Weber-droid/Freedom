@@ -21,13 +21,15 @@ class RegisterCubit extends Cubit<RegisterState> {
 
   void setUserDetails({
     String? phone,
-    String? fullName,
+    String? firstName,
+    String? surName,
     String? email,
     String? password,
   }) {
     emit(state.copyWith(
       phone: phone,
-      fullName: fullName,
+      firstName: firstName,
+      surname: surName,
       email: email,
       password: password,
     ));
@@ -37,22 +39,25 @@ class RegisterCubit extends Cubit<RegisterState> {
     emit(state.copyWith(formStatus: FormStatus.submitting));
     try {
       final response = await registerRepository.registerUser(UserModel(
-          name: state.fullName, email: state.email, phoneNumber: state.phone));
+          firstName: state.firstName,
+          surName: state.surname,
+          email: state.email,
+          phoneNumber: state.phone));
 
-      response.fold(
-        (l) {
-          final message = json.decode(l.message);
-          log('message $message');
-          final transformedMessage = message['msg'] as String;
-          emit(state.copyWith(
-            formStatus: FormStatus.failure,
-            message: transformedMessage,
-          ));
-        },
-        (r) => emit(state.copyWith(
+      response.fold((l) {
+        log('message: ${l.message}');
+        emit(state.copyWith(
+          formStatus: FormStatus.failure,
+          message: l.message,
+        ));
+      }, (r) {
+        log('message: ${r.toJson()}');
+        emit(state.copyWith(
             formStatus: FormStatus.success,
-            message: 'Success, please verify your number to login')),
-      );
+            message: r.message!.isEmpty
+                ? 'Check your phone for a verification code'
+                : r.message));
+      });
     } on Exception catch (_) {
       emit(state.copyWith(
           formStatus: FormStatus.failure, message: state.message));
@@ -65,33 +70,19 @@ class RegisterCubit extends Cubit<RegisterState> {
       final response = await registerRepository.registerOrLoginWithGoogle();
 
       await response.fold(
-            (failure) {
-          // Properly handle the failure here
+        (failure) {
           emit(state.copyWith(
             formStatus: FormStatus.failure,
             message: failure.message,
           ));
         },
-            (success) async {
-          // Check if there's an error message in the success response
-          if (success?.message?.contains("Duplicate value") == true ||
-              success?.message?.contains("error") == true) {
-            emit(state.copyWith(
-              formStatus: FormStatus.failure,
-              message: success?.message,
-            ));
-            return; // Stop execution to prevent proceeding to phone status check
-          }
-
+        (success) async {
           emit(state.copyWith(
             formStatus: FormStatus.success,
-            fullName: success?.data?.name,
+            firstName: success?.data?.firstName,
             phone: '',
             message: success?.message,
           ));
-
-          // Only check phone status if authentication was actually successful
-          await _checkPhoneStatus();
         },
       );
     } catch (e) {
@@ -102,21 +93,22 @@ class RegisterCubit extends Cubit<RegisterState> {
     }
   }
 
-  Future<void> _checkPhoneStatus() async {
+  Future<void> checkPhoneStatus() async {
     emit(state.copyWith(phoneStatus: PhoneStatus.submitting));
     try {
       final response = await registerRepository.checkSocialAuthPhoneStatus();
 
       response.fold(
-            (failure) {
-          // Clear any previous success status
+        (failure) {
+          log(failure.message);
           emit(state.copyWith(
             phoneStatus: PhoneStatus.failure,
             message: failure.message,
-            formStatus: FormStatus.initial, // Reset to initial state
+            formStatus: FormStatus.initial,
           ));
         },
-            (needsVerification) {
+        (needsVerification) {
+          log('needs verifaction: $needsVerification');
           emit(state.copyWith(
             phoneStatus: PhoneStatus.success,
             needsVerification: needsVerification,
@@ -124,7 +116,6 @@ class RegisterCubit extends Cubit<RegisterState> {
         },
       );
     } catch (e) {
-      // Reset form status on exception
       emit(state.copyWith(
         phoneStatus: PhoneStatus.failure,
         message: e.toString(),

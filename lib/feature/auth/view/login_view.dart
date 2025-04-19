@@ -1,14 +1,13 @@
-import 'dart:developer';
-
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
 import 'package:freedom/feature/auth/cubit/registration_cubit.dart';
+import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
 import 'package:freedom/feature/auth/view/personal_detail_screen.dart';
 import 'package:freedom/feature/auth/view/phone_number_screen.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
+import 'package:freedom/feature/user_verification/verify_otp/view/complete_registration.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_login_view.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/shared/enums/enums.dart';
@@ -79,7 +78,7 @@ class _LoginViewState extends State<LoginView> {
                   position: ToastPosition.top,
                   type: ToastType.warning);
               Future.delayed(const Duration(milliseconds: 1000), () {
-                Navigator.of(context).pushNamed(VerifyOtpScreen.routeName);
+                Navigator.of(context).pushNamed(CompleteRegistration.routeName);
               });
             }
           }
@@ -292,33 +291,34 @@ class _LoginViewState extends State<LoginView> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 17),
       child: BlocConsumer<RegisterCubit, RegisterState>(
-          listenWhen: (previous, current) =>
-              previous.formStatus != current.formStatus ||
-              previous.phoneStatus != current.phoneStatus,
           listener: (context, state) {
-            if (state.phoneStatus == PhoneStatus.success &&
-                state.needsVerification == true) {
-              Navigator.pushReplacementNamed(
-                  context, PhoneNumberScreen.routeName);
-            }
-
             if (state.formStatus == FormStatus.failure) {
-              context.showToast(message: state.message, type: ToastType.error);
+              context.showToast(
+                  message: state.message,
+                  type: ToastType.error,
+                  position: ToastPosition.top);
             }
 
             if (state.phoneStatus == PhoneStatus.failure) {
-              context.showToast(message: state.message, type: ToastType.error);
+              context.showToast(
+                  message: state.message,
+                  type: ToastType.error,
+                  position: ToastPosition.top);
             }
 
-            if (state.formStatus == FormStatus.success &&
-                state.phoneStatus == PhoneStatus.success &&
-                state.needsVerification == false) {
-              Navigator.pushReplacementNamed(
-                  context, MainActivityScreen.routeName);
+            if (state.formStatus == FormStatus.success) {
+              context.showToast(
+                  message: state.message,
+                  type: ToastType.success,
+                  position: ToastPosition.top);
+              Future.delayed(const Duration(milliseconds: 300), () {
+                Navigator.pushReplacementNamed(
+                    context, MainActivityScreen.routeName);
+              });
             }
           },
           buildWhen: (previous, current) =>
-              previous.formStatus != current.formStatus,
+          previous.formStatus != current.formStatus,
           builder: (context, state) {
             if (state.formStatus == FormStatus.submitting) {
               return const Center(child: CircularProgressIndicator());

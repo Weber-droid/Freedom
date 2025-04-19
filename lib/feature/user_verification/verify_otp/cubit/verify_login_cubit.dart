@@ -29,17 +29,15 @@ class VerifyLoginCubit extends Cubit<VerifyLoginState> {
           await registerRepository.verifyLogin(state.phoneNumber!, otp);
       await Future.delayed(Duration(seconds: 2));
       await response.fold((l) {
-        final message = json.decode(l.message);
-        log('message $message');
-        final transformedMessage = message['msg'] as String;
         emit(
           state.copyWith(
             status: VerifyLoginStatus.failure,
             isError: true,
-            errorMessage: transformedMessage,
+            errorMessage: l.message,
           ),
         );
       }, (r) async {
+        log('right profile ${r?.toJson()}');
         await AppPreferences.setFirstTimer(false);
         if (r != null) {
           await AppPreferences.setToken(r.token!);
@@ -54,22 +52,6 @@ class VerifyLoginCubit extends Cubit<VerifyLoginState> {
           ),
         );
       });
-    } on ServerException catch (e) {
-      emit(
-        state.copyWith(
-          status: VerifyLoginStatus.failure,
-          isError: true,
-          errorMessage: e.message,
-        ),
-      );
-    } on NetworkException catch (e) {
-      emit(
-        state.copyWith(
-          status: VerifyLoginStatus.failure,
-          isError: true,
-          errorMessage: e.message,
-        ),
-      );
     } catch (e) {
       emit(
         state.copyWith(

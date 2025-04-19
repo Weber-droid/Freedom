@@ -20,6 +20,7 @@ class CustomToast {
 
   static OverlayEntry? _overlayEntry;
   static bool _isVisible = false;
+  static OverlayState? _overlayState; // Add this to track the overlay state
 
   static void show({
     required BuildContext context,
@@ -30,35 +31,50 @@ class CustomToast {
     double width = 300,
     VoidCallback? onDismiss,
   }) {
-    // Dismiss any existing toast first
-    if (_isVisible) {
-      dismiss();
+    try {
+      // Dismiss any existing toast first
+      if (_isVisible) {
+        dismiss();
+      }
+
+      // Get the overlay and store it
+      _overlayState = Overlay.of(context, rootOverlay: true);
+
+      if (_overlayState == null) {
+        return;
+      }
+
+      _overlayEntry = OverlayEntry(
+        builder: (BuildContext context) => _ToastWidget(
+          message: message,
+          position: position,
+          type: type,
+          width: width,
+          onDismiss: onDismiss,
+        ),
+      );
+
+      _isVisible = true;
+      _overlayState!.insert(_overlayEntry!);
+
+      Future.delayed(duration, dismiss);
+    } catch (e) {
+      print('Error showing toast: $e');
+      _isVisible = false;
+      _overlayEntry = null;
     }
-
-    // Create overlay entry
-    _overlayEntry = OverlayEntry(
-      builder: (BuildContext context) => _ToastWidget(
-        message: message,
-        position: position,
-        type: type,
-        width: width,
-        onDismiss: onDismiss,
-      ),
-    );
-
-    // Show the toast
-    _isVisible = true;
-    Overlay.of(context).insert(_overlayEntry!);
-
-    // Auto dismiss after duration
-    Future.delayed(duration, () {
-      dismiss();
-    });
   }
 
   static void dismiss() {
-    if (_isVisible && _overlayEntry != null) {
-      _overlayEntry?.remove();
+    try {
+      if (_isVisible && _overlayEntry != null) {
+        _overlayEntry?.remove();
+        _overlayEntry = null;
+        _isVisible = false;
+      }
+    } catch (e) {
+      print('Error dismissing toast: $e');
+      // Reset state even if there's an error
       _overlayEntry = null;
       _isVisible = false;
     }
@@ -66,15 +82,14 @@ class CustomToast {
 }
 
 class _ToastWidget extends StatefulWidget {
-
   const _ToastWidget({
-    Key? key,
     required this.message,
     required this.position,
     required this.type,
     required this.width,
+    super.key,
     this.onDismiss,
-  }) : super(key: key);
+  });
   final String message;
   final ToastPosition position;
   final ToastType type;
@@ -85,7 +100,8 @@ class _ToastWidget extends StatefulWidget {
   State<_ToastWidget> createState() => _ToastWidgetState();
 }
 
-class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderStateMixin {
+class _ToastWidgetState extends State<_ToastWidget>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -103,14 +119,10 @@ class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderSta
     switch (widget.position) {
       case ToastPosition.top:
         beginOffset = const Offset(0.0, -1.0);
-        break;
       case ToastPosition.center:
         beginOffset = const Offset(0.0, 0.2);
-        break;
       case ToastPosition.bottom:
-      default:
-        beginOffset = const Offset(0.0, 1.0);
-        break;
+      beginOffset = const Offset(0.0, 1.0);
     }
 
     _slideAnimation = Tween<Offset>(
@@ -291,4 +303,3 @@ extension ToastExtension on BuildContext {
     );
   }
 }
-

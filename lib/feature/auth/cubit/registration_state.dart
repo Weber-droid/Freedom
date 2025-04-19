@@ -3,7 +3,8 @@ part of 'registration_cubit.dart';
 class RegisterState extends Equatable {
   const RegisterState(
       {this.phone = '',
-      this.fullName = '',
+      this.firstName = '',
+      this.surname = '',
       this.email = '',
       this.password = '',
       this.message = '',
@@ -15,14 +16,16 @@ class RegisterState extends Equatable {
   factory RegisterState.fromJson(Map<String, dynamic> json) {
     return RegisterState(
       phone: json['phone'] as String? ?? '',
-      fullName: json['name'] as String? ?? '',
+      firstName: json['name'] as String? ?? '',
+      surname: json['surname'] as String? ?? '',
       email: json['email'] as String? ?? '',
       password: json['password'] as String? ?? '',
     );
   }
 
   final String phone;
-  final String fullName;
+  final String firstName;
+  final String surname;
   final String email;
   final String password;
   final String message;
@@ -33,7 +36,8 @@ class RegisterState extends Equatable {
 
   RegisterState copyWith({
     String? phone,
-    String? fullName,
+    String? firstName,
+    String? surname,
     String? password,
     String? email,
     String? message,
@@ -44,7 +48,8 @@ class RegisterState extends Equatable {
   }) {
     return RegisterState(
         phone: phone ?? this.phone,
-        fullName: fullName ?? this.fullName,
+        firstName: firstName ?? this.firstName,
+        surname: surname ?? this.surname,
         password: password ?? this.password,
         email: email ?? this.email,
         message: message ?? this.message,
@@ -56,6 +61,8 @@ class RegisterState extends Equatable {
 
   @override
   List<Object> get props => [
+        firstName,
+        surname,
         phone,
         email,
         password,
@@ -68,7 +75,8 @@ class RegisterState extends Equatable {
 
   Map<String, dynamic> toJson() => {
         'phone': phone,
-        'name': fullName,
+        'firstName': firstName,
+        'surname': surname,
         'email': email,
         'password': password,
       };

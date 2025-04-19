@@ -3,15 +3,15 @@ import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:freedom/shared/formatters/count_down_formatter.dart';
 
-class VerifyOtpScreen extends StatefulWidget {
-  const VerifyOtpScreen({super.key});
-  static const routeName = '/verify_otp';
+class CompleteRegistration extends StatefulWidget {
+  const CompleteRegistration({super.key});
+  static const routeName = '/complete-registration';
 
   @override
-  State<VerifyOtpScreen> createState() => _VerifyOtpScreenState();
+  State<CompleteRegistration> createState() => _CompleteRegistrationState();
 }
 
-class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
+class _CompleteRegistrationState extends State<CompleteRegistration> {
   final _otpFormKey = GlobalKey<FormState>();
   final _otpController = TextEditingController();
   final _otpFocusNode = FocusNode();
@@ -26,6 +26,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _otpFocusNode.requestFocus();
+      _resendOtp();
     });
   }
 
@@ -82,7 +83,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
             Navigator.pushNamedAndRemoveUntil(
               context,
               MainActivityScreen.routeName,
-              (route) => false,
+                  (route) => false,
             );
           }
         },
@@ -105,7 +106,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                   ),
                   const VSpace(35.45),
                   Text(
-                    'Enter Code',
+                    'Complete Registration',
                     style: GoogleFonts.poppins(
                         fontSize: 29.02, color: Colors.black),
                   ),
@@ -222,8 +223,8 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                         : 'Verify',
                     child: state.status == VerifyOtpStatus.submitting
                         ? const CircularProgressIndicator(
-                            strokeWidth: 2,
-                          )
+                      strokeWidth: 2,
+                    )
                         : null,
                     onPressed: () =>
                         _onVerifyPressed(context, state, formCubit, loginCubit),
@@ -290,7 +291,7 @@ class DecoratedBackButton extends StatelessWidget {
         height: 38.09,
         width: 38.09,
         decoration:
-            const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+        const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8.86, 8.86, 9.74, 9.74),
           child: SvgPicture.asset('assets/images/back_button.svg'),
