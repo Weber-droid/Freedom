@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
-import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
+import 'package:freedom/feature/profile/model/profile_model.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/text_field_factory.dart';
@@ -27,47 +27,18 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
   final TextEditingController phoneController = TextEditingController();
   final emailFormKey = GlobalKey<FormState>();
   final phoneNumberFormKey = GlobalKey<FormState>();
-
-  // Default country code, will be updated with user's number
-  String countryCode = '+233';
-
-  // Track which field is being edited - null by default
-  String? activeField;
-  // Store original values to detect changes
-  String? originalEmail;
-  String? originalPhone;
-  // Flag to track if country code has been set from user data
-  bool hasLoadedCountryCode = false;
+  final refreshKey = GlobalKey<RefreshIndicatorState>();
 
   @override
   void initState() {
     super.initState();
-    phoneController.addListener(() {
-      // Skip auto-formatting if we're displaying a verified number
-      // or if the user explicitly changed the country code
-      if (hasLoadedCountryCode) {
-        return;
-      }
-
-      // Only format unverified numbers or actively editing numbers
-      if (!phoneController.text.startsWith(countryCode) && mounted && activeField == 'phone') {
-        final currentPosition = phoneController.selection.baseOffset;
-        phoneController
-          ..text = countryCode +
-              phoneController.text.replaceAll(RegExp(r'^\+\d+'), '')
-          ..selection = TextSelection.fromPosition(
-            TextPosition(
-                offset: currentPosition < 0
-                    ? phoneController.text.length
-                    : currentPosition),
-          );
-      }
-    });
+    context.read<ProfileCubit>().getUserProfile();
   }
 
   @override
   void dispose() {
     nameController.dispose();
+    surnameController.dispose();
     emailController.dispose();
     phoneController.dispose();
     super.dispose();
@@ -108,553 +79,131 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
             ),
             const VSpace(8),
 
-            // Single BlocConsumer for all profile data
+            // Main content with BlocConsumer
             Expanded(
               child: BlocConsumer<ProfileCubit, ProfileState>(
                 listener: (context, state) {
+                  // Handle toast messages and navigation
                   if (state is NumberUpdated || state is EmailUpdated) {
                     context.showToast(
                         message: state is NumberUpdated
                             ? state.message
-                            : state is EmailUpdated
-                            ? state.message
-                            : '',
+                            : (state is EmailUpdated ? state.message : ''),
                         type: ToastType.success,
                         position: ToastPosition.top);
+
                     Future.delayed(const Duration(milliseconds: 1000));
                     Navigator.of(context)
                         .pushNamed('/phone_update_verification_screen');
-
-                    // Reset active field after successful update
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) {
-                        setState(() {
-                          activeField = null;
-                        });
-                      }
-                    });
                   }
 
-                  if (state is NumberUpdateError || state is EmailUpdateError) {
+                  // Handle profile errors only once with a toast
+                  if (state is ProfileError) {
                     context.showToast(
-                        message: 'Failed to update',
+                        message: 'Failed to load profile: ${state.message}',
+                        type: ToastType.error,
+                        position: ToastPosition.top);
+
+                    // No automatic retry - user will use pull-to-refresh
+                  }
+
+                  // Handle number and email update errors
+                  if (state is NumberUpdateError || state is EmailUpdateError) {
+                    final String errorMessage = state is NumberUpdateError
+                        ? (state as NumberUpdateError).message
+                        : (state as EmailUpdateError).message;
+
+                    context.showToast(
+                        message: errorMessage,
                         type: ToastType.error,
                         position: ToastPosition.top);
                   }
                 },
                 builder: (context, state) {
-                  // Loading state
-                  if (state is ProfileLoading) {
+                  // Only show full-screen loader on initial load
+                  final bool isInitialLoad = state is ProfileLoading &&
+                      !(context.read<ProfileCubit>().state is ProfileLoaded) &&
+                      !(context.read<ProfileCubit>().state is ProfileError);
+
+                  if (isInitialLoad) {
                     return const Center(
                       child: CircularProgressIndicator(),
                     );
                   }
-                  final updatingNumberState = state is UpdatingNumber;
-                  final updatingEmailState = state is UpdatingEmail;
 
-                  if (updatingNumberState || updatingEmailState) {
-                    return const Center(
-                      child: CircularProgressIndicator.adaptive(strokeWidth: 1),
-                    );
-                  }
+                  // For update operations, show overlay loader
+                  final bool isUpdating = state is UpdatingNumber || state is UpdatingEmail;
 
-                  // Error state with retry button
-                  if (state is ProfileError) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            'Failed to load profile',
-                            style: GoogleFonts.poppins(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const VSpace(16),
-                          ElevatedButton(
-                            onPressed: () {
-                              context.read<ProfileCubit>().getUserProfile();
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.black,
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: Text(
-                              'Retry',
-                              style: GoogleFonts.poppins(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
+                  // Get cached profile data if available
+                  final ProfileLoaded? loadedState = state is ProfileLoaded
+                      ? state
+                      : (context.read<ProfileCubit>().state is ProfileLoaded
+                      ? context.read<ProfileCubit>().state as ProfileLoaded
+                      : null);
 
-                  // Only set the controller values if the state is ProfileLoaded
-                  // and the controllers are not disposed
-                  if (state is ProfileLoaded && mounted) {
-                    // Store original values
-                    originalEmail = state.user!.data.email;
-                    originalPhone = state.user!.data.phone;
+                  // Create empty profile data for first-time errors
+                  final emptyUser = ProfileLoaded(
+                    user: ProfileModel(
+                        data: ProfileData(
+                            id: '',
+                            name: '',
+                            email: '',
+                            phone: '',
+                            isPhoneVerified: false,
+                            isEmailVerified: false,
+                            authProvider: '',
+                            role: '',
+                            profilePicture: '',
+                            mobileMoneyProvider: '',
+                            mobileMoneyNumber: '',
+                            createdAt: DateTime.now(),
+                            updatedAt: DateTime.now()),
+                        success: false),
+                    activeField: null,
+                  );
 
-                    nameController.text =
-                    '${state.user!.data.firstName} ${state.user!.data.surname}';
+                  // Use loaded state if available, otherwise use empty template
+                  final profileState = loadedState ?? emptyUser;
 
-                    // Only set controller text if it's not the active field to avoid cursor jump
-                    if (activeField != 'email') {
-                      emailController.text = state.user!.data.email;
+                  // Update controller values if we have real data
+                  if (loadedState != null) {
+                    // Only update if not currently editing to prevent cursor jumping
+                    if (loadedState.activeField != 'email') {
+                      emailController.text = loadedState.user!.data.email;
                     }
 
-                    // Handle phone number with verified data
-                    if (activeField != 'phone') {
-                      if (state.user!.data.isPhoneVerified && state.user!.data.phone.isNotEmpty) {
-                        // For verified numbers, use the exact number from user data
-                        phoneController.text = state.user!.data.phone;
+                    if (loadedState.activeField != 'phone') {
+                      phoneController.text = loadedState.user!.data.phone;
+                    }
 
-                        // Extract country code from verified phone
-                        if (state.user!.data.phone.startsWith('+')) {
-                          // Find the country code by matching the pattern of a plus sign followed by digits
-                          final countryCodeMatch = RegExp(r'^\+\d+').firstMatch(state.user!.data.phone);
-                          if (countryCodeMatch != null) {
-                            countryCode = countryCodeMatch.group(0) ?? '+233';
-                            hasLoadedCountryCode = true;
-                          }
-                        }
-                      } else {
-                        // For unverified or empty numbers, use the default country code
-                        phoneController.text = state.user!.data.phone.isEmpty ? countryCode : state.user!.data.phone;
-                      }
+                    if (loadedState.activeField != 'name') {
+                      nameController.text = loadedState.user!.data.firstName!;
+                      surnameController.text = loadedState.user!.data.surname!;
                     }
                   }
 
-                  return Padding(
-                    padding: const EdgeInsets.only(left: 27, right: 19),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Name',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(
-                              color: Colors.black,
-                              fontSize: 13.09,
-                              fontWeight: FontWeight.w500,
+                  // Build main content with refresh indicator
+                  return RefreshIndicator(
+                    key: refreshKey,
+                    onRefresh: () async {
+                      context.read<ProfileCubit>().getUserProfile();
+                      // Wait for a reasonable time to prevent infinite loading
+                      return Future.delayed(const Duration(seconds: 2));
+                    },
+                    child: Stack(
+                      children: [
+                        // Form content
+                        _buildProfileForm(context, profileState),
+
+                        // Overlay loading indicator for updates
+                        if (isUpdating)
+                          Container(
+                            color: Colors.black.withOpacity(0.1),
+                            child: const Center(
+                              child: CircularProgressIndicator.adaptive(strokeWidth: 1),
                             ),
                           ),
-                          const VSpace(10),
-                          TextFieldFactory.name(
-                            controller: nameController,
-                            fillColor: Colors.white,
-                            enabledColorBorder: const Color(0xFFE1E1E1),
-                            hinText: state is ProfileLoaded
-                                ? '${state.user!.data.firstName} ${state.user!.data.surname}'
-                                : 'Full name',
-                            focusedBorderColor: Colors.black,
-                            hintTextStyle:
-                            GoogleFonts.poppins(color: Colors.black),
-                            // Read-only since name update isn't implemented
-                            readOnly: true,
-                          ),
-
-                          const VSpace(20),
-
-                          Text(
-                            'Surname',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.poppins(
-                              color: Colors.black,
-                              fontSize: 13.09,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const VSpace(10),
-                          TextFieldFactory.name(
-                            controller: surnameController,
-                            fillColor: Colors.white,
-                            enabledColorBorder: const Color(0xFFE1E1E1),
-                            hinText: state is ProfileLoaded
-                                ? state.user!.data.surname
-                                : 'surname',
-                            focusedBorderColor: Colors.black,
-                            hintTextStyle:
-                            GoogleFonts.poppins(color: Colors.black),
-                            // Read-only since name update isn't implemented
-                            readOnly: true,
-                          ),
-                          const VSpace(20),
-                          // Email Field
-                          Row(
-                            children: [
-                              Text(
-                                'Email',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.poppins(
-                                  color: Colors.black,
-                                  fontSize: 13.09,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const HSpace(10),
-                              if (state is ProfileLoaded &&
-                                  state.user!.data.isEmailVerified)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 5, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xffBFFF9F),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    'Verified',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.poppins(
-                                        fontSize: 11.9,
-                                        color: const Color(0xff52C01B)),
-                                  ),
-                                ),
-                              // Show active indicator
-                              if (activeField == 'email')
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 5, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber.withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    'Editing',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.poppins(
-                                        fontSize: 11.9,
-                                        color: Colors.amber[800]),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const VSpace(10),
-                          Form(
-                            key: emailFormKey,
-                            autovalidateMode:
-                            AutovalidateMode.onUserInteraction,
-                            child: TextFieldFactory.email(
-                              controller: emailController,
-                              fillColor: Colors.white,
-                              hinText: state is ProfileLoaded
-                                  ? state.user!.data.email
-                                  : 'youremail@email.com',
-                              focusedBorderColor: activeField == 'email'
-                                  ? Colors.amber[800]
-                                  : Colors.black,
-                              enabledColorBorder: activeField == 'email'
-                                  ? Colors.amber[800]
-                                  : const Color(0xFFE1E1E1),
-                              hintTextStyle: GoogleFonts.poppins(),
-                              onTap: () {
-                                // Clear phone field edit state if user taps email
-                                if (activeField == 'phone') {
-                                  // Reset phone to original value
-                                  phoneController.text = originalPhone ?? '';
-                                }
-                                // Use a post-frame callback to avoid setState during build
-                                WidgetsBinding.instance
-                                    .addPostFrameCallback((_) {
-                                  if (mounted) {
-                                    setState(() {
-                                      activeField = 'email';
-                                    });
-                                  }
-                                });
-                              },
-                              // Disable if another field is being edited
-                              readOnly:
-                              activeField != null && activeField != 'email',
-                            ),
-                          ),
-
-                          const VSpace(20),
-
-                          // Phone Number Field
-                          Row(
-                            children: [
-                              Text(
-                                'Phone Number',
-                                textAlign: TextAlign.center,
-                                style: GoogleFonts.poppins(
-                                  color: Colors.black,
-                                  fontSize: 13.09,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const HSpace(10),
-                              if (state is ProfileLoaded)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 5, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xffBFFF9F),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    state.user!.data.isPhoneVerified
-                                        ? 'Verified'
-                                        : 'Unverified',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.poppins(
-                                        fontSize: 11.9,
-                                        color: const Color(0xff52C01B)),
-                                  ),
-                                ),
-                              // Show active indicator
-                              if (activeField == 'phone')
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 5, vertical: 5),
-                                  decoration: BoxDecoration(
-                                    color: Colors.amber.withOpacity(0.3),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  child: Text(
-                                    'Editing',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.poppins(
-                                        fontSize: 11.9,
-                                        color: Colors.amber[800]),
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const VSpace(10),
-                          Form(
-                            key: phoneNumberFormKey,
-                            autovalidateMode:
-                            AutovalidateMode.onUserInteraction,
-                            child: TextFieldFactory.phone(
-                              controller: phoneController,
-                              fillColor: Colors.white,
-                              hintText: '+244-902-345-909',
-                              fontStyle: GoogleFonts.poppins(),
-                              focusedBorderColor: activeField == 'phone'
-                                  ? Colors.amber[800]
-                                  : Colors.black,
-                              enabledColorBorder: activeField == 'phone'
-                                  ? Colors.amber[800]
-                                  : const Color(0xFFE1E1E1),
-                              onTap: () {
-                                // Clear email field edit state if user taps phone
-                                if (activeField == 'email') {
-                                  // Reset email to original value
-                                  emailController.text = originalEmail ?? '';
-                                }
-                                // Use a post-frame callback to avoid setState during build
-                                WidgetsBinding.instance
-                                    .addPostFrameCallback((_) {
-                                  if (mounted) {
-                                    setState(() {
-                                      activeField = 'phone';
-                                    });
-                                  }
-                                });
-                              },
-                              // Disable if another field is being edited
-                              readOnly:
-                              activeField != null && activeField != 'phone',
-                              prefixText: Transform.translate(
-                                offset: const Offset(0, -5),
-                                child: Padding(
-                                  padding: const EdgeInsets.only(
-                                    left: 10,
-                                    top: 18,
-                                    bottom: 7,
-                                    right: 17,
-                                  ),
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(5),
-                                      color: const Color(0x4FF59E0B),
-                                    ),
-                                    child: Stack(
-                                      children: [
-                                        CountryCodePicker(
-                                          textStyle: GoogleFonts.poppins(
-                                              fontSize: 12,
-                                              color: Colors.black),
-                                          dialogTextStyle: GoogleFonts.poppins(
-                                              fontSize: 12,
-                                              color: Colors.black),
-                                          countryFilter: const ['GH', 'NG'],
-                                          dialogSize: const Size(300, 200),
-                                          hideSearch: true,
-                                          onChanged: (value) {
-                                            if (mounted) {
-                                              final newCountryCode = value.dialCode ?? '+233';
-
-                                              // Only update if country code changed
-                                              if (countryCode != newCountryCode) {
-                                                countryCode = newCountryCode;
-
-                                                // If phone field is already active, just update the prefix
-                                                if (activeField == 'phone') {
-                                                  // Remove old country code and add new one
-                                                  final phoneWithoutCode = phoneController.text
-                                                      .replaceAll(RegExp(r'^\+\d+'), '');
-                                                  phoneController.text = countryCode + phoneWithoutCode;
-                                                } else {
-                                                  // Otherwise, activate the field and set to just the country code
-                                                  phoneController.text = countryCode;
-                                                }
-
-                                                // Use post-frame callback to avoid setState during build
-                                                WidgetsBinding.instance
-                                                    .addPostFrameCallback((_) {
-                                                  if (mounted) {
-                                                    setState(() {
-                                                      // Set active field to phone when changing country code
-                                                      activeField = 'phone';
-                                                      // Reset the flag to allow formatting with new country code
-                                                      hasLoadedCountryCode = false;
-                                                    });
-                                                  }
-                                                });
-                                              }
-                                            }
-                                          },
-                                          padding: EdgeInsets.zero,
-                                          initialSelection: 'GH',
-                                          hideMainText: true,
-                                          enabled: activeField == null ||
-                                              activeField == 'phone',
-                                        ),
-                                        Positioned(
-                                          top: MediaQuery.of(context)
-                                              .size
-                                              .height *
-                                              0.014,
-                                          left: MediaQuery.of(context)
-                                              .size
-                                              .width *
-                                              0.11,
-                                          child: SvgPicture.asset(
-                                              'assets/images/drop_down.svg'),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              validator: (val) {
-                                if (val == null || val.trim().isEmpty) {
-                                  return 'Phone number is required';
-                                }
-                                final cleanedNumber =
-                                val.replaceAll(RegExp(r'\D'), '');
-
-                                if (cleanedNumber.isEmpty) {
-                                  return 'Please enter digits only';
-                                }
-
-                                if (cleanedNumber.length < 10) {
-                                  return 'Phone number must be at least 10 digits long';
-                                }
-
-                                return null;
-                              },
-                              hintTextStyle: GoogleFonts.poppins(),
-                            ),
-                          ),
-
-                          const VSpace(30),
-                          // Save Button - Only active when a field is being edited
-                          Center(
-                            child: ElevatedButton(
-                              onPressed: activeField == null
-                                  ? null // Disable if no field is active
-                                  : () {
-                                if (activeField == 'phone') {
-                                  if (phoneNumberFormKey.currentState !=
-                                      null &&
-                                      phoneNumberFormKey.currentState!
-                                          .validate()) {
-                                    context
-                                        .read<ProfileCubit>()
-                                        .setPhoneNumber(
-                                        phoneController.text.trim());
-                                    log('Updating phone number: ${phoneController.text.trim()}');
-                                    context
-                                        .read<ProfileCubit>()
-                                        .requestNumberUpdate(
-                                        phoneController.text.trim());
-                                  }
-                                } else if (activeField == 'email') {
-                                  if (emailFormKey.currentState != null &&
-                                      emailFormKey.currentState!
-                                          .validate()) {
-                                    log('Updating email: ${emailController.text.trim()}');
-                                    context
-                                        .read<ProfileCubit>()
-                                        .requestEmailUpdate(
-                                        emailController.text.trim());
-                                  }
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.black,
-                                foregroundColor: Colors.white,
-                                disabledBackgroundColor: Colors.grey,
-                                minimumSize: const Size(200, 45),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: Text(
-                                activeField == null
-                                    ? 'No Changes'
-                                    : activeField == 'phone'
-                                    ? 'Update Phone Number'
-                                    : 'Update Email',
-                                style: GoogleFonts.poppins(),
-                              ),
-                            ),
-                          ),
-                          if (activeField != null)
-                            Center(
-                              child: TextButton(
-                                onPressed: () {
-                                  // Reset the active field and revert changes
-                                  // Store the current active field
-                                  final currentActiveField = activeField;
-
-                                  // Reset the field's value
-                                  if (currentActiveField == 'email') {
-                                    emailController.text = originalEmail ?? '';
-                                  } else if (currentActiveField == 'phone') {
-                                    phoneController.text = originalPhone ?? '';
-                                  }
-
-                                  // Use post-frame callback to avoid setState during build
-                                  WidgetsBinding.instance
-                                      .addPostFrameCallback((_) {
-                                    if (mounted) {
-                                      setState(() {
-                                        activeField = null;
-                                      });
-                                    }
-                                  });
-                                },
-                                child: Text(
-                                  'Cancel',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.red,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
+                      ],
                     ),
                   );
                 },
@@ -663,6 +212,394 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildProfileForm(BuildContext context, ProfileLoaded state) {
+    return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(), // Important for RefreshIndicator
+      padding: const EdgeInsets.only(left: 27, right: 19),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'First Name',
+                style: GoogleFonts.poppins(
+                  color: Colors.black,
+                  fontSize: 13.09,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const HSpace(10),
+              if (state.activeField == 'name')
+                _buildStatusBadge('Editing', Colors.amber.withOpacity(0.3),
+                    Colors.amber[800] ?? Colors.amber),
+            ],
+          ),
+          const VSpace(10),
+          TextFieldFactory.name(
+            controller: nameController,
+            fillColor: Colors.white,
+            enabledColorBorder: state.activeField == 'name'
+                ? Colors.amber[800] ?? Colors.amber
+                : const Color(0xFFE1E1E1),
+            hinText: state.user?.data.firstName ?? "",
+            focusedBorderColor: state.activeField == 'name'
+                ? Colors.amber[800]
+                : Colors.black,
+            hintTextStyle: GoogleFonts.poppins(color: Colors.black),
+            readOnly:
+            state.activeField != null && state.activeField != 'name',
+            onTap: () {
+              context.read<ProfileCubit>().startEditingField('name');
+            },
+          ),
+
+          // Surname field
+          const VSpace(20),
+          Text(
+            'Surname',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(
+              color: Colors.black,
+              fontSize: 13.09,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const VSpace(10),
+          TextFieldFactory.name(
+            controller: surnameController,
+            fillColor: Colors.white,
+            enabledColorBorder: state.activeField == 'name'
+                ? Colors.amber[800] ?? Colors.amber
+                : const Color(0xFFE1E1E1),
+            hinText: state.user?.data.surname ?? "",
+            focusedBorderColor: state.activeField == 'name'
+                ? Colors.amber[800]
+                : Colors.black,
+            hintTextStyle: GoogleFonts.poppins(color: Colors.black),
+            readOnly:
+            state.activeField != null && state.activeField != 'name',
+            onTap: () {
+              context.read<ProfileCubit>().startEditingField('name');
+            },
+          ),
+
+          const VSpace(20),
+
+          // Email Field with status badges
+          Row(
+            children: [
+              Text(
+                'Email',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  color: Colors.black,
+                  fontSize: 13.09,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const HSpace(10),
+              if (state.user?.data.isEmailVerified ?? false)
+                _buildStatusBadge('Verified', const Color(0xffBFFF9F),
+                    const Color(0xff52C01B)),
+              if (state.activeField == 'email')
+                _buildStatusBadge('Editing', Colors.amber.withOpacity(0.3),
+                    Colors.amber[800] ?? Colors.amber),
+            ],
+          ),
+          const VSpace(10),
+          Form(
+            key: emailFormKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: TextFieldFactory.email(
+              controller: emailController,
+              fillColor: Colors.white,
+              hinText: state.user?.data.email ?? "",
+              focusedBorderColor: state.activeField == 'email'
+                  ? Colors.amber[800]
+                  : Colors.black,
+              enabledColorBorder: state.activeField == 'email'
+                  ? Colors.amber[800] ?? Colors.amber
+                  : const Color(0xFFE1E1E1),
+              hintTextStyle: GoogleFonts.poppins(),
+              onTap: () {
+                context.read<ProfileCubit>().startEditingField('email');
+              },
+              readOnly:
+              state.activeField != null && state.activeField != 'email',
+              validator: (email) {
+                if (email == null || email.isEmpty) {
+                  return 'Please enter your email';
+                }
+                final regX = RegExp(
+                    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                if (!regX.hasMatch(email)) {
+                  return 'Please enter a valid email';
+                }
+                return null;
+              },
+            ),
+          ),
+
+          const VSpace(20),
+
+          // Phone Number Field with status badges
+          Row(
+            children: [
+              Text(
+                'Phone Number',
+                textAlign: TextAlign.center,
+                style: GoogleFonts.poppins(
+                  color: Colors.black,
+                  fontSize: 13.09,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const HSpace(10),
+              if (state.user?.data.isPhoneVerified ?? false)
+                _buildStatusBadge('Verified', const Color(0xffBFFF9F),
+                    const Color(0xff52C01B)),
+              if (state.activeField == 'phone')
+                _buildStatusBadge('Editing', Colors.amber.withOpacity(0.3),
+                    Colors.amber[800] ?? Colors.amber),
+            ],
+          ),
+          const VSpace(10),
+          Form(
+            key: phoneNumberFormKey,
+            autovalidateMode: AutovalidateMode.onUserInteraction,
+            child: TextFieldFactory.phone(
+              controller: phoneController,
+              fillColor: Colors.white,
+              hintText: '+233-902-345-909',
+              fontStyle: GoogleFonts.poppins(),
+              focusedBorderColor: state.activeField == 'phone'
+                  ? Colors.amber[800]
+                  : Colors.black,
+              enabledColorBorder: state.activeField == 'phone'
+                  ? Colors.amber[800] ?? Colors.amber
+                  : const Color(0xFFE1E1E1),
+              onTap: () {
+                context.read<ProfileCubit>().startEditingField('phone');
+              },
+              readOnly:
+              state.activeField != null && state.activeField != 'phone',
+              prefixText: Transform.translate(
+                offset: const Offset(0, -5),
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    left: 10,
+                    top: 18,
+                    bottom: 7,
+                    right: 17,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(5),
+                      color: const Color(0x4FF59E0B),
+                    ),
+                    child: Stack(
+                      children: [
+                        CountryCodePicker(
+                          textStyle: GoogleFonts.poppins(
+                              fontSize: 12, color: Colors.black),
+                          dialogTextStyle: GoogleFonts.poppins(
+                              fontSize: 12, color: Colors.black),
+                          countryFilter: const ['GH', 'NG'],
+                          dialogSize: const Size(300, 200),
+                          hideSearch: true,
+                          // Inside the CountryCodePicker's onChanged callback:
+                          onChanged: (value) {
+                            final newCountryCode = value.dialCode ?? '+233';
+
+                            context
+                                .read<ProfileCubit>()
+                                .updateCountryCode(newCountryCode);
+
+                            if (state.activeField == 'phone') {
+                              final phoneWithoutCode = phoneController.text
+                                  .replaceAll(RegExp(r'^\+\d+'), '');
+                              phoneController
+                                ..text = newCountryCode + phoneWithoutCode
+                                ..selection = TextSelection.fromPosition(
+                                  TextPosition(
+                                      offset: phoneController.text.length),
+                                );
+                            }
+                          },
+                          padding: EdgeInsets.zero,
+                          initialSelection: 'GH',
+                          hideMainText: true,
+                          enabled: state.activeField == null ||
+                              state.activeField == 'phone',
+                        ),
+                        Positioned(
+                          top: MediaQuery.of(context).size.height * 0.014,
+                          left: MediaQuery.of(context).size.width * 0.11,
+                          child:
+                          SvgPicture.asset('assets/images/drop_down.svg'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              validator: (val) {
+                if (val == null || val.trim().isEmpty) {
+                  return 'Phone number is required';
+                }
+
+                final cleanedNumber = val.replaceAll(RegExp(r'\D'), '');
+
+                if (cleanedNumber.isEmpty) {
+                  return 'Please enter digits only';
+                }
+
+                if (cleanedNumber.length < 10) {
+                  return 'Phone number must be at least 10 digits long';
+                }
+
+                return null;
+              },
+              hintTextStyle: GoogleFonts.poppins(),
+            ),
+          ),
+
+          const VSpace(30),
+
+          // Action buttons
+          Center(
+            child: ElevatedButton(
+              onPressed: state.activeField == null
+                  ? null
+                  : () => _handleUpdatePress(context, state),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.black,
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: Colors.grey,
+                minimumSize: const Size(200, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(
+                state.activeField == null
+                    ? 'No Changes'
+                    : state.activeField == 'phone'
+                    ? 'Update Phone Number'
+                    : state.activeField == 'email'
+                    ? 'Update Email'
+                    : 'Update Name',
+                style: GoogleFonts.poppins(),
+              ),
+            ),
+          ),
+
+          if (state.activeField != null)
+            Center(
+              child: TextButton(
+                onPressed: () {
+                  // Reset field to original value and cancel edit mode
+                  if (state.activeField == 'email') {
+                    emailController.text = state.originalEmail ?? state.user?.data.email ?? '';
+                  } else if (state.activeField == 'phone') {
+                    phoneController.text = state.originalPhone ?? state.user?.data.phone ?? '';
+                  } else if (state.activeField == 'name') {
+                    nameController.text = state.user?.data.firstName ?? '';
+                    surnameController.text = state.user?.data.surname ?? '';
+                  }
+                  context.read<ProfileCubit>().cancelEdit();
+                },
+                child: Text(
+                  'Cancel',
+                  style: GoogleFonts.poppins(
+                    color: Colors.red,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+            ),
+
+          // Add padding at bottom for better scrolling
+          const SizedBox(height: 50),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(
+      String text, Color backgroundColor, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: GoogleFonts.poppins(fontSize: 11.9, color: textColor),
+      ),
+    );
+  }
+
+  void _handleUpdatePress(BuildContext context, ProfileLoaded state) {
+    if (state.activeField == 'email') {
+      if (emailFormKey.currentState != null &&
+          emailFormKey.currentState!.validate()) {
+        log('Updating email: ${emailController.text.trim()}');
+        context
+            .read<ProfileCubit>()
+            .requestEmailUpdate(emailController.text.trim());
+      }
+    } else if (state.activeField == 'phone') {
+      if (phoneNumberFormKey.currentState != null &&
+          phoneNumberFormKey.currentState!.validate()) {
+        log('Updating phone number: ${phoneController.text.trim()}');
+        context
+            .read<ProfileCubit>()
+            .requestNumberUpdate(phoneController.text.trim());
+      }
+    } else if (state.activeField == 'name') {
+      // Updating both name and surname together
+      final firstName = nameController.text.trim();
+      final surname = surnameController.text.trim();
+
+      if (firstName.isNotEmpty && surname.isNotEmpty) {
+        log('Updating name: $firstName $surname');
+        context.read<ProfileCubit>().updateUserNames(firstName, surname);
+      } else {
+        context.showToast(
+            message: 'Name and surname cannot be empty',
+            type: ToastType.error,
+            position: ToastPosition.top);
+      }
+    }
+  }
+}
+
+class DecoratedBackButton extends StatelessWidget {
+  const DecoratedBackButton({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      child: Container(
+        height: 38.09,
+        width: 38.09,
+        decoration:
+        const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8.86, 8.86, 9.74, 9.74),
+          child: SvgPicture.asset('assets/images/back_button.svg'),
+        ),
+      ),
+      onTap: () => Navigator.pop(context),
     );
   }
 }

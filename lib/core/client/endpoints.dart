@@ -13,6 +13,7 @@ class Endpoints {
   static const String requestEmailUpdate = 'request-email-update';
   static const String verifyPhoneUpdate = 'verify-phone-update';
   static const String verifyEmailUpdate = 'verify-email-update';
+  static const String updateUserNames = 'updateMyProfile';
   static const String requestPhoneNumberUpdate = 'request-phone-update';
   static const String verify = 'auth/verify';
   static const String profile = 'getMyProfile';

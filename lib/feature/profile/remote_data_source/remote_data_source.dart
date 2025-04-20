@@ -10,6 +10,7 @@ import 'package:freedom/core/config/api_constants.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
+import 'package:freedom/feature/auth/remote_data_source/models/models.dart';
 import 'package:freedom/feature/profile/model/profile_model.dart';
 import 'package:freedom/feature/profile/model/update_use_details.dart';
 import 'package:freedom/feature/profile/model/verify_phone_update_model.dart';
@@ -128,15 +129,17 @@ class ProfileRemoteDataSource {
     }
   }
 
-  Future<UpdateUserDetailsData> updatePhoneNumber(String number) async{
+  Future<UpdateUserDetailsData> updatePhoneNumber(String number) async {
     try {
-    final token = await AppPreferences.getToken();
+      final token = await AppPreferences.getToken();
       final response = await client.post(Endpoints.requestPhoneNumberUpdate,
           headers: {
             'Content-Type': 'application/json',
             'authorization': 'Bearer $token'
           },
-          body: {'newPhone': number});
+          body: {
+            'newPhone': number
+          });
       final decoded = json.decode(response.body) as Map<String, dynamic>;
       log('updatePhoneNumber(): $decoded');
       if (decoded.containsKey('msg')) {
@@ -152,15 +155,16 @@ class ProfileRemoteDataSource {
       throw ServerException(e.toString());
     }
   }
-  Future<VerifyPhoneUpdateModel> verifyUpdatePhone(String otp) async{
+
+  Future<VerifyPhoneUpdateModel> verifyUpdatePhone(String otp) async {
     try {
       final token = await AppPreferences.getToken();
-      final response = await client.post(Endpoints.verifyPhoneUpdate,
-          headers: {
-            'Content-Type': 'application/json',
-            'authorization': 'Bearer $token'
-          },
-          body: {'verificationCode': otp});
+      final response = await client.post(Endpoints.verifyPhoneUpdate, headers: {
+        'Content-Type': 'application/json',
+        'authorization': 'Bearer $token'
+      }, body: {
+        'verificationCode': otp
+      });
       final decoded = json.decode(response.body) as Map<String, dynamic>;
       log('updatePhoneNumber(): $decoded');
       if (decoded.containsKey('msg')) {
@@ -177,7 +181,7 @@ class ProfileRemoteDataSource {
     }
   }
 
-  Future<UpdateUserDetails> upDateEmail(String email) async{
+  Future<UpdateUserDetails> upDateEmail(String email) async {
     try {
       final token = await AppPreferences.getToken();
       final response = await client.post(Endpoints.requestEmailUpdate,
@@ -185,7 +189,9 @@ class ProfileRemoteDataSource {
             'Content-Type': 'application/json',
             'authorization': 'Bearer $token'
           },
-          body: {'newEmail': email});
+          body: {
+            'newEmail': email
+          });
       final decoded = json.decode(response.body) as Map<String, dynamic>;
       log('updateEmail(): $decoded');
       if (decoded.containsKey('msg')) {
@@ -202,15 +208,15 @@ class ProfileRemoteDataSource {
     }
   }
 
-  Future<VerifyPhoneUpdateModel> verifyUpdateEmail(String otp) async{
+  Future<VerifyPhoneUpdateModel> verifyUpdateEmail(String otp) async {
     try {
       final token = await AppPreferences.getToken();
-      final response = await client.post(Endpoints.verifyPhoneUpdate,
-          headers: {
-            'Content-Type': 'application/json',
-            'authorization': 'Bearer $token'
-          },
-          body: {'verificationCode': otp});
+      final response = await client.post(Endpoints.verifyPhoneUpdate, headers: {
+        'Content-Type': 'application/json',
+        'authorization': 'Bearer $token'
+      }, body: {
+        'verificationCode': otp
+      });
       final decoded = json.decode(response.body) as Map<String, dynamic>;
       log('updatePhoneNumber(): $decoded');
       if (decoded.containsKey('msg')) {
@@ -218,6 +224,39 @@ class ProfileRemoteDataSource {
       }
       final val = VerifyPhoneUpdateModel.fromJson(decoded);
       return val;
+    } on SocketException catch (e) {
+      throw NetworkException(e.message);
+    } on ServerException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  Future<User> updateUserNames(
+    String firstName,
+    String surname,
+  ) async {
+    try {
+      final token = await AppPreferences.getToken();
+      final response = await client.patch(
+        Endpoints.updateUserNames,
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': 'Bearer $token',
+        },
+        body: {
+          'firstName': firstName,
+          'surname': surname,
+          'otherName': surname,
+        },
+      );
+      final decoded = json.decode(response.body) as Map<String, dynamic>;
+      log('updatePassword(): $decoded');
+      if (decoded.containsKey('msg')) {
+        throw ServerException(decoded['msg'].toString());
+      }
+      return  User.fromNewApiResponse(decoded);
     } on SocketException catch (e) {
       throw NetworkException(e.message);
     } on ServerException catch (e) {
