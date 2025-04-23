@@ -10,6 +10,7 @@ class OnboardingCarouselOne extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -29,14 +30,15 @@ class OnboardingCarouselOne extends StatelessWidget {
                     height: 29,
                     child: TextButton(
                       style: TextButton.styleFrom(
-                          backgroundColor: Colors.black,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(5),
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 19,
-                            vertical: 4,
-                          )),
+                        backgroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 19,
+                          vertical: 4,
+                        ),
+                      ),
                       onPressed: () {},
                       child: const Text(
                         'Skip',

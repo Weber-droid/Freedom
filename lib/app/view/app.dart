@@ -1,17 +1,35 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:freedom/core/services/audio_call_service/audio_call_service.dart';
+import 'package:freedom/feature/auth/cubit/registration_cubit.dart';
+import 'package:freedom/feature/auth/local_data_source/local_user.dart';
+import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
+import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
+import 'package:freedom/feature/auth/repository/register_repository.dart';
+import 'package:freedom/feature/auth/social_auth_cubit/google_auth_cubit.dart';
+import 'package:freedom/feature/emergency/cubit/emergency_cubit.dart';
+import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
+import 'package:freedom/feature/home/cubit/home_cubit.dart';
+import 'package:freedom/feature/home/location_cubit/location_cubit.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
 import 'package:freedom/feature/onboarding/cubit/onboarding_cubit.dart';
-import 'package:freedom/feature/registration/cubit/forms_cubit.dart';
+import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
+import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_login_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_otp_cubit.dart';
+import 'package:freedom/feature/wallet/cubit/wallet_cubit.dart';
+import 'package:freedom/feature/wallet/repository/repository.dart';
 import 'package:freedom/l10n/l10n.dart';
 import 'package:freedom/router/router.dart';
 import 'package:freedom/shared/theme/dark_theme.dart';
 import 'package:freedom/shared/theme/light_theme.dart';
+import 'package:hive/hive.dart';
+import 'package:path_provider/path_provider.dart' as path_provider;
 
 class App extends StatelessWidget {
-  const App({super.key});
+  const App({required this.callService, super.key});
+
+  final CallServiceInterface callService;
 
   @override
   Widget build(BuildContext context) {
@@ -28,10 +46,31 @@ class App extends StatelessWidget {
             create: (context) => OnboardingCubit(),
           ),
           BlocProvider(
-            create: (context) => RegisterFormCubit(),
+            create: (context) => RegisterCubit(RegisterRepository()),
           ),
           BlocProvider(
-            create: (context) => VerifyOtpCubit(),
+            create: (context) => VerifyOtpCubit(RegisterRepository()),
+          ),
+          BlocProvider(
+            create: (context) => HomeCubit(),
+          ),
+          BlocProvider(
+            create: (context) => EmergencyCubit(),
+          ),
+          BlocProvider(create: (context) => ProfileCubit()),
+          BlocProvider(
+              create: (context) =>
+                  LoginCubit(registerRepository: RegisterRepository())),
+          BlocProvider(
+              create: (context) => VerifyLoginCubit(RegisterRepository())),
+          BlocProvider(create: (context) => LocationCubit()),
+          BlocProvider(
+              create: (context) => CallCubit(callService: callService)),
+          BlocProvider(
+              create: (context) => WalletCubit(Repository()),
+          ),
+          BlocProvider(
+            create: (context) => GoogleAuthCubit(RegisterRepository()),
           ),
         ],
         child: MaterialApp(
@@ -45,4 +84,17 @@ class App extends StatelessWidget {
       ),
     );
   }
+}
+
+Future<void> initializeStorage() async {
+  final appDocumentDirectory =
+      await path_provider.getApplicationDocumentsDirectory();
+  Hive
+    ..init(appDocumentDirectory.path)
+
+    // Register adapters
+    ..registerAdapter(UserAdapter());
+
+  // Ensure boxes are open
+  await RegisterLocalDataSource.ensureBoxesAreOpen();
 }

@@ -13,6 +13,7 @@ class _OnboardingCarouselTwoState extends State<OnboardingCarouselTwo> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -63,7 +64,6 @@ class _OnboardingCarouselTwoState extends State<OnboardingCarouselTwo> {
               ),
             ),
             const VSpace(20),
-            // Add your two buttons here
           ],
         ),
       ),

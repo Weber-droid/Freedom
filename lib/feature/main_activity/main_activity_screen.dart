@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_svg/svg.dart';
+import 'package:freedom/feature/History/view/history_screen.dart';
+import 'package:freedom/feature/emergency/view/emergency_screen.dart';
 import 'package:freedom/feature/home/view/home_screen.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
+import 'package:freedom/feature/profile/view/profile_screen.dart';
 
 class MainActivityScreen extends StatelessWidget {
   const MainActivityScreen({super.key});
@@ -52,16 +56,22 @@ class _MainActivityScreen extends StatelessWidget {
               selectedItemColor: const Color(0xfffc7013),
               selectedLabelStyle: const TextStyle(color: Color(0xfffc7013)),
               items: List.generate(
-                _itemDetails.length,
+                _itemDetailsActive.length,
                 (index) {
-                  final data = _itemDetails[index];
+                  final activeIconData = _itemDetailsActive[index];
+                  final inActiveIconData = _itemDetailsInactive[index];
                   return BottomNavigationBarItem(
                     backgroundColor: Colors.white,
-                    icon: Image.asset(
-                      'assets/images/${data['icon']}',
-                      scale: 20,
-                    ),
-                    label: data['label'],
+                    icon: state.currentIndex == index
+                        ? SvgPicture.asset(
+                            'assets/images/nav_icon/active/${activeIconData['icon']}',
+                          )
+                        : SvgPicture.asset(
+                            'assets/images/nav_icon/inactive/${inActiveIconData['icon']}',
+                          ),
+                    label: state.currentIndex == index
+                        ? activeIconData['label']
+                        : inActiveIconData['label'],
                   );
                 },
               ),
@@ -75,10 +85,21 @@ class _MainActivityScreen extends StatelessWidget {
 
 List<Widget> _pages = [
   const HomeScreen(),
-  const HomeScreen(),
+  const HistoryScreen(),
+  const EmergencyScreen(),
+  const ProfileScreen(),
 ];
 
-List<Map<String, String>> _itemDetails = [
-  {'icon': 'wallet1.png', 'label': 'Wallet'},
-  {'icon': 'wallet2.png', 'label': 'Wallet'},
+List<Map<String, String>> _itemDetailsActive = [
+  {'icon': 'home_nav_icon_active.svg', 'label': 'Home'},
+  {'icon': 'history_nav_icon_active.svg', 'label': 'History'},
+  {'icon': 'emergency_nav_icon_active.svg', 'label': 'Emergency'},
+  {'icon': 'more_nav_icon_active.svg', 'label': 'More'},
+];
+
+List<Map<String, String>> _itemDetailsInactive = [
+  {'icon': 'home_nav_icon_inactive.svg', 'label': 'Home'},
+  {'icon': 'history_nav_icon_inactive.svg', 'label': 'History'},
+  {'icon': 'emergency_nav_icon_inactive.svg', 'label': 'Emergency'},
+  {'icon': 'more_nav_icon_inactive.svg', 'label': 'More'},
 ];

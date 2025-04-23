@@ -2,31 +2,35 @@ part of 'verify_otp_cubit.dart';
 
 class VerifyOtpState extends Equatable {
   const VerifyOtpState({
-    this.isLoading = false,
+    this.status = VerifyOtpStatus.initial,
     this.isError = false,
-    this.errorMessage = '',
-    this.isVerified = false,
+    this.errorMessage,
+    this.isVerified,
+    this.user,
   });
-  final bool isLoading;
+  final VerifyOtpStatus status;
   final bool isError;
   final String? errorMessage;
-  final bool isVerified;
+  final bool? isVerified;
+  final User? user;
 
   VerifyOtpState copyWith({
-    String? otp,
-    bool? isLoading,
+    VerifyOtpStatus? status,
     bool? isError,
     String? errorMessage,
     bool? isVerified,
+    bool clearMessage = false,
+    User? user,
   }) {
     return VerifyOtpState(
-      isLoading: isLoading ?? this.isLoading,
+      status: status ?? this.status,
       isError: isError ?? this.isError,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: clearMessage ? null : (errorMessage ?? this.errorMessage),
       isVerified: isVerified ?? this.isVerified,
+      user: user ?? this.user,
     );
   }
 
   @override
-  List<Object?> get props => [isLoading, isError, errorMessage, isVerified];
+  List<Object?> get props => [status, isError, errorMessage, isVerified];
 }

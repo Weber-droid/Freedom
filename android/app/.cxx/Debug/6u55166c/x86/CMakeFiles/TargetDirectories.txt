@@ -1,0 +1,2 @@
+/Users/godwinekainu/StudioProjects/freedom/android/app/.cxx/Debug/6u55166c/x86/CMakeFiles/edit_cache.dir
+/Users/godwinekainu/StudioProjects/freedom/android/app/.cxx/Debug/6u55166c/x86/CMakeFiles/rebuild_cache.dir

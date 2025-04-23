@@ -1,5 +1,8 @@
 plugins {
     id "com.android.application"
+    // START: FlutterFire Configuration
+    id 'com.google.gms.google-services'
+    // END: FlutterFire Configuration
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
 }
@@ -28,9 +31,21 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 }
 
+def dartEnvironmentVariables = []
+if (project.hasProperty('dart-defines')) {
+    dartEnvironmentVariables = project.property('dart-defines')
+        .split(',')
+        .collectEntries { entry ->
+            def pair = new String(entry.decodeBase64(), 'UTF-8').split('=')
+            [(pair.first()): pair.last()]
+        }
+}
+
+println(dartEnvironmentVariables)
+
 android {
     namespace "com.freedom.app"
-    compileSdkVersion flutter.compileSdkVersion
+    compileSdkVersion 35
     ndkVersion flutter.ndkVersion
 
     compileOptions {
@@ -51,32 +66,28 @@ android {
         applicationId "com.freedom.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://docs.flutter.dev/deployment/android#reviewing-the-gradle-build-configuration.
-        minSdkVersion flutter.minSdkVersion
+        minSdkVersion 24
         targetSdkVersion flutter.targetSdkVersion
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+        manifestPlaceholders += [
+    MAPS_API_KEY: dartEnvironmentVariables.MAPS_API_KEY ?: localProperties.getProperty('MAPS_API_KEY')
+]
+        multiDexEnabled true
     }
 
     signingConfigs {
-        if (System.getenv("ANDROID_KEYSTORE_PATH")) {
-            release {
-                storeFile file(System.getenv("ANDROID_KEYSTORE_PATH"))
-                keyAlias System.getenv("ANDROID_KEYSTORE_ALIAS")
-                keyPassword System.getenv("ANDROID_KEYSTORE_PRIVATE_KEY_PASSWORD")
-                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
-            }
-        } else {
-            release {
-                keyAlias keystoreProperties['keyAlias']
-                keyPassword keystoreProperties['keyPassword']
+       release {
                 storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
-                storePassword keystoreProperties['storePassword']
+                storePassword keystoreProperties['storePassword'] ?: ""
+                keyAlias keystoreProperties['keyAlias'] ?: ""
+                keyPassword keystoreProperties['keyPassword'] ?: ""
+
             }
-        }
     }
 
     flavorDimensions "default"
-    productFlavors { 
+    productFlavors {
         production {
             dimension "default"
             applicationIdSuffix ""
@@ -89,7 +100,7 @@ android {
         }
         development {
             dimension "default"
-            applicationIdSuffix ".dev"
+            applicationIdSuffix ""
             manifestPlaceholders = [appName: "[DEV] Freedom"]
         }
     }
@@ -98,7 +109,7 @@ android {
         release {
             signingConfig signingConfigs.release
             minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android.txt')
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
         debug {
             signingConfig signingConfigs.debug
@@ -112,4 +123,5 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.20"
+    implementation "com.google.firebase:firebase-analytics"
 }

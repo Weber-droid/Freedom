@@ -1,17 +1,7 @@
-import 'dart:async';
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:freedom/feature/registration/cubit/forms_cubit.dart';
-import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_otp_cubit.dart';
-import 'package:freedom/shared/theme/app_colors.dart';
-import 'package:freedom/shared/utilities.dart';
-import 'package:freedom/shared/widgets/buttons.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:pin_code_fields/pin_code_fields.dart';
+import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
+import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
+import 'package:freedom/shared/formatters/count_down_formatter.dart';
 
 class VerifyOtpScreen extends StatefulWidget {
   const VerifyOtpScreen({super.key});
@@ -24,10 +14,10 @@ class VerifyOtpScreen extends StatefulWidget {
 class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   final _otpFormKey = GlobalKey<FormState>();
   final _otpController = TextEditingController();
-  FocusNode _otpFocusNode = FocusNode();
+  final _otpFocusNode = FocusNode();
 
   Timer? _timer;
-  int _start = 10;
+  int _start = 600;
   @override
   void initState() {
     super.initState();
@@ -37,7 +27,6 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _otpFocusNode.requestFocus();
     });
-    _startTimer();
   }
 
   void _startTimer() {
@@ -56,44 +45,69 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     });
   }
 
+  void _resendOtp() {
+    final loginCubit = BlocProvider.of<LoginCubit>(context);
+    final registerCubit = BlocProvider.of<RegisterCubit>(context);
+
+    var phoneNumber = '';
+    if (loginCubit.state.phone.isNotEmpty) {
+      phoneNumber = loginCubit.state.phone;
+    } else if (registerCubit.state.phone.isNotEmpty) {
+      phoneNumber = registerCubit.state.phone;
+    } else {
+      context.showToast(
+          message: 'Phone number not found. Please go back and try again.',
+          position: ToastPosition.top,
+          type: ToastType.error
+      );
+      return;
+    }
+    context.read<VerifyOtpCubit>().resendOtp(phoneNumber,'registration').then((_) {
+      _start = 600;
+      _startTimer();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final formCubit = BlocProvider.of<RegisterFormCubit>(context);
+    final formCubit = BlocProvider.of<RegisterCubit>(context);
+    final loginCubit = BlocProvider.of<LoginCubit>(context);
     return Scaffold(
-      body: BlocBuilder<VerifyOtpCubit, VerifyOtpState>(
+      backgroundColor: Colors.white,
+      body: BlocConsumer<VerifyOtpCubit, VerifyOtpState>(
+        listener: (context, state) {
+          if (state.isVerified!) {
+            context.showToast(
+                message: state.user!.message!, type: ToastType.success);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              MainActivityScreen.routeName,
+              (route) => false,
+            );
+          }
+        },
         builder: (context, state) {
-          return SafeArea(
+          Widget mainContent;
+
+          mainContent = SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 25),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const VSpace(54),
                   InkWell(
                     onTap: () {
                       if (mounted) {
                         Navigator.pop(context);
                       }
                     },
-                    child: Container(
-                      height: 38.09,
-                      width: 38.09,
-                      decoration: const BoxDecoration(
-                          color: Colors.black, shape: BoxShape.circle),
-                      child: Padding(
-                        padding:
-                            const EdgeInsets.fromLTRB(8.86, 8.86, 9.74, 9.74),
-                        child:
-                            SvgPicture.asset('assets/images/back_button.svg'),
-                      ),
-                    ),
+                    child: const DecoratedBackButton(),
                   ),
                   const VSpace(35.45),
                   Text(
                     'Enter Code',
                     style: GoogleFonts.poppins(
-                      fontSize: 29.02,
-                    ),
+                        fontSize: 29.02, color: Colors.black),
                   ),
                   const VSpace(5),
                   Text(
@@ -105,10 +119,13 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                   ),
                   const VSpace(5.3),
                   Text(
-                    '${formCubit.state.phoneNumber}',
+                    formCubit.state.phone.isEmpty
+                        ? loginCubit.state.phone
+                        : formCubit.state.phone,
                     style: GoogleFonts.poppins(
                       fontSize: 19.5,
                       fontWeight: FontWeight.w600,
+                      color: Colors.black,
                     ),
                   ),
                   const VSpace(17),
@@ -117,6 +134,11 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                     child: PinCodeTextField(
                       focusNode: _otpFocusNode,
                       appContext: context,
+                      textStyle: GoogleFonts.poppins(
+                        fontSize: 19.5,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black,
+                      ),
                       pastedTextStyle: TextStyle(
                         color: Colors.green.shade600,
                         fontWeight: FontWeight.bold,
@@ -157,7 +179,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                       ],
                       onChanged: (value) {
                         if (mounted) {
-                          log('$value');
+                          log(value);
                         }
                       },
                       beforeTextPaste: (text) {
@@ -170,7 +192,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                   ),
                   if (_start != 0)
                     Text(
-                      'Resend code in 0:$_start',
+                      'Resend code in 0:${formatTimeLeft(_start)}',
                       style: GoogleFonts.poppins(
                         fontSize: 15,
                         color: Colors.black,
@@ -179,10 +201,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                     )
                   else if (_start == 0)
                     InkWell(
-                      onTap: () {
-                        _start = 10;
-                        _startTimer();
-                      },
+                      onTap: _resendOtp,
                       child: Text(
                         'Resend Code',
                         style: GoogleFonts.poppins(
@@ -198,37 +217,86 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
                     useLoader: true,
                     borderRadius: BorderRadius.circular(10),
                     width: double.infinity,
-                    title: state.isLoading ? 'Loading' : 'Verify',
-                    child: state.isLoading
+                    title: state.status == VerifyOtpStatus.submitting
+                        ? 'Loading'
+                        : 'Verify',
+                    child: state.status == VerifyOtpStatus.submitting
                         ? const CircularProgressIndicator(
                             strokeWidth: 2,
                           )
                         : null,
-                    onPressed: () {
-                      if (_otpFormKey.currentState!.validate()) {
-                        context
-                            .read<VerifyOtpCubit>()
-                            .verifyOtp(_otpController.text);
-                        if (state.isVerified) {
-                          Navigator.pushNamed(context, '/personal_details');
-                        }
-                      }
-                    },
+                    onPressed: () =>
+                        _onVerifyPressed(context, state, formCubit, loginCubit),
                   ),
                 ],
               ),
             ),
           );
+          if (state.status == VerifyOtpStatus.submitting) {
+            return BlurredLoadingOverlay(
+              isLoading: state.status == VerifyOtpStatus.submitting,
+              child: mainContent,
+            );
+          }
+          return mainContent;
         },
       ),
     );
   }
 
+  void _onVerifyPressed(BuildContext context, VerifyOtpState state,
+      RegisterCubit formCubit, LoginCubit loginCubit) {
+    log('Loading state: ${state.status}');
+
+    if (_otpFormKey.currentState!.validate()) {
+      if (loginCubit.state.phone.isNotEmpty) {
+        context
+            .read<VerifyOtpCubit>()
+            .verifyOtp(loginCubit.state.phone, _otpController.text);
+      } else {
+        context
+            .read<VerifyOtpCubit>()
+            .verifyOtp(formCubit.state.phone, _otpController.text);
+      }
+
+      // Log states after the verify action
+      log('Verification in progress...');
+      log('isVerified: ${state.isVerified}, isLoading: ${state.status}');
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel();
-    _otpController.dispose();
+    _otpController
+      ..removeListener(() {
+        setState(() {});
+      })
+      ..dispose();
     _otpFocusNode.dispose();
     super.dispose();
+  }
+}
+
+class DecoratedBackButton extends StatelessWidget {
+  const DecoratedBackButton({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      child: Container(
+        height: 38.09,
+        width: 38.09,
+        decoration:
+            const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8.86, 8.86, 9.74, 9.74),
+          child: SvgPicture.asset('assets/images/back_button.svg'),
+        ),
+      ),
+      onTap: () => Navigator.pop(context),
+    );
   }
 }
