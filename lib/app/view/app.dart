@@ -12,6 +12,7 @@ import 'package:freedom/feature/emergency/cubit/emergency_cubit.dart';
 import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/location_cubit/location_cubit.dart';
+import 'package:freedom/feature/location_search/repository/location_repository.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
 import 'package:freedom/feature/onboarding/cubit/onboarding_cubit.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
@@ -52,9 +53,6 @@ class App extends StatelessWidget {
             create: (context) => VerifyOtpCubit(RegisterRepository()),
           ),
           BlocProvider(
-            create: (context) => HomeCubit(),
-          ),
-          BlocProvider(
             create: (context) => EmergencyCubit(),
           ),
           BlocProvider(create: (context) => ProfileCubit()),
@@ -67,7 +65,7 @@ class App extends StatelessWidget {
           BlocProvider(
               create: (context) => CallCubit(callService: callService)),
           BlocProvider(
-              create: (context) => WalletCubit(Repository()),
+            create: (context) => WalletCubit(Repository()),
           ),
           BlocProvider(
             create: (context) => GoogleAuthCubit(RegisterRepository()),

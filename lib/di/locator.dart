@@ -3,7 +3,7 @@ import 'package:flutter_google_maps_webservices/places.dart';
 import 'package:freedom/core/client/base_api_client.dart';
 import 'package:freedom/core/config/environment_config.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
-import 'package:freedom/feature/location_search/cubit/map_search_cubit.dart';
+import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/location_search/data_sources/local_location_data_source.dart';
 import 'package:freedom/feature/location_search/data_sources/location_remote_data_source.dart';
 import 'package:freedom/feature/location_search/repository/location_repository.dart';
@@ -27,7 +27,7 @@ Future<void> locator() async {
   getIt
     ..registerSingleton<BaseApiClients>(freedomClient)
     ..registerLazySingleton(RegisterLocalDataSource.new)
-    ..registerFactory<MapSearchCubit>(() => MapSearchCubit(repository: getIt()))
+    ..registerFactory<HomeCubit>(() => HomeCubit(repository: getIt()))
     ..registerLazySingleton<LocationRepository>(
       () => LocationRepositoryImpl(
         remoteDataSource: getIt(),

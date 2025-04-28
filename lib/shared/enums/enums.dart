@@ -8,6 +8,8 @@ enum LoginStatus { initial, submitting, success, failure }
 
 enum VerifyLoginStatus { initial, submitting, success, failure }
 
+enum MapSearchStatus { initial, loading, success, error }
+
 enum LocationServiceStatus {
   initial,
   loading,

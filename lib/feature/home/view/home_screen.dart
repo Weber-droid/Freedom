@@ -6,12 +6,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
+import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/location_cubit/location_cubit.dart';
 import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/feature/home/widgets/custom_drawer.dart';
 import 'package:freedom/feature/home/widgets/stacked_bottom_sheet_component.dart';
-import 'package:freedom/feature/location_search/cubit/map_search_cubit.dart';
-import 'package:freedom/feature/location_search/repository/models/location.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
 import 'package:freedom/shared/enums/enums.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -36,146 +35,33 @@ class _HomeScreenState extends State<HomeScreen> {
   int trackSelectedIndex = 0;
 
   bool hideStackedBottomSheet = false;
-  final Completer<GoogleMapController> _controller = Completer();
-  Location? _pickupLocation;
-  Location? _destinationLocation;
-  // Markers set
-  Set<Marker> _markers = {};
-
-  // Route polylines
-  Set<Polyline> _polylines = {};
-
-  // Initial camera position
-  final CameraPosition _initialPosition = const CameraPosition(
-    target: LatLng(0, 0),
-    zoom: 14,
-  );
-
-  Future<void> _getCurrentLocation() async {
-    try {
-      await context.read<LocationCubit>().getCurrentLocation();
-    } catch (e) {
-      log('Error getting current location: $e');
-    }
-  }
-
-  void _onPickupSelected(Location location) {
-    setState(() {
-      _pickupLocation = location;
-      _updateMarkers();
-    });
-
-    _moveCameraToLocation(location);
-    _calculateRoute();
-  }
-
-  // Handle selection of destination location
-  void _onDestinationSelected(Location location) {
-    setState(() {
-      _destinationLocation = location;
-      _updateMarkers();
-    });
-
-    _moveCameraToLocation(location);
-    _calculateRoute();
-  }
-
-  // Move camera to selected location
-  Future<void> _moveCameraToLocation(Location location) async {
-    final controller = await _controller.future;
-
-    await controller.animateCamera(
-      CameraUpdate.newCameraPosition(
-        CameraPosition(
-          target: LatLng(
-            location.latitude,
-            location.longitude,
-          ),
-          zoom: 16.0,
-        ),
-      ),
-    );
-  }
-
-  // Update markers on the map
-  void _updateMarkers() {
-    final markers = <Marker>{};
-
-    if (_pickupLocation != null) {
-      markers.add(
-        Marker(
-          markerId: MarkerId("pickup"),
-          position: LatLng(
-            _pickupLocation!.latitude,
-            _pickupLocation!.longitude,
-          ),
-          infoWindow: InfoWindow(
-            title: "Pickup",
-            snippet: _pickupLocation!.latitude.toString(),
-          ),
-          icon:
-          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        ),
-      );
-    }
-
-    if (_destinationLocation != null) {
-      markers.add(
-        Marker(
-          markerId: MarkerId("destination"),
-          position: LatLng(
-            _destinationLocation!.latitude,
-            _destinationLocation!.longitude,
-          ),
-          infoWindow: InfoWindow(
-            title: "Destination",
-            snippet: _destinationLocation!.longitude.toString(),
-          ),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        ),
-      );
-    }
-
-    setState(() {
-      _markers = markers;
-    });
-  }
-
-  // Calculate route between locations
-  Future<void> _calculateRoute() async {
-    if (_pickupLocation == null || _destinationLocation == null) {
-      return;
-    }
-
-    // Route calculation logic
-    // ...
-  }
 
   @override
   void initState() {
     super.initState();
     context.read<LocationCubit>().checkPermissionStatus();
     context.read<ProfileCubit>().getUserProfile();
-   WidgetsBinding.instance.addPostFrameCallback((_) {
-     initCallCubit();
-   });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      initCallCubit();
+    });
   }
-  Future<void> initCallCubit()async {
+
+  Future<void> initCallCubit() async {
     final user = await RegisterLocalDataSource().getUser();
     log('user: ${user!.token}');
-   if(mounted){
-     await context
-         .read<CallCubit>()
-         .initialize(userId: user.id!, userName: user.firstName!);
-   }
+    if (mounted) {
+      await context
+          .read<CallCubit>()
+          .initialize(userId: user.id!, userName: user.firstName!);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<MapSearchCubit>(
-          create: (context) => getIt<MapSearchCubit>(),
+        BlocProvider<HomeCubit>(
+          create: (context) => getIt<HomeCubit>(),
         ),
       ],
       child: Scaffold(
@@ -199,14 +85,11 @@ class _HomeScreenState extends State<HomeScreen> {
             final Widget mapWidget = GoogleMap(
               initialCameraPosition: LocationState.initialCameraPosition,
               myLocationEnabled:
-              state.serviceStatus == LocationServiceStatus.located,
-              markers: _markers,
-              polylines: _polylines,
+                  state.serviceStatus == LocationServiceStatus.located,
               compassEnabled: false,
               mapToolbarEnabled: false,
               onMapCreated: (GoogleMapController controller) {
                 _mapController = controller;
-                _controller.complete(controller);
               },
             );
 
@@ -237,7 +120,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
 
   Future<void> _showRiderFoundBottomSheet(BuildContext context) async {
     await showModalBottomSheet<dynamic>(

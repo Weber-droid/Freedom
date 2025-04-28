@@ -7,18 +7,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:freedom/di/locator.dart';
-import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/location_cubit/location_cubit.dart';
-import 'package:freedom/feature/home/models/home_history_model.dart';
-import 'package:freedom/feature/home/view/welcome_screen.dart';
 import 'package:freedom/feature/home/view/widget/search_sheet.dart';
 import 'package:freedom/feature/home/widgets/audio_call_widget.dart';
-import 'package:freedom/feature/location_search/cubit/map_search_cubit.dart';
-import 'package:freedom/feature/location_search/repository/models/PlacePrediction.dart';
-import 'package:freedom/feature/location_search/use_cases/get_place_prediction.dart';
-import 'package:freedom/feature/location_search/use_cases/get_recent_locations.dart';
-import 'package:freedom/feature/location_search/use_cases/get_saved_location.dart';
-import 'package:freedom/feature/location_search/view/map_search_view.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
 import 'package:freedom/shared/enums/enums.dart';
@@ -27,9 +18,7 @@ import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
 import 'package:freedom/shared/widgets/custom_dropdown_button.dart';
 import 'package:freedom/shared/widgets/text_field_factory.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:gradient_borders/box_borders/gradient_box_border.dart';
 
 class ChoosePayMentMethod extends StatefulWidget {
@@ -648,7 +637,6 @@ Future<void> showLogisticsBottomSheet(
 }
 
 int trackSelectedIndex = 0;
-bool _isDestinationFieldVisible = false;
 
 Future<void> showMotorCycleBottomSheet(
   BuildContext context, {

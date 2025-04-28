@@ -6,7 +6,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
-import 'package:freedom/feature/location_search/cubit/map_search_cubit.dart';
 import 'package:freedom/feature/location_search/repository/models/PlacePrediction.dart';
 import 'package:freedom/feature/location_search/repository/models/location.dart';
 import 'package:freedom/feature/location_search/use_cases/clear_recent_location.dart';
@@ -14,6 +13,7 @@ import 'package:freedom/feature/location_search/use_cases/get_place_detail.dart'
 import 'package:freedom/feature/location_search/use_cases/get_place_prediction.dart';
 import 'package:freedom/feature/location_search/use_cases/get_recent_locations.dart';
 import 'package:freedom/feature/location_search/use_cases/get_saved_location.dart';
+import 'package:freedom/shared/enums/enums.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/text_field_factory.dart';
@@ -120,7 +120,6 @@ class _SearchSheetState extends State<SearchSheet>
       }
     });
 
-    // Listen for text changes to update suggestions
     widget.pickUpLocationController.addListener(_onSearchChangedPickup);
     widget.destinationController.addListener(_onSearchChangedDestination);
   }
@@ -213,8 +212,8 @@ class _SearchSheetState extends State<SearchSheet>
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<MapSearchCubit>(
-          create: (context) => getIt<MapSearchCubit>(),
+        BlocProvider<HomeCubit>(
+          create: (context) => getIt<HomeCubit>(),
         ),
       ],
       child: Container(
@@ -268,7 +267,7 @@ class _SearchSheetState extends State<SearchSheet>
                           ),
                         ],
                       ),
-                      BlocBuilder<MapSearchCubit, MapSearchState>(
+                      BlocBuilder<HomeCubit, HomeState>(
                         buildWhen: (previous, current) {
                           return current.status == MapSearchStatus.success;
                         },
@@ -431,7 +430,7 @@ class _SearchSheetState extends State<SearchSheet>
                       ),
                       const VSpace(3),
                       //Destination TextField
-                      BlocBuilder<MapSearchCubit, MapSearchState>(
+                      BlocBuilder<HomeCubit, HomeState>(
                         buildWhen: (previous, current) {
                           return current.status == MapSearchStatus.success;
                         },
