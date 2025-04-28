@@ -564,12 +564,10 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
             .requestNumberUpdate(phoneController.text.trim());
       }
     } else if (state.activeField == 'name') {
-      // Updating both name and surname together
       final firstName = nameController.text.trim();
       final surname = surnameController.text.trim();
 
       if (firstName.isNotEmpty && surname.isNotEmpty) {
-        log('Updating name: $firstName $surname');
         context.read<ProfileCubit>().updateUserNames(firstName, surname);
       } else {
         context.showToast(

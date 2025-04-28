@@ -9,8 +9,6 @@ import 'package:freedom/core/client/endpoints.dart';
 import 'package:freedom/core/config/api_constants.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
-import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
-import 'package:freedom/feature/auth/remote_data_source/models/models.dart';
 import 'package:freedom/feature/profile/model/profile_model.dart';
 import 'package:freedom/feature/profile/model/update_use_details.dart';
 import 'package:freedom/feature/profile/model/verify_phone_update_model.dart';
@@ -252,7 +250,6 @@ class ProfileRemoteDataSource {
         },
       );
       final decoded = json.decode(response.body) as Map<String, dynamic>;
-      log('updatePassword(): $decoded');
       if (decoded.containsKey('msg')) {
         throw ServerException(decoded['msg'].toString());
       }

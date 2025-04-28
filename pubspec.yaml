@@ -47,6 +47,8 @@ dependencies:
   geocoding: ^3.0.0
   flutter_secure_storage: ^9.2.4
   internet_connection_checker: ^3.0.1
+  flutter_google_maps_webservices: ^1.1.1
+  flutter_dotenv: ^5.2.1
 dev_dependencies:
   bloc_test: ^9.1.7
   retrofit_generator: ^9.1.3
@@ -67,10 +69,10 @@ flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
   remove_alpha_ios: true
-  image_path: "assets/images/android12splash.png"
+  image_path: "assets/images/bold_bcg.jpg"
   min_sdk_android: 21
-  adaptive_icon_background: "#ffffff"
-  adaptive_icon_foreground: "assets/images/android12splash.png"
+  adaptive_icon_background: "#de4a0a"
+  adaptive_icon_foreground: "assets/images/bold_bcg.jpg"
 
 flutter:
   uses-material-design: true
@@ -79,6 +81,7 @@ flutter:
     - assets/images/
     - assets/images/nav_icon/active/
     - assets/images/nav_icon/inactive/
+    - .env
   # fonts:
   #   - family: SF Pro Display
   #     fonts:

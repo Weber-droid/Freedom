@@ -1,19 +1,14 @@
-import 'dart:developer';
-
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:freedom/app_preference.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
-import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/auth/view/login_view.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
 import 'package:freedom/feature/profile/view/address_screen.dart';
 import 'package:freedom/feature/profile/view/profile_details_screen.dart';
 import 'package:freedom/feature/profile/view/security_screen.dart';
 import 'package:freedom/feature/wallet/view/wallet_screen.dart';
-import 'package:freedom/shared/constants/hive_constants.dart';
 import 'package:freedom/shared/sections_tiles.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
@@ -42,71 +37,79 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Hero(
       tag: 'profileImage',
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: BlocConsumer<ProfileCubit, ProfileState>(
-            listener: (context, state) {
-              if (state is ProfileError) {
-                context.showToast(
-                    message: state.message,
-                    type: ToastType.error,
-                    position: ToastPosition.top);
-              }
-            },
-            builder: (context, state) {
-              return Column(
-                children: [
-                  Center(
-                    child: Text(
-                      'Profile',
-                      style: GoogleFonts.poppins(),
-                    ),
-                  ),
-                  const VSpace(35),
-                  ProfileCard(userData: User(), state: state),
-                  const VSpace(10),
-                  const Divider(
-                    thickness: 5,
-                    color: Color(0xFFF1F1F1),
-                  ),
-                  const VSpace(22.49),
-                  PersonalDataSection(
-                    onProfileTap: () {
-                      Navigator.pushNamed(
-                          context, ProfileDetailsScreen.routeName);
-                    },
-                    onWalletTap: () {
-                      Navigator.pushNamed(context, WalletScreen.routeName);
-                    },
-                    paddingSection: const EdgeInsets.all(5),
-                  ),
-                  const VSpace(10.49),
-                  MoreSection(
-                    onTapAddress: () => Navigator.pushNamed(
-                      context,
-                      AddressScreen.routeName,
-                    ),
-                    onTapLogout: () async {
-                      await AppPreferences.clearAll().then((_) {
-                        Navigator.pushNamedAndRemoveUntil(
+      child: RefreshIndicator(
+        onRefresh: () async{
+          return context.read<ProfileCubit>().getUserProfile();
+        },
+        child: Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: BlocConsumer<ProfileCubit, ProfileState>(
+              listener: (context, state) {
+                if (state is ProfileError) {
+                  context.showToast(
+                      message: state.message,
+                      type: ToastType.error,
+                      position: ToastPosition.top);
+                }
+              },
+              builder: (context, state) {
+                return SingleChildScrollView(
+                  physics: AlwaysScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      Center(
+                        child: Text(
+                          'Profile',
+                          style: GoogleFonts.poppins(),
+                        ),
+                      ),
+                      const VSpace(35),
+                      ProfileCard(userData: User(), state: state),
+                      const VSpace(10),
+                      const Divider(
+                        thickness: 5,
+                        color: Color(0xFFF1F1F1),
+                      ),
+                      const VSpace(22.49),
+                      PersonalDataSection(
+                        onProfileTap: () {
+                          Navigator.pushNamed(
+                              context, ProfileDetailsScreen.routeName);
+                        },
+                        onWalletTap: () {
+                          Navigator.pushNamed(context, WalletScreen.routeName);
+                        },
+                        paddingSection: const EdgeInsets.all(5),
+                      ),
+                      const VSpace(10.49),
+                      MoreSection(
+                        onTapAddress: () => Navigator.pushNamed(
                           context,
-                          LoginView.routeName,
-                          (route) => false,
-                        );
-                      });
-                    },
-                    onTapSecurity: () {
-                      Navigator.pushNamed(
-                        context,
-                        SecurityScreen.routeName,
-                      );
-                    },
-                    paddingSection: const EdgeInsets.all(5),
+                          AddressScreen.routeName,
+                        ),
+                        onTapLogout: () async {
+                          await AppPreferences.clearAll().then((_) {
+                            Navigator.pushNamedAndRemoveUntil(
+                              context,
+                              LoginView.routeName,
+                              (route) => false,
+                            );
+                          });
+                        },
+                        onTapSecurity: () {
+                          Navigator.pushNamed(
+                            context,
+                            SecurityScreen.routeName,
+                          );
+                        },
+                        paddingSection: const EdgeInsets.all(5),
+                      ),
+                    ],
                   ),
-                ],
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),

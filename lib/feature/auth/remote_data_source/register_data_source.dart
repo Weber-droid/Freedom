@@ -33,7 +33,6 @@ class RegisterDataSource {
       if (decoded.containsKey('msg')) {
         throw ServerException(decoded['msg'].toString());
       }
-
       return User.fromRegistrationResponse(decoded);
     } on SocketException catch (e) {
       log('Network exception: ${e.message}');
@@ -55,6 +54,7 @@ class RegisterDataSource {
       if (decoded.containsKey('msg')) {
         throw ServerException(decoded['msg'].toString());
       }
+      await RegisterLocalDataSource().saveUser(User.fromVerificationResponse(decoded));
       return User.fromVerificationResponse(decoded);
     } on SocketException catch (e) {
       throw ServerException(e.message);
@@ -63,7 +63,6 @@ class RegisterDataSource {
     }
   }
 
-  // Main function for Google authentication
   Future<SocialResponseModel> registerOrLoginWithGoogle() async {
     try {
       final googleSignIn = GoogleSignIn();
@@ -125,6 +124,7 @@ class RegisterDataSource {
             await AppPreferences.setToken(decoded['data']['token'].toString());
 
             final socialResponse = SocialResponseModel.fromJson(decoded);
+            await RegisterLocalDataSource().saveUser(User.fromRegistrationResponse(decoded));
             return socialResponse;
           } else {
             final decoded = json.decode(response.body) as Map<String, dynamic>;
@@ -200,6 +200,7 @@ class RegisterDataSource {
       if (decoded.containsKey('msg')) {
         throw ServerException(decoded['msg'].toString());
       }
+
       return LoginResponse.fromJson(decoded);
     } on SocketException catch (e) {
       throw NetworkException(e.message);
@@ -219,6 +220,7 @@ class RegisterDataSource {
       if (decoded.containsKey('msg')) {
         throw ServerException(decoded['msg'].toString());
       }
+      await RegisterLocalDataSource().saveUser(User.fromVerificationResponse(decoded));
       return User.fromVerificationResponse(decoded);
     } on SocketException catch (e) {
       throw NetworkException(e.message);

@@ -151,26 +151,24 @@ class ProfileCubit extends Cubit<ProfileState> {
   }
 
   Future<void> verifyPhoneNumberUpdate(String otp) async {
-    if (state is ProfileLoaded) {
-      try {
-        emit(VerifyingOtp(phoneNumber: _phoneNumber));
+    try {
+      emit(VerifyingOtp(phoneNumber: _phoneNumber));
 
-        final response = await _profileRepository.verifyPhoneUpDate(otp);
-        response.fold(
-          (l) =>
-              emit(OtpVerificationError(l.message, phoneNumber: _phoneNumber)),
-          (profile) => emit(
-            OtpVerified(
-                isVerified: profile.success ?? false,
-                phoneNumber: _phoneNumber),
-          ),
-        );
-      } catch (e) {
-        emit(
-          OtpVerificationError('Error verifying OTP: $e',
+      final response = await _profileRepository.verifyPhoneUpDate(otp);
+      response.fold(
+            (l) =>
+            emit(OtpVerificationError(l.message, phoneNumber: _phoneNumber)),
+            (profile) => emit(
+          OtpVerified(
+              isVerified: profile.success ?? false,
               phoneNumber: _phoneNumber),
-        );
-      }
+        ),
+      );
+    } catch (e) {
+      emit(
+        OtpVerificationError('Error verifying OTP: $e',
+            phoneNumber: _phoneNumber),
+      );
     }
   }
 

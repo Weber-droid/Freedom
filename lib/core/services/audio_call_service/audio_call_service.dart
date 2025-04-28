@@ -3,6 +3,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart';
 
@@ -39,7 +40,7 @@ class StreamCallService implements CallServiceInterface {
     if (_isInitialized) return;
     try {
       // In a real app, you would get this token from your backend
-      final userToken = await _getUserToken(userId);
+      final user = await RegisterLocalDataSource().getUser();
 
       _client = StreamVideo(
         _apiKey,
@@ -47,7 +48,7 @@ class StreamCallService implements CallServiceInterface {
           userId: userId,
           name: userName,
         ),
-        userToken: userToken,
+        userToken: user!.token,
       );
       _isInitialized = true;
 
@@ -79,7 +80,6 @@ class StreamCallService implements CallServiceInterface {
         id: callId,
       );
 
-      // Configure call for audio only
       await _currentCall!.getOrCreate(
         ringing: true,
         notify: true,
@@ -133,25 +133,6 @@ class StreamCallService implements CallServiceInterface {
   @override
   bool isInCall() {
     return _currentCall != null;
-  }
-
-  /// Simulate getting a user token from a backend service
-  /// Do not use this in production!
-  Future<String> _getUserToken(String userId) async {
-    try {
-      await Future.delayed(const Duration(milliseconds: 300));
-      final header =
-          base64Url.encode(utf8.encode('{"alg":"HS256","typ":"JWT"}'));
-      final payload = base64Url.encode(utf8.encode(
-          '{"user_id":"$userId","exp":${(DateTime.now().millisecondsSinceEpoch / 1000).round() + 3600}}'));
-      final signature =
-          base64Url.encode(utf8.encode('dummy_signature_for_development_only'));
-      log('Generated token: $header.$payload.$signature');
-      return '$header.$payload.$signature';
-    } catch (e) {
-      debugPrint('Error generating token: $e');
-      rethrow;
-    }
   }
 
   // Get the StreamVideo instance for advanced operations

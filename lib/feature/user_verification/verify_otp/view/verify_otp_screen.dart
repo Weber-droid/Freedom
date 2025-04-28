@@ -26,6 +26,7 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _otpFocusNode.requestFocus();
+      _startTimer();
     });
   }
 

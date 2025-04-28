@@ -1,12 +1,17 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:freedom/di/locator.dart';
+import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
 import 'package:freedom/feature/home/location_cubit/location_cubit.dart';
 import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/feature/home/widgets/custom_drawer.dart';
 import 'package:freedom/feature/home/widgets/stacked_bottom_sheet_component.dart';
+import 'package:freedom/feature/location_search/cubit/map_search_cubit.dart';
+import 'package:freedom/feature/location_search/repository/models/location.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
 import 'package:freedom/shared/enums/enums.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -31,186 +36,204 @@ class _HomeScreenState extends State<HomeScreen> {
   int trackSelectedIndex = 0;
 
   bool hideStackedBottomSheet = false;
+  final Completer<GoogleMapController> _controller = Completer();
+  Location? _pickupLocation;
+  Location? _destinationLocation;
+  // Markers set
+  Set<Marker> _markers = {};
+
+  // Route polylines
+  Set<Polyline> _polylines = {};
+
+  // Initial camera position
+  final CameraPosition _initialPosition = const CameraPosition(
+    target: LatLng(0, 0),
+    zoom: 14,
+  );
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      await context.read<LocationCubit>().getCurrentLocation();
+    } catch (e) {
+      log('Error getting current location: $e');
+    }
+  }
+
+  void _onPickupSelected(Location location) {
+    setState(() {
+      _pickupLocation = location;
+      _updateMarkers();
+    });
+
+    _moveCameraToLocation(location);
+    _calculateRoute();
+  }
+
+  // Handle selection of destination location
+  void _onDestinationSelected(Location location) {
+    setState(() {
+      _destinationLocation = location;
+      _updateMarkers();
+    });
+
+    _moveCameraToLocation(location);
+    _calculateRoute();
+  }
+
+  // Move camera to selected location
+  Future<void> _moveCameraToLocation(Location location) async {
+    final controller = await _controller.future;
+
+    await controller.animateCamera(
+      CameraUpdate.newCameraPosition(
+        CameraPosition(
+          target: LatLng(
+            location.latitude,
+            location.longitude,
+          ),
+          zoom: 16.0,
+        ),
+      ),
+    );
+  }
+
+  // Update markers on the map
+  void _updateMarkers() {
+    final markers = <Marker>{};
+
+    if (_pickupLocation != null) {
+      markers.add(
+        Marker(
+          markerId: MarkerId("pickup"),
+          position: LatLng(
+            _pickupLocation!.latitude,
+            _pickupLocation!.longitude,
+          ),
+          infoWindow: InfoWindow(
+            title: "Pickup",
+            snippet: _pickupLocation!.latitude.toString(),
+          ),
+          icon:
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        ),
+      );
+    }
+
+    if (_destinationLocation != null) {
+      markers.add(
+        Marker(
+          markerId: MarkerId("destination"),
+          position: LatLng(
+            _destinationLocation!.latitude,
+            _destinationLocation!.longitude,
+          ),
+          infoWindow: InfoWindow(
+            title: "Destination",
+            snippet: _destinationLocation!.longitude.toString(),
+          ),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        ),
+      );
+    }
+
+    setState(() {
+      _markers = markers;
+    });
+  }
+
+  // Calculate route between locations
+  Future<void> _calculateRoute() async {
+    if (_pickupLocation == null || _destinationLocation == null) {
+      return;
+    }
+
+    // Route calculation logic
+    // ...
+  }
 
   @override
   void initState() {
     super.initState();
     context.read<LocationCubit>().checkPermissionStatus();
     context.read<ProfileCubit>().getUserProfile();
-    context
-        .read<CallCubit>()
-        .initialize(userId: 'MWCHb02GD5m6', userName: 'USER1');
+   WidgetsBinding.instance.addPostFrameCallback((_) {
+     initCallCubit();
+   });
   }
-
-
-
-  // void _showPhoneVerificationDialog() {
-  //   showDialog(
-  //     context: context,
-  //     barrierDismissible: false,
-  //     builder: (BuildContext context) {
-  //       return Dialog(
-  //         shape: RoundedRectangleBorder(
-  //           borderRadius: BorderRadius.circular(20),
-  //         ),
-  //         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-  //
-  //         child: Container(
-  //           decoration: BoxDecoration(
-  //             gradient: const LinearGradient(
-  //               colors: [Color(0xFFFFF2DD), Color(0xFFFCFCFC)],
-  //               begin: Alignment.topCenter,
-  //               end: Alignment.bottomCenter,
-  //             ),
-  //             borderRadius: BorderRadius.circular(20),
-  //           ),
-  //           padding: const EdgeInsets.all(20),
-  //           child: Column(
-  //             mainAxisSize: MainAxisSize.min,
-  //             children: [
-  //               // Phone icon in circular container with gradient
-  //               Container(
-  //                 width: 80,
-  //                 height: 80,
-  //                 decoration:  BoxDecoration(
-  //                     shape: BoxShape.circle,
-  //                     gradient: redLinearGradient
-  //                 ),
-  //                 child: const Icon(
-  //                   Icons.phone,
-  //                   color: Colors.white,
-  //                   size: 40,
-  //                 ),
-  //               ),
-  //               const SizedBox(height: 20),
-  //               Text(
-  //                 'Please verify your phone number',
-  //                 style: GoogleFonts.poppins(
-  //                   fontSize: 18,
-  //                   fontWeight: FontWeight.w600,
-  //                 ),
-  //                 textAlign: TextAlign.center,
-  //               ),
-  //               const SizedBox(height: 15),
-  //               Text(
-  //                 'Your phone number needs to be verified before you can use the app.',
-  //                 style: GoogleFonts.poppins(
-  //                   fontSize: 14,
-  //                   color: Colors.grey[700],
-  //                 ),
-  //                 textAlign: TextAlign.center,
-  //               ),
-  //               const SizedBox(height: 25),
-  //               // Verify button with the same gradient as in StackedBottomSheet
-  //               Container(
-  //                 width: double.infinity,
-  //                 height: 50,
-  //                 decoration: BoxDecoration(
-  //                     borderRadius: BorderRadius.circular(10),
-  //                     gradient:redLinearGradient
-  //                 ),
-  //                 child: ElevatedButton(
-  //                   onPressed: () {
-  //                     Navigator.of(context).pop();
-  //                     Navigator.pushNamed(context, PhoneNumberScreen.routeName);
-  //                   },
-  //                   style: ElevatedButton.styleFrom(
-  //                     backgroundColor: Colors.transparent,
-  //                     shadowColor: Colors.transparent,
-  //                     shape: RoundedRectangleBorder(
-  //                       borderRadius: BorderRadius.circular(10),
-  //                     ),
-  //                   ),
-  //                   child: Text(
-  //                     'Verify Now',
-  //                     style: GoogleFonts.poppins(
-  //                       color: Colors.white,
-  //                       fontSize: 16,
-  //                       fontWeight: FontWeight.w500,
-  //                     ),
-  //                   ),
-  //                 ),
-  //               ),
-  //               const SizedBox(height: 15),
-  //               // Maybe Later button
-  //               TextButton(
-  //                 onPressed: () {
-  //                   Navigator.of(context).pop();
-  //                   // Show again in a short while
-  //                   Future.delayed(const Duration(minutes: 5), () {
-  //                     if (mounted) {
-  //                       _showPhoneVerificationDialog();
-  //                     }
-  //                   });
-  //                 },
-  //                 child: Text(
-  //                   'Maybe Later',
-  //                   style: GoogleFonts.poppins(
-  //                     color: Colors.grey[800],
-  //                     fontSize: 14,
-  //                   ),
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-  //         ),
-  //       );
-  //     },
-  //   );
-  // }
+  Future<void> initCallCubit()async {
+    final user = await RegisterLocalDataSource().getUser();
+    log('user: ${user!.token}');
+   if(mounted){
+     await context
+         .read<CallCubit>()
+         .initialize(userId: user.id!, userName: user.firstName!);
+   }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      key: _scaffoldKey,
-      drawer: const CustomDrawer(),
-      body: BlocConsumer<LocationCubit, LocationState>(
-        listener: (context, state) {
-          if (state.serviceStatus == LocationServiceStatus.located &&
-              state.currentLocation != null) {
-            _mapController.animateCamera(
-              CameraUpdate.newCameraPosition(
-                CameraPosition(
-                  target: state.currentLocation!,
-                  zoom: 15.5,
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider<MapSearchCubit>(
+          create: (context) => getIt<MapSearchCubit>(),
+        ),
+      ],
+      child: Scaffold(
+        key: _scaffoldKey,
+        drawer: const CustomDrawer(),
+        body: BlocConsumer<LocationCubit, LocationState>(
+          listener: (context, state) {
+            if (state.serviceStatus == LocationServiceStatus.located &&
+                state.currentLocation != null) {
+              _mapController.animateCamera(
+                CameraUpdate.newCameraPosition(
+                  CameraPosition(
+                    target: state.currentLocation!,
+                    zoom: 15.5,
+                  ),
                 ),
-              ),
+              );
+            }
+          },
+          builder: (context, state) {
+            final Widget mapWidget = GoogleMap(
+              initialCameraPosition: LocationState.initialCameraPosition,
+              myLocationEnabled:
+              state.serviceStatus == LocationServiceStatus.located,
+              markers: _markers,
+              polylines: _polylines,
+              compassEnabled: false,
+              mapToolbarEnabled: false,
+              onMapCreated: (GoogleMapController controller) {
+                _mapController = controller;
+                _controller.complete(controller);
+              },
             );
-          }
-        },
-        builder: (context, state) {
-          final Widget mapWidget = GoogleMap(
-            initialCameraPosition: LocationState.initialCameraPosition,
-            myLocationEnabled:
-            state.serviceStatus == LocationServiceStatus.located,
-            onMapCreated: (GoogleMapController controller) {
-              _mapController = controller;
-            },
-          );
 
-          return Stack(
-            children: [
-              mapWidget,
-              UserFloatingAccessBar(scaffoldKey: _scaffoldKey, state: state),
-              Visibility(
-                visible: !hideStackedBottomSheet,
-                child: StackedBottomSheetComponent(
-                  onFindRider: () {
-                    setState(() {
-                      hideStackedBottomSheet = true;
-                    });
-                    _showRiderFoundBottomSheet(context).then((_) {
+            return Stack(
+              children: [
+                mapWidget,
+                UserFloatingAccessBar(scaffoldKey: _scaffoldKey, state: state),
+                Visibility(
+                  visible: !hideStackedBottomSheet,
+                  child: StackedBottomSheetComponent(
+                    onFindRider: () {
                       setState(() {
-                        hideStackedBottomSheet = false;
+                        hideStackedBottomSheet = true;
                       });
-                    });
-                  },
-                  onServiceSelected: (int index) {},
+                      _showRiderFoundBottomSheet(context).then((_) {
+                        setState(() {
+                          hideStackedBottomSheet = false;
+                        });
+                      });
+                    },
+                    onServiceSelected: (int index) {},
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

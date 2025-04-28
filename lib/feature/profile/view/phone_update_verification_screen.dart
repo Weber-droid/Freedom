@@ -43,6 +43,7 @@ class _PhoneUpdateVerificationScreenState
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _otpFocusNode.requestFocus();
+      _startTimer();
     });
   }
 
@@ -244,11 +245,6 @@ class _PhoneUpdateVerificationScreenState
                     borderRadius: BorderRadius.circular(10),
                     width: double.infinity,
                     title: state is VerifyingOtp ? 'Loading' : 'Verify',
-                    child: state is VerifyingOtp
-                        ? const CircularProgressIndicator(
-                            strokeWidth: 2,
-                          )
-                        : null,
                     onPressed: () => _onVerifyPressed(context),
                   ),
                 ],
@@ -271,6 +267,7 @@ class _PhoneUpdateVerificationScreenState
     BuildContext context,
   ) {
     if (_otpFormKey.currentState!.validate()) {
+      log('caller here');
       context.read<ProfileCubit>().verifyPhoneNumberUpdate(_otpController.text);
     }
   }

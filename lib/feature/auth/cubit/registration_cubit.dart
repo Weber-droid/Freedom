@@ -3,7 +3,9 @@ import 'dart:developer';
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/client/data_layer_exceptions.dart';
+import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/auth/remote_data_source/models/models.dart';
 import 'package:freedom/feature/auth/repository/register_repository.dart';
 import 'package:freedom/shared/enums/enums.dart';
@@ -48,7 +50,7 @@ class RegisterCubit extends Cubit<RegisterState> {
         ),
       );
 
-      response.fold((l) {
+      await response.fold((l) {
         log('message: ${l.message}');
         emit(
           state.copyWith(
@@ -56,8 +58,9 @@ class RegisterCubit extends Cubit<RegisterState> {
             message: l.message,
           ),
         );
-      }, (r) {
+      }, (r) async{
         log('message: ${r.toJson()}');
+
         emit(
           state.copyWith(
             formStatus: FormStatus.success,
@@ -75,63 +78,34 @@ class RegisterCubit extends Cubit<RegisterState> {
     }
   }
 
-  Future<void> registerOrLoginWithGoogle() async {
-    emit(state.copyWith(formStatus: FormStatus.submitting));
-    try {
-      final response = await registerRepository.registerOrLoginWithGoogle();
+Future<void> checkPhoneStatus() async {
+  emit(state.copyWith(phoneStatus: PhoneStatus.submitting));
+  try {
+    final response = await registerRepository.checkSocialAuthPhoneStatus();
 
-      await response.fold(
-        (failure) {
-          emit(state.copyWith(
-            formStatus: FormStatus.failure,
-            message: failure.message,
-          ));
-        },
-        (success) async {
-          emit(state.copyWith(
-            formStatus: FormStatus.success,
-            firstName: success?.data?.firstName,
-            phone: '',
-            message: success?.message,
-          ));
-        },
-      );
-    } catch (e) {
-      emit(state.copyWith(
-        formStatus: FormStatus.failure,
-        message: e.toString(),
-      ));
-    }
+    response.fold(
+      (failure) {
+        log(failure.message);
+        emit(state.copyWith(
+          phoneStatus: PhoneStatus.failure,
+          message: failure.message,
+          formStatus: FormStatus.initial,
+        ));
+      },
+      (needsVerification) {
+        log('needs verifaction: $needsVerification');
+        emit(state.copyWith(
+          phoneStatus: PhoneStatus.success,
+          needsVerification: needsVerification,
+        ));
+      },
+    );
+  } catch (e) {
+    emit(state.copyWith(
+      phoneStatus: PhoneStatus.failure,
+      message: e.toString(),
+      formStatus: FormStatus.initial,
+    ));
   }
-
-// Future<void> checkPhoneStatus() async {
-//   emit(state.copyWith(phoneStatus: PhoneStatus.submitting));
-//   try {
-//     final response = await registerRepository.checkSocialAuthPhoneStatus();
-//
-//     response.fold(
-//       (failure) {
-//         log(failure.message);
-//         emit(state.copyWith(
-//           phoneStatus: PhoneStatus.failure,
-//           message: failure.message,
-//           formStatus: FormStatus.initial,
-//         ));
-//       },
-//       (needsVerification) {
-//         log('needs verifaction: $needsVerification');
-//         emit(state.copyWith(
-//           phoneStatus: PhoneStatus.success,
-//           needsVerification: needsVerification,
-//         ));
-//       },
-//     );
-//   } catch (e) {
-//     emit(state.copyWith(
-//       phoneStatus: PhoneStatus.failure,
-//       message: e.toString(),
-//       formStatus: FormStatus.initial,
-//     ));
-//   }
-// }
+}
 }
