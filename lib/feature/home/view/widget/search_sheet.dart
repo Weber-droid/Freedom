@@ -1,13 +1,11 @@
 import 'dart:async';
+import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
-import 'package:freedom/feature/home/models/home_history_model.dart';
-import 'package:freedom/feature/home/view/welcome_screen.dart';
-import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/feature/location_search/cubit/map_search_cubit.dart';
 import 'package:freedom/feature/location_search/repository/models/PlacePrediction.dart';
 import 'package:freedom/feature/location_search/repository/models/location.dart';
@@ -48,17 +46,18 @@ class SearchSheet extends StatefulWidget {
 
 class _SearchSheetState extends State<SearchSheet>
     with SingleTickerProviderStateMixin {
-  final bool _isDestinationFieldVisible = false;
-  bool isPickUpLocation = true;
+  bool isPickUpLocation = false;
+  bool isDestinationLocation = false;
   bool isInitialDestinationField = false;
-  List<PlacePrediction> _predictions = [];
-  List<Location> _savedLocations = [];
+  List<PlacePrediction> _pickUpPredictions = [];
+  List<PlacePrediction> _destinationPredictions = [];
   List<Location> _recentLocations = [];
   bool _isLoading = false;
   bool _showResults = false;
   Timer? _debounce;
 
-  final FocusNode _focusNode = FocusNode();
+  final FocusNode _pickUpNode = FocusNode();
+  final FocusNode _destinationNode = FocusNode();
 
   // Animation for search results
   late AnimationController _animationController;
@@ -78,43 +77,65 @@ class _SearchSheetState extends State<SearchSheet>
       curve: Curves.easeInOut,
     );
 
-    // Set initial text if provided
-    // if (widget.initialText != null && widget.initialText!.isNotEmpty) {
-    //   _searchController.text = widget.initialText!;
-    // }
-
-    // Load saved and recent locations
     _loadLocations();
 
     // Listen for focus changes
-    _focusNode.addListener(() {
-      if (_focusNode.hasFocus) {
+    _pickUpNode.addListener(() {
+      if (_pickUpNode.hasFocus) {
+        log('Pickup location field focused');
         setState(() {
           _showResults = true;
+          isPickUpLocation = true;
+          isDestinationLocation = false;
         });
         _animationController.forward();
       } else {
         _animationController.reverse().then((_) {
           setState(() {
             _showResults = false;
+            isPickUpLocation = false;
+            isDestinationLocation = false;
+          });
+        });
+      }
+    });
+
+    _destinationNode.addListener(() {
+      if (_destinationNode.hasFocus) {
+        log('Destination field focused');
+        setState(() {
+          _showResults = true;
+          isDestinationLocation = true;
+          isPickUpLocation = false;
+        });
+        _animationController.forward();
+      } else {
+        _animationController.reverse().then((_) {
+          setState(() {
+            _showResults = false;
+            isDestinationLocation = false;
+            isPickUpLocation = false;
           });
         });
       }
     });
 
     // Listen for text changes to update suggestions
-    widget.pickUpLocationController.addListener(_onSearchChanged);
+    widget.pickUpLocationController.addListener(_onSearchChangedPickup);
+    widget.destinationController.addListener(_onSearchChangedDestination);
   }
 
   @override
   void dispose() {
-    widget.pickUpLocationController.removeListener(_onSearchChanged);
-    _focusNode.dispose();
+    widget.pickUpLocationController.removeListener(_onSearchChangedPickup);
+    widget.destinationController.removeListener(_onSearchChangedDestination);
+    _pickUpNode.dispose();
+    _destinationNode.dispose();
     _debounce?.cancel();
     super.dispose();
   }
 
-  void _onSearchChanged() {
+  void _onSearchChangedPickup() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
     _debounce = Timer(const Duration(milliseconds: 500), () {
@@ -122,10 +143,22 @@ class _SearchSheetState extends State<SearchSheet>
     });
   }
 
+  void _onSearchChangedDestination() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      _fetchPredictions(widget.destinationController.text);
+    });
+  }
+
   Future<void> _fetchPredictions(String query) async {
     if (query.isEmpty) {
       setState(() {
-        _predictions = [];
+        if (isPickUpLocation) {
+          _pickUpPredictions = [];
+        } else {
+          _destinationPredictions = [];
+        }
       });
       return;
     }
@@ -139,16 +172,26 @@ class _SearchSheetState extends State<SearchSheet>
 
       if (mounted) {
         setState(() {
-          _predictions = predictions;
-          _isLoading = false;
+          if (isPickUpLocation) {
+            _pickUpPredictions = predictions;
+            _isLoading = false;
+          } else {
+            _destinationPredictions = predictions;
+            _isLoading = false;
+          }
         });
       }
     } catch (e) {
       print('Error fetching predictions: $e');
       if (mounted) {
         setState(() {
-          _predictions = [];
-          _isLoading = false;
+          if (isPickUpLocation) {
+            _pickUpPredictions = [];
+            _isLoading = false;
+          } else {
+            _destinationPredictions = [];
+            _isLoading = false;
+          }
         });
       }
     }
@@ -157,11 +200,8 @@ class _SearchSheetState extends State<SearchSheet>
   // Load user's saved and recent locations
   Future<void> _loadLocations() async {
     try {
-      final savedLocations = await getIt<GetSavedLocations>()();
       final recentLocations = await getIt<GetRecentLocations>()();
-
       setState(() {
-        _savedLocations = savedLocations;
         _recentLocations = recentLocations;
       });
     } catch (e) {
@@ -193,7 +233,8 @@ class _SearchSheetState extends State<SearchSheet>
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.only(right: 11, bottom: 11),
+                  padding:
+                      const EdgeInsets.only(right: 11, bottom: 11, left: 11),
                   decoration: ShapeDecoration(
                     color: Colors.white,
                     shape: RoundedRectangleBorder(
@@ -235,8 +276,8 @@ class _SearchSheetState extends State<SearchSheet>
                           return TextFieldFactory.location(
                             controller: widget.pickUpLocationController,
                             fillColor: textFieldFillColor,
-                            suffixIcon: isPickUpLocation ||
-                                    isInitialDestinationField
+                            focusNode: _pickUpNode,
+                            suffixIcon: isPickUpLocation
                                 ? _isLoading
                                     ? Container(
                                         width: 24,
@@ -264,7 +305,7 @@ class _SearchSheetState extends State<SearchSheet>
                                                 widget.pickUpLocationController
                                                     .clear();
                                                 setState(() {
-                                                  _predictions = [];
+                                                  _pickUpPredictions = [];
                                                 });
                                               },
                                               child: Container(
@@ -297,9 +338,9 @@ class _SearchSheetState extends State<SearchSheet>
                                     ),
                                     child: GestureDetector(
                                       onTap: () {
-                                        context
-                                            .read<HomeCubit>()
-                                            .removeLastDestination();
+                                        // context
+                                        //     .read<HomeCubit>()
+                                        //     .removeLastDestination();
                                       },
                                       child: Container(
                                         decoration: ShapeDecoration(
@@ -315,7 +356,6 @@ class _SearchSheetState extends State<SearchSheet>
                                       ),
                                     ),
                                   ),
-                            focusNode: _focusNode,
                             prefixText: Padding(
                               padding: const EdgeInsets.only(
                                 top: 6,
@@ -390,39 +430,46 @@ class _SearchSheetState extends State<SearchSheet>
                         ],
                       ),
                       const VSpace(3),
-                      TextFieldFactory.location(
-                        fillColor: textFieldFillColor,
-                        focusNode: _focusNode,
-                        hinText: 'Enter Destination',
-                        prefixText: Padding(
-                          padding: const EdgeInsets.only(
-                            top: 6,
-                            left: 5,
-                            bottom: 7,
-                            right: 10.8,
-                          ),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(6),
+                      //Destination TextField
+                      BlocBuilder<MapSearchCubit, MapSearchState>(
+                        buildWhen: (previous, current) {
+                          return current.status == MapSearchStatus.success;
+                        },
+                        builder: (context, state) {
+                          return TextFieldFactory.location(
+                            fillColor: textFieldFillColor,
+                            focusNode: _destinationNode,
+                            hinText: 'Enter Destination',
+                            prefixText: Padding(
+                              padding: const EdgeInsets.only(
+                                top: 6,
+                                left: 5,
+                                bottom: 7,
+                                right: 10.8,
+                              ),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: SvgPicture.asset(
+                                  'assets/images/maps_icon.svg',
+                                ),
+                              ),
                             ),
-                            child: SvgPicture.asset(
-                              'assets/images/maps_icon.svg',
+                            hintTextStyle: GoogleFonts.poppins(
+                              fontSize: 10.13,
+                              color: const Color(0xFFBEBCBC),
+                              fontWeight: FontWeight.w500,
                             ),
-                          ),
-                        ),
-                        hintTextStyle: GoogleFonts.poppins(
-                          fontSize: 10.13,
-                          color: const Color(0xFFBEBCBC),
-                          fontWeight: FontWeight.w500,
-                        ),
-                        controller: widget.destinationController,
+                            controller: widget.destinationController,
+                          );
+                        },
                       ),
                     ],
                   ),
                 ),
                 const VSpace(19.65),
-
                 // Conditionally show either search results or history list
                 if (_showResults)
                   SizeTransition(
@@ -437,163 +484,21 @@ class _SearchSheetState extends State<SearchSheet>
                               child: CircularProgressIndicator(),
                             ),
                           )
-                        else if (_predictions.isNotEmpty) ...[
-                          if (_predictions.isNotEmpty)
-                            ..._predictions.map((prediction) {
-                              IconData iconData;
-                              switch (prediction.iconType) {
-                                case 'local_airport':
-                                  iconData = Icons.local_airport;
-                                case 'train':
-                                  iconData = Icons.train;
-                                case 'hotel':
-                                  iconData = Icons.hotel;
-                                case 'restaurant':
-                                  iconData = Icons.restaurant;
-                                case 'shopping_cart':
-                                  iconData = Icons.shopping_cart;
-                                case 'local_hospital':
-                                  iconData = Icons.local_hospital;
-                                case 'home':
-                                  iconData = Icons.home;
-                                case 'work':
-                                  iconData = Icons.work;
-                                default:
-                                  iconData = Icons.location_on;
-                              }
-                              return Column(
-                                children: [
-                                  Divider(
-                                    thickness: 2,
-                                    color:
-                                        Colors.black.withValues(alpha: 0.019),
-                                  ),
-                                  Row(
-                                    children: [
-                                      Container(
-                                        margin: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                        ),
-                                        width: 30,
-                                        height: 30,
-                                        decoration: ShapeDecoration(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.55),
-                                          shape: RoundedRectangleBorder(
-                                            side: BorderSide(
-                                              strokeAlign:
-                                                  BorderSide.strokeAlignOutside,
-                                              color: Colors.black
-                                                  .withValues(alpha: 0.05),
-                                            ),
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          iconData,
-                                          color: Colors.orange,
-                                          size: 20,
-                                        ),
-                                      ),
-                                      Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            prediction.mainText,
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 12,
-                                              fontWeight: FontWeight.w400,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          Text(
-                                            prediction.mainText,
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 10,
-                                              color: Colors.grey[600],
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              );
+                        else if (_pickUpPredictions.isNotEmpty ||
+                            _destinationPredictions.isNotEmpty) ...[
+                          if (_pickUpPredictions.isNotEmpty) ...[
+                            ..._pickUpPredictions.map((prediction) {
+                              return buildPredictionList(
+                                  getIconData(prediction.iconType), prediction);
                             }),
-                          Divider(
-                            thickness: 2,
-                            color: Colors.black.withValues(alpha: 0.019),
-                          ),
+                          ] else if (_destinationPredictions.isNotEmpty) ...[
+                            ..._destinationPredictions.map((prediction) {
+                              return buildPredictionList(
+                                  getIconData(prediction.iconType), prediction);
+                            }),
+                          ],
                         ] else if (_recentLocations.isNotEmpty) ...[
-                          ..._recentLocations.map((recent) {
-                            return Column(
-                              children: [
-                                Divider(
-                                  thickness: 2,
-                                  color: Colors.black.withValues(alpha: 0.019),
-                                ),
-                                Row(
-                                  children: [
-                                    Container(
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                      ),
-                                      width: 30,
-                                      height: 30,
-                                      decoration: ShapeDecoration(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.55),
-                                        shape: RoundedRectangleBorder(
-                                          side: BorderSide(
-                                            strokeAlign:
-                                                BorderSide.strokeAlignOutside,
-                                            color: Colors.black
-                                                .withValues(alpha: 0.05),
-                                          ),
-                                          borderRadius:
-                                              BorderRadius.circular(6),
-                                        ),
-                                      ),
-                                      child: const Icon(
-                                        Icons.history,
-                                        color: Colors.orange,
-                                        size: 20,
-                                      ),
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          recent.name,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w400,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          recent.address,
-                                          style: GoogleFonts.poppins(
-                                            fontSize: 10,
-                                            color: Colors.grey[600],
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            );
-                          }),
+                          ..._recentLocations.map(buildRecentLocation),
                         ],
                       ],
                     ),
@@ -604,5 +509,148 @@ class _SearchSheetState extends State<SearchSheet>
         ),
       ),
     );
+  }
+
+  Column buildPredictionList(IconData iconData, PlacePrediction prediction) {
+    return Column(
+      children: [
+        Divider(
+          thickness: 2,
+          color: Colors.black.withValues(alpha: 0.019),
+        ),
+        Row(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(
+                horizontal: 8,
+              ),
+              width: 30,
+              height: 30,
+              decoration: ShapeDecoration(
+                color: Colors.white.withValues(alpha: 0.55),
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(
+                    strokeAlign: BorderSide.strokeAlignOutside,
+                    color: Colors.black.withValues(alpha: 0.05),
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: Icon(
+                iconData,
+                color: Colors.orange,
+                size: 20,
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  prediction.mainText,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  prediction.mainText,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Column buildRecentLocation(Location recent) {
+    return Column(
+      children: [
+        Divider(
+          thickness: 2,
+          color: Colors.black.withValues(alpha: 0.019),
+        ),
+        Row(
+          children: [
+            Container(
+              margin: const EdgeInsets.symmetric(
+                horizontal: 8,
+              ),
+              width: 30,
+              height: 30,
+              decoration: ShapeDecoration(
+                color: Colors.white.withValues(alpha: 0.55),
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(
+                    strokeAlign: BorderSide.strokeAlignOutside,
+                    color: Colors.black.withValues(alpha: 0.05),
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
+              child: const Icon(
+                Icons.history,
+                color: Colors.orange,
+                size: 20,
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  recent.name,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  recent.address,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  IconData getIconData(String iconType) {
+    switch (iconType) {
+      case 'local_airport':
+        return Icons.local_airport;
+      case 'train':
+        return Icons.train;
+      case 'hotel':
+        return Icons.hotel;
+      case 'restaurant':
+        return Icons.restaurant;
+      case 'shopping_cart':
+        return Icons.shopping_cart;
+      case 'local_hospital':
+        return Icons.local_hospital;
+      case 'home':
+        return Icons.home;
+      case 'work':
+        return Icons.work;
+      default:
+        return Icons.location_on;
+    }
   }
 }

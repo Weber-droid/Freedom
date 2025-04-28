@@ -333,6 +333,7 @@ class _TextFieldFactoryState extends State<TextFieldFactory> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      focusNode: widget.focusNode,
       inputFormatters: widget.inputFormatters,
       textCapitalization: widget.textCapitalization,
       controller: widget.controller,
