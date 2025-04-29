@@ -7,6 +7,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:freedom/di/locator.dart';
+import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/location_cubit/location_cubit.dart';
 import 'package:freedom/feature/home/view/widget/search_sheet.dart';
 import 'package:freedom/feature/home/widgets/audio_call_widget.dart';
@@ -1243,7 +1244,7 @@ class UserFloatingAccessBar extends StatelessWidget {
       super.key})
       : _scaffoldKey = scaffoldKey;
   final GlobalKey<ScaffoldState> _scaffoldKey;
-  final LocationState state;
+  final HomeState state;
 
   @override
   Widget build(BuildContext context) {
@@ -1293,10 +1294,8 @@ class UserFloatingAccessBar extends StatelessWidget {
                           children: [
                             GestureDetector(
                               onTap: () {
-                                context
-                                    .read<LocationCubit>()
-                                    .checkPermissionStatus(
-                                        requestPermissions: true);
+                                context.read<HomeCubit>().checkPermissionStatus(
+                                    requestPermissions: true);
                               },
                               child: SvgPicture.asset(
                                   'assets/images/map_location_icon.svg'),

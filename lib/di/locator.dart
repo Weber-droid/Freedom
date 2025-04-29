@@ -2,6 +2,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_google_maps_webservices/places.dart';
 import 'package:freedom/core/client/base_api_client.dart';
 import 'package:freedom/core/config/environment_config.dart';
+import 'package:freedom/core/services/map_services.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/location_search/data_sources/local_location_data_source.dart';
@@ -46,6 +47,7 @@ Future<void> locator() async {
     ..registerLazySingleton(() => SaveLocation(getIt()))
     ..registerLazySingleton(() => RemoveLocation(getIt()))
     ..registerLazySingleton(() => ClearRecentLocations(getIt()))
+    ..registerLazySingleton(MapService.new)
     ..registerLazySingleton(
       () => GoogleMapsPlaces(apiKey: dotenv.env['GOOGLE_MAPS_API_KEY']),
     );

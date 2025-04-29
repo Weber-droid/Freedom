@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_otp_cubit.dart';
@@ -253,7 +252,7 @@ class _PhoneUpdateVerificationScreenState
           );
           if (state is VerifyingOtp) {
             return BlurredLoadingOverlay(
-              isLoading: state is VerifyingOtp,
+              isLoading: true,
               child: mainContent,
             );
           }

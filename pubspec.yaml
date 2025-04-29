@@ -82,6 +82,7 @@ flutter:
     - assets/images/nav_icon/active/
     - assets/images/nav_icon/inactive/
     - .env
+    - assets/images/bike_marker.png
   # fonts:
   #   - family: SF Pro Display
   #     fonts:

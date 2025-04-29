@@ -1,7 +1,5 @@
 // ignore_for_file: inference_failure_on_instance_creation
 
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';

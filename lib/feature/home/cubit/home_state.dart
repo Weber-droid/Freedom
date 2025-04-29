@@ -8,9 +8,11 @@ class HomeState extends Equatable {
     this.predictions = const [],
     this.locationSearchErrorMessage = '',
     this.status = MapSearchStatus.initial,
-    this.selectedPickUpLocation,
-    this.selectedDestinationLocation,
     this.markers = const <Marker>{},
+    this.currentLocation,
+    this.serviceStatus = LocationServiceStatus.initial,
+    this.errorMessage,
+    this.userAddress,
   });
 
   final List<String> locations;
@@ -19,9 +21,18 @@ class HomeState extends Equatable {
   final List<PlacePrediction> predictions;
   final String locationSearchErrorMessage;
   final MapSearchStatus status;
-  final Location? selectedPickUpLocation;
-  final Location? selectedDestinationLocation;
   final Set<Marker> markers;
+  final LatLng? currentLocation;
+  final LocationServiceStatus serviceStatus;
+  final String? userAddress;
+  final String? errorMessage;
+
+  static const LatLng defaultInitialPosition = LatLng(6.6667, -1.6167);
+
+  static CameraPosition get initialCameraPosition => const CameraPosition(
+        target: defaultInitialPosition,
+        zoom: 15,
+      );
 
   HomeState copyWith({
     List<String>? locations,
@@ -30,9 +41,11 @@ class HomeState extends Equatable {
     List<PlacePrediction>? predictions,
     String? locationSearchErrorMessage,
     MapSearchStatus? status,
-    Location? selectedPickUpLocation,
-    Location? selectedDestinationLocation,
     Set<Marker>? markers,
+    LatLng? currentLocation,
+    LocationServiceStatus? serviceStatus,
+    String? userAddress,
+    String? errorMessage,
   }) {
     return HomeState(
       locations: locations ?? this.locations,
@@ -42,14 +55,26 @@ class HomeState extends Equatable {
       locationSearchErrorMessage:
           locationSearchErrorMessage ?? this.locationSearchErrorMessage,
       status: status ?? this.status,
-      selectedPickUpLocation:
-          selectedPickUpLocation ?? this.selectedPickUpLocation,
-      selectedDestinationLocation:
-          selectedDestinationLocation ?? this.selectedDestinationLocation,
       markers: markers ?? this.markers,
+      currentLocation: currentLocation ?? this.currentLocation,
+      serviceStatus: serviceStatus ?? this.serviceStatus,
+      userAddress: userAddress ?? this.userAddress,
+      errorMessage: errorMessage ?? this.errorMessage,
     );
   }
 
   @override
-  List<Object?> get props => [locations, fieldIndexSetter];
+  List<Object?> get props => [
+        locations,
+        fieldIndexSetter,
+        searchText,
+        predictions,
+        locationSearchErrorMessage,
+        status,
+        markers,
+        currentLocation,
+        serviceStatus,
+        userAddress,
+        errorMessage
+      ];
 }

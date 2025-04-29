@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:freedom/core/services/map_services.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/location_search/repository/models/PlacePrediction.dart';
@@ -18,6 +20,7 @@ import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/text_field_factory.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class SearchSheet extends StatefulWidget {
   const SearchSheet({
@@ -55,6 +58,9 @@ class _SearchSheetState extends State<SearchSheet>
   bool _isLoading = false;
   bool _showResults = false;
   Timer? _debounce;
+  Location? _pickUpLocation;
+  Location? _destinationLocation;
+  BitmapDescriptor? bikeIcon;
 
   final FocusNode _pickUpNode = FocusNode();
   final FocusNode _destinationNode = FocusNode();
@@ -78,6 +84,9 @@ class _SearchSheetState extends State<SearchSheet>
     );
 
     _loadLocations();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      createMotorcycleIcon();
+    });
 
     // Listen for focus changes
     _pickUpNode.addListener(() {
@@ -205,6 +214,195 @@ class _SearchSheetState extends State<SearchSheet>
       });
     } catch (e) {
       print('Error loading locations: $e');
+    }
+  }
+
+  Future<void> _handlePickUpSelection(
+    PlacePrediction prediction,
+  ) async {
+    _pickUpNode.unfocus();
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      final placeDetail = await widget.getPlaceDetails(prediction.placeId);
+      if (placeDetail != null && mounted) {
+        widget.pickUpLocationController.text = placeDetail.name;
+        await _loadLocations();
+        setState(() {
+          _isLoading = false;
+          _pickUpLocation = placeDetail;
+        });
+        upDateMarkers();
+        await upDateLocation();
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      print('Error fetching location details: $e');
+    }
+  }
+
+  Future<void> _handleDestinationSelection(
+    PlacePrediction prediction,
+  ) async {
+    _pickUpNode.unfocus();
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      final placeDetail = await widget.getPlaceDetails(prediction.placeId);
+      if (placeDetail != null && mounted) {
+        widget.destinationController.text = placeDetail.name;
+        await _loadLocations();
+        setState(() {
+          _isLoading = false;
+          _destinationLocation = placeDetail;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      print('Error fetching location details: $e');
+    }
+  }
+
+  void upDateMarkers() {
+    final markers = <Marker>{};
+    if (_pickUpLocation != null && bikeIcon != null) {
+      log('Adding pickup marker ${bikeIcon?.toJson()}');
+      markers.add(
+        Marker(
+          markerId: const MarkerId('pickup'),
+          position: LatLng(
+            _pickUpLocation!.latitude,
+            _pickUpLocation!.longitude,
+          ),
+          infoWindow: InfoWindow(
+            title: 'Pickup',
+            snippet: _pickUpLocation?.name,
+          ),
+          icon: bikeIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+        ),
+      );
+    }
+    if (context.mounted) {
+      context.read<HomeCubit>().setMarkers(markers);
+    }
+  }
+
+  Future<void> createMotorcycleIcon() async {
+    final PictureRecorder recorder = PictureRecorder();
+    final Canvas canvas = Canvas(recorder);
+    const size = Size(80, 80);
+
+    // Define the gradient for the motorcycle
+    final gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: [Color(0xffF59E0B), Color(0xffE61D2A)], // Orange to Red gradient
+    );
+
+    // Create a paint with the gradient
+    final Paint gradientPaint = Paint()
+      ..shader =
+          gradient.createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..style = PaintingStyle.fill;
+
+    // Draw a motorcycle icon or "M" text with gradient
+    // Using "M" text as a simple representation of a motorcycle
+    const textStyle = TextStyle(
+      fontSize: 40,
+      fontWeight: FontWeight.bold,
+    );
+
+    final textSpan = TextSpan(
+      text: "🏍️", // Motorcycle emoji (or use "M" if emoji doesn't work well)
+      style: textStyle,
+    );
+
+    final textPainter = TextPainter(
+      text: textSpan,
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+
+    textPainter.layout();
+
+    // For a text character with gradient fill
+    final path = Path();
+    textPainter.paint(
+      canvas,
+      Offset(
+        size.width / 2 - textPainter.width / 2,
+        size.height / 2 - textPainter.height / 2,
+      ),
+    );
+
+    // Alternative approach using a custom motorcycle shape with path
+    // This is a simplified motorcycle shape
+    final motorcyclePath = Path()
+      ..moveTo(size.width * 0.3, size.height * 0.6) // Bottom left
+      ..lineTo(size.width * 0.4, size.height * 0.4) // Top left
+      ..lineTo(size.width * 0.6, size.height * 0.4) // Top right
+      ..lineTo(size.width * 0.7, size.height * 0.6) // Bottom right
+      ..close();
+
+    // Add wheels (circles)
+    final wheelPaint = Paint()
+      ..shader =
+          gradient.createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..style = PaintingStyle.fill;
+
+    // Front wheel
+    canvas.drawCircle(Offset(size.width * 0.3, size.height * 0.65),
+        size.width * 0.1, wheelPaint);
+
+    // Rear wheel
+    canvas.drawCircle(Offset(size.width * 0.7, size.height * 0.65),
+        size.width * 0.1, wheelPaint);
+
+    // Draw the motorcycle body with gradient
+    canvas.drawPath(motorcyclePath, gradientPaint);
+
+    // Add handlebars
+    canvas.drawLine(
+        Offset(size.width * 0.4, size.height * 0.45),
+        Offset(size.width * 0.3, size.height * 0.5),
+        Paint()
+          ..shader = gradient
+              .createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+          ..strokeWidth = 3
+          ..style = PaintingStyle.stroke);
+
+    // Convert to image
+    final picture = recorder.endRecording();
+    final image =
+        await picture.toImage(size.width.toInt(), size.height.toInt());
+    final byteData = await image.toByteData(format: ImageByteFormat.png);
+
+    bikeIcon = BitmapDescriptor.fromBytes(byteData!.buffer.asUint8List());
+  }
+
+  void journeyRoute() {}
+
+  Future<void> upDateLocation() async {
+    final mapServices = getIt<MapService>();
+    if (_pickUpLocation != null) {
+      await mapServices.controller?.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            target: LatLng(
+              _pickUpLocation!.latitude,
+              _pickUpLocation!.longitude,
+            ),
+            zoom: 15,
+          ),
+        ),
+      );
     }
   }
 
@@ -469,7 +667,6 @@ class _SearchSheetState extends State<SearchSheet>
                   ),
                 ),
                 const VSpace(19.65),
-                // Conditionally show either search results or history list
                 if (_showResults)
                   SizeTransition(
                     sizeFactor: _animation,
@@ -479,7 +676,7 @@ class _SearchSheetState extends State<SearchSheet>
                         if (_isLoading)
                           const Center(
                             child: Padding(
-                              padding: EdgeInsets.all(16.0),
+                              padding: EdgeInsets.all(16),
                               child: CircularProgressIndicator(),
                             ),
                           )
@@ -487,21 +684,32 @@ class _SearchSheetState extends State<SearchSheet>
                             _destinationPredictions.isNotEmpty) ...[
                           if (_pickUpPredictions.isNotEmpty) ...[
                             ..._pickUpPredictions.map((prediction) {
-                              return buildPredictionList(
-                                  getIconData(prediction.iconType), prediction);
+                              return Builder(
+                                builder: (context) {
+                                  return buildPredictionList(
+                                    context,
+                                    getIconData(prediction.iconType),
+                                    prediction,
+                                  );
+                                },
+                              );
                             }),
                           ] else if (_destinationPredictions.isNotEmpty) ...[
                             ..._destinationPredictions.map((prediction) {
                               return buildPredictionList(
-                                  getIconData(prediction.iconType), prediction);
+                                context,
+                                getIconData(prediction.iconType),
+                                prediction,
+                              );
                             }),
                           ],
                         ] else if (_recentLocations.isNotEmpty) ...[
-                          ..._recentLocations.map(buildRecentLocation),
+                          ..._recentLocations
+                              .map((e) => buildRecentLocation(context, e)),
                         ],
                       ],
                     ),
-                  )
+                  ),
               ],
             ),
           ),
@@ -510,67 +718,76 @@ class _SearchSheetState extends State<SearchSheet>
     );
   }
 
-  Column buildPredictionList(IconData iconData, PlacePrediction prediction) {
-    return Column(
-      children: [
-        Divider(
-          thickness: 2,
-          color: Colors.black.withValues(alpha: 0.019),
-        ),
-        Row(
-          children: [
-            Container(
-              margin: const EdgeInsets.symmetric(
-                horizontal: 8,
-              ),
-              width: 30,
-              height: 30,
-              decoration: ShapeDecoration(
-                color: Colors.white.withValues(alpha: 0.55),
-                shape: RoundedRectangleBorder(
-                  side: BorderSide(
-                    strokeAlign: BorderSide.strokeAlignOutside,
-                    color: Colors.black.withValues(alpha: 0.05),
+  Widget buildPredictionList(
+      BuildContext context, IconData iconData, PlacePrediction prediction) {
+    return GestureDetector(
+      onTap: () async {
+        await _handlePickUpSelection(prediction);
+        if (context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Column(
+        children: [
+          Divider(
+            thickness: 2,
+            color: Colors.black.withValues(alpha: 0.019),
+          ),
+          Row(
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                ),
+                width: 30,
+                height: 30,
+                decoration: ShapeDecoration(
+                  color: Colors.white.withValues(alpha: 0.55),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(
+                      strokeAlign: BorderSide.strokeAlignOutside,
+                      color: Colors.black.withValues(alpha: 0.05),
+                    ),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  iconData,
+                  color: Colors.orange,
+                  size: 20,
                 ),
               ),
-              child: Icon(
-                iconData,
-                color: Colors.orange,
-                size: 20,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    prediction.mainText,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    prediction.mainText,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-            ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  prediction.mainText,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  prediction.mainText,
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: Colors.grey[600],
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 
-  Column buildRecentLocation(Location recent) {
+  Column buildRecentLocation(BuildContext context, Location recent) {
     return Column(
       children: [
         Divider(

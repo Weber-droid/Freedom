@@ -36,7 +36,7 @@ class ProfileRepository {
 
   Future<Either<Failure, void>> updateProfile(File profile) async {
     try {
-      final response = await _remoteDataSource.uploadImage(profile);
+      await _remoteDataSource.uploadImage(profile);
       return const Right(0);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

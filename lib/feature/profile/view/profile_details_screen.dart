@@ -56,8 +56,9 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
             Row(
               children: [
                 const Padding(
-                    padding: EdgeInsets.only(left: 27),
-                    child: DecoratedBackButton()),
+                  padding: EdgeInsets.only(left: 27),
+                  child: DecoratedBackButton(),
+                ),
                 const HSpace(84.91),
                 Center(
                   child: Text(
@@ -69,7 +70,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                )
+                ),
               ],
             ),
             const VSpace(14.91),
@@ -86,13 +87,14 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                   // Handle toast messages and navigation
                   if (state is NumberUpdated || state is EmailUpdated) {
                     context.showToast(
-                        message: state is NumberUpdated
-                            ? state.message
-                            : (state is EmailUpdated ? state.message : ''),
-                        type: ToastType.success,
-                        position: ToastPosition.top);
+                      message: state is NumberUpdated
+                          ? state.message
+                          : (state is EmailUpdated ? state.message : ''),
+                      type: ToastType.success,
+                      position: ToastPosition.top,
+                    );
 
-                    Future.delayed(const Duration(milliseconds: 1000));
+                    Future<void>.delayed(const Duration(milliseconds: 1000));
                     Navigator.of(context)
                         .pushNamed('/phone_update_verification_screen');
                   }
@@ -100,9 +102,10 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                   // Handle profile errors only once with a toast
                   if (state is ProfileError) {
                     context.showToast(
-                        message: 'Failed to load profile: ${state.message}',
-                        type: ToastType.error,
-                        position: ToastPosition.top);
+                      message: 'Failed to load profile: ${state.message}',
+                      type: ToastType.error,
+                      position: ToastPosition.top,
+                    );
 
                     // No automatic retry - user will use pull-to-refresh
                   }
@@ -110,20 +113,21 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                   // Handle number and email update errors
                   if (state is NumberUpdateError || state is EmailUpdateError) {
                     final String errorMessage = state is NumberUpdateError
-                        ? (state as NumberUpdateError).message
+                        ? state.message
                         : (state as EmailUpdateError).message;
 
                     context.showToast(
-                        message: errorMessage,
-                        type: ToastType.error,
-                        position: ToastPosition.top);
+                      message: errorMessage,
+                      type: ToastType.error,
+                      position: ToastPosition.top,
+                    );
                   }
                 },
                 builder: (context, state) {
                   // Only show full-screen loader on initial load
-                  final bool isInitialLoad = state is ProfileLoading &&
-                      !(context.read<ProfileCubit>().state is ProfileLoaded) &&
-                      !(context.read<ProfileCubit>().state is ProfileError);
+                  final isInitialLoad = state is ProfileLoading &&
+                      context.read<ProfileCubit>().state is! ProfileLoaded &&
+                      context.read<ProfileCubit>().state is! ProfileError;
 
                   if (isInitialLoad) {
                     return const Center(
@@ -132,34 +136,36 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                   }
 
                   // For update operations, show overlay loader
-                  final bool isUpdating = state is UpdatingNumber || state is UpdatingEmail;
+                  final bool isUpdating =
+                      state is UpdatingNumber || state is UpdatingEmail;
 
                   // Get cached profile data if available
-                  final ProfileLoaded? loadedState = state is ProfileLoaded
+                  final loadedState = state is ProfileLoaded
                       ? state
                       : (context.read<ProfileCubit>().state is ProfileLoaded
-                      ? context.read<ProfileCubit>().state as ProfileLoaded
-                      : null);
+                          ? context.read<ProfileCubit>().state as ProfileLoaded
+                          : null);
 
                   // Create empty profile data for first-time errors
                   final emptyUser = ProfileLoaded(
                     user: ProfileModel(
-                        data: ProfileData(
-                            id: '',
-                            name: '',
-                            email: '',
-                            phone: '',
-                            isPhoneVerified: false,
-                            isEmailVerified: false,
-                            authProvider: '',
-                            role: '',
-                            profilePicture: '',
-                            mobileMoneyProvider: '',
-                            mobileMoneyNumber: '',
-                            createdAt: DateTime.now(),
-                            updatedAt: DateTime.now()),
-                        success: false),
-                    activeField: null,
+                      data: ProfileData(
+                        id: '',
+                        name: '',
+                        email: '',
+                        phone: '',
+                        isPhoneVerified: false,
+                        isEmailVerified: false,
+                        authProvider: '',
+                        role: '',
+                        profilePicture: '',
+                        mobileMoneyProvider: '',
+                        mobileMoneyNumber: '',
+                        createdAt: DateTime.now(),
+                        updatedAt: DateTime.now(),
+                      ),
+                      success: false,
+                    ),
                   );
 
                   // Use loaded state if available, otherwise use empty template
@@ -167,7 +173,6 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
 
                   // Update controller values if we have real data
                   if (loadedState != null) {
-                    // Only update if not currently editing to prevent cursor jumping
                     if (loadedState.activeField != 'email') {
                       emailController.text = loadedState.user!.data.email;
                     }
@@ -186,7 +191,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                   return RefreshIndicator(
                     key: refreshKey,
                     onRefresh: () async {
-                      context.read<ProfileCubit>().getUserProfile();
+                      await context.read<ProfileCubit>().getUserProfile();
                       // Wait for a reasonable time to prevent infinite loading
                       return Future.delayed(const Duration(seconds: 2));
                     },
@@ -197,10 +202,12 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
 
                         // Overlay loading indicator for updates
                         if (isUpdating)
-                          Container(
-                            color: Colors.black.withOpacity(0.1),
+                          ColoredBox(
+                            color: Colors.black.withValues(alpha: 0.1),
                             child: const Center(
-                              child: CircularProgressIndicator.adaptive(strokeWidth: 1),
+                              child: CircularProgressIndicator.adaptive(
+                                strokeWidth: 1,
+                              ),
                             ),
                           ),
                       ],
@@ -217,7 +224,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
 
   Widget _buildProfileForm(BuildContext context, ProfileLoaded state) {
     return SingleChildScrollView(
-      physics: const AlwaysScrollableScrollPhysics(), // Important for RefreshIndicator
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.only(left: 27, right: 19),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,8 +241,11 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
               ),
               const HSpace(10),
               if (state.activeField == 'name')
-                _buildStatusBadge('Editing', Colors.amber.withOpacity(0.3),
-                    Colors.amber[800] ?? Colors.amber),
+                _buildStatusBadge(
+                  'Editing',
+                  Colors.amber.withValues(alpha: 0.3),
+                  Colors.amber[800] ?? Colors.amber,
+                ),
             ],
           ),
           const VSpace(10),
@@ -245,13 +255,11 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
             enabledColorBorder: state.activeField == 'name'
                 ? Colors.amber[800] ?? Colors.amber
                 : const Color(0xFFE1E1E1),
-            hinText: state.user?.data.firstName ?? "",
-            focusedBorderColor: state.activeField == 'name'
-                ? Colors.amber[800]
-                : Colors.black,
+            hinText: state.user?.data.firstName ?? '',
+            focusedBorderColor:
+                state.activeField == 'name' ? Colors.amber[800] : Colors.black,
             hintTextStyle: GoogleFonts.poppins(color: Colors.black),
-            readOnly:
-            state.activeField != null && state.activeField != 'name',
+            readOnly: state.activeField != null && state.activeField != 'name',
             onTap: () {
               context.read<ProfileCubit>().startEditingField('name');
             },
@@ -275,13 +283,11 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
             enabledColorBorder: state.activeField == 'name'
                 ? Colors.amber[800] ?? Colors.amber
                 : const Color(0xFFE1E1E1),
-            hinText: state.user?.data.surname ?? "",
-            focusedBorderColor: state.activeField == 'name'
-                ? Colors.amber[800]
-                : Colors.black,
+            hinText: state.user?.data.surname ?? '',
+            focusedBorderColor:
+                state.activeField == 'name' ? Colors.amber[800] : Colors.black,
             hintTextStyle: GoogleFonts.poppins(color: Colors.black),
-            readOnly:
-            state.activeField != null && state.activeField != 'name',
+            readOnly: state.activeField != null && state.activeField != 'name',
             onTap: () {
               context.read<ProfileCubit>().startEditingField('name');
             },
@@ -303,11 +309,17 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
               ),
               const HSpace(10),
               if (state.user?.data.isEmailVerified ?? false)
-                _buildStatusBadge('Verified', const Color(0xffBFFF9F),
-                    const Color(0xff52C01B)),
+                _buildStatusBadge(
+                  'Verified',
+                  const Color(0xffBFFF9F),
+                  const Color(0xff52C01B),
+                ),
               if (state.activeField == 'email')
-                _buildStatusBadge('Editing', Colors.amber.withOpacity(0.3),
-                    Colors.amber[800] ?? Colors.amber),
+                _buildStatusBadge(
+                  'Editing',
+                  Colors.amber.withValues(alpha: 0.3),
+                  Colors.amber[800] ?? Colors.amber,
+                ),
             ],
           ),
           const VSpace(10),
@@ -317,7 +329,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
             child: TextFieldFactory.email(
               controller: emailController,
               fillColor: Colors.white,
-              hinText: state.user?.data.email ?? "",
+              hinText: state.user?.data.email ?? '',
               focusedBorderColor: state.activeField == 'email'
                   ? Colors.amber[800]
                   : Colors.black,
@@ -329,13 +341,13 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                 context.read<ProfileCubit>().startEditingField('email');
               },
               readOnly:
-              state.activeField != null && state.activeField != 'email',
+                  state.activeField != null && state.activeField != 'email',
               validator: (email) {
                 if (email == null || email.isEmpty) {
                   return 'Please enter your email';
                 }
-                final regX = RegExp(
-                    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                final regX =
+                    RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
                 if (!regX.hasMatch(email)) {
                   return 'Please enter a valid email';
                 }
@@ -360,11 +372,17 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
               ),
               const HSpace(10),
               if (state.user?.data.isPhoneVerified ?? false)
-                _buildStatusBadge('Verified', const Color(0xffBFFF9F),
-                    const Color(0xff52C01B)),
+                _buildStatusBadge(
+                  'Verified',
+                  const Color(0xffBFFF9F),
+                  const Color(0xff52C01B),
+                ),
               if (state.activeField == 'phone')
-                _buildStatusBadge('Editing', Colors.amber.withOpacity(0.3),
-                    Colors.amber[800] ?? Colors.amber),
+                _buildStatusBadge(
+                  'Editing',
+                  Colors.amber.withValues(alpha: 0.3),
+                  Colors.amber[800] ?? Colors.amber,
+                ),
             ],
           ),
           const VSpace(10),
@@ -386,7 +404,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                 context.read<ProfileCubit>().startEditingField('phone');
               },
               readOnly:
-              state.activeField != null && state.activeField != 'phone',
+                  state.activeField != null && state.activeField != 'phone',
               prefixText: Transform.translate(
                 offset: const Offset(0, -5),
                 child: Padding(
@@ -405,9 +423,13 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                       children: [
                         CountryCodePicker(
                           textStyle: GoogleFonts.poppins(
-                              fontSize: 12, color: Colors.black),
+                            fontSize: 12,
+                            color: Colors.black,
+                          ),
                           dialogTextStyle: GoogleFonts.poppins(
-                              fontSize: 12, color: Colors.black),
+                            fontSize: 12,
+                            color: Colors.black,
+                          ),
                           countryFilter: const ['GH', 'NG'],
                           dialogSize: const Size(300, 200),
                           hideSearch: true,
@@ -426,7 +448,8 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                                 ..text = newCountryCode + phoneWithoutCode
                                 ..selection = TextSelection.fromPosition(
                                   TextPosition(
-                                      offset: phoneController.text.length),
+                                    offset: phoneController.text.length,
+                                  ),
                                 );
                             }
                           },
@@ -440,7 +463,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                           top: MediaQuery.of(context).size.height * 0.014,
                           left: MediaQuery.of(context).size.width * 0.11,
                           child:
-                          SvgPicture.asset('assets/images/drop_down.svg'),
+                              SvgPicture.asset('assets/images/drop_down.svg'),
                         ),
                       ],
                     ),
@@ -489,10 +512,10 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                 state.activeField == null
                     ? 'No Changes'
                     : state.activeField == 'phone'
-                    ? 'Update Phone Number'
-                    : state.activeField == 'email'
-                    ? 'Update Email'
-                    : 'Update Name',
+                        ? 'Update Phone Number'
+                        : state.activeField == 'email'
+                            ? 'Update Email'
+                            : 'Update Name',
                 style: GoogleFonts.poppins(),
               ),
             ),
@@ -504,9 +527,11 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                 onPressed: () {
                   // Reset field to original value and cancel edit mode
                   if (state.activeField == 'email') {
-                    emailController.text = state.originalEmail ?? state.user?.data.email ?? '';
+                    emailController.text =
+                        state.originalEmail ?? state.user?.data.email ?? '';
                   } else if (state.activeField == 'phone') {
-                    phoneController.text = state.originalPhone ?? state.user?.data.phone ?? '';
+                    phoneController.text =
+                        state.originalPhone ?? state.user?.data.phone ?? '';
                   } else if (state.activeField == 'name') {
                     nameController.text = state.user?.data.firstName ?? '';
                     surnameController.text = state.user?.data.surname ?? '';
@@ -531,7 +556,10 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
   }
 
   Widget _buildStatusBadge(
-      String text, Color backgroundColor, Color textColor) {
+    String text,
+    Color backgroundColor,
+    Color textColor,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 5),
       decoration: BoxDecoration(
@@ -571,9 +599,10 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
         context.read<ProfileCubit>().updateUserNames(firstName, surname);
       } else {
         context.showToast(
-            message: 'Name and surname cannot be empty',
-            type: ToastType.error,
-            position: ToastPosition.top);
+          message: 'Name and surname cannot be empty',
+          type: ToastType.error,
+          position: ToastPosition.top,
+        );
       }
     }
   }
@@ -591,7 +620,7 @@ class DecoratedBackButton extends StatelessWidget {
         height: 38.09,
         width: 38.09,
         decoration:
-        const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
+            const BoxDecoration(color: Colors.black, shape: BoxShape.circle),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(8.86, 8.86, 9.74, 9.74),
           child: SvgPicture.asset('assets/images/back_button.svg'),

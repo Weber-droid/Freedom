@@ -3,11 +3,11 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:freedom/core/services/map_services.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
-import 'package:freedom/feature/home/location_cubit/location_cubit.dart';
 import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/feature/home/widgets/custom_drawer.dart';
 import 'package:freedom/feature/home/widgets/stacked_bottom_sheet_component.dart';
@@ -25,7 +25,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  late GoogleMapController _mapController;
 
   String defaultValue = 'Now';
   List<String> dropdownItems = ['Now', 'Later'];
@@ -39,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<LocationCubit>().checkPermissionStatus();
+    context.read<HomeCubit>().checkPermissionStatus();
     context.read<ProfileCubit>().getUserProfile();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       initCallCubit();
@@ -58,65 +57,59 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider<HomeCubit>(
-          create: (context) => getIt<HomeCubit>(),
-        ),
-      ],
-      child: Scaffold(
-        key: _scaffoldKey,
-        drawer: const CustomDrawer(),
-        body: BlocConsumer<LocationCubit, LocationState>(
-          listener: (context, state) {
-            if (state.serviceStatus == LocationServiceStatus.located &&
-                state.currentLocation != null) {
-              _mapController.animateCamera(
-                CameraUpdate.newCameraPosition(
-                  CameraPosition(
-                    target: state.currentLocation!,
-                    zoom: 15.5,
-                  ),
+    return Scaffold(
+      key: _scaffoldKey,
+      drawer: const CustomDrawer(),
+      body: BlocConsumer<HomeCubit, HomeState>(
+        listener: (context, state) {
+          final mapServices = getIt<MapService>();
+          if (state.serviceStatus == LocationServiceStatus.located &&
+              state.currentLocation != null) {
+            mapServices.controller?.animateCamera(
+              CameraUpdate.newCameraPosition(
+                CameraPosition(
+                  target: state.currentLocation!,
+                  zoom: 15.5,
                 ),
-              );
-            }
-          },
-          builder: (context, state) {
-            final Widget mapWidget = GoogleMap(
-              initialCameraPosition: LocationState.initialCameraPosition,
-              myLocationEnabled:
-                  state.serviceStatus == LocationServiceStatus.located,
-              compassEnabled: false,
-              mapToolbarEnabled: false,
-              onMapCreated: (GoogleMapController controller) {
-                _mapController = controller;
-              },
+              ),
             );
-
-            return Stack(
-              children: [
-                mapWidget,
-                UserFloatingAccessBar(scaffoldKey: _scaffoldKey, state: state),
-                Visibility(
-                  visible: !hideStackedBottomSheet,
-                  child: StackedBottomSheetComponent(
-                    onFindRider: () {
+          }
+        },
+        builder: (context, state) {
+          return Stack(
+            children: [
+              GoogleMap(
+                initialCameraPosition: HomeState.initialCameraPosition,
+                myLocationEnabled:
+                    state.serviceStatus == LocationServiceStatus.located,
+                compassEnabled: false,
+                mapToolbarEnabled: false,
+                markers: context.select((HomeCubit c) => c.state.markers),
+                onMapCreated: (GoogleMapController controller) {
+                  getIt.registerSingleton<GoogleMapController>(controller);
+                  getIt<MapService>().setController(controller);
+                },
+              ),
+              UserFloatingAccessBar(scaffoldKey: _scaffoldKey, state: state),
+              Visibility(
+                visible: !hideStackedBottomSheet,
+                child: StackedBottomSheetComponent(
+                  onFindRider: () {
+                    setState(() {
+                      hideStackedBottomSheet = true;
+                    });
+                    _showRiderFoundBottomSheet(context).then((_) {
                       setState(() {
-                        hideStackedBottomSheet = true;
+                        hideStackedBottomSheet = false;
                       });
-                      _showRiderFoundBottomSheet(context).then((_) {
-                        setState(() {
-                          hideStackedBottomSheet = false;
-                        });
-                      });
-                    },
-                    onServiceSelected: (int index) {},
-                  ),
+                    });
+                  },
+                  onServiceSelected: (int index) {},
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

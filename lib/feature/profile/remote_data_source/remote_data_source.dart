@@ -21,9 +21,6 @@ class ProfileRemoteDataSource {
   Future<ProfileModel> fetchUserProfile() async {
     try {
       final token = await AppPreferences.getToken();
-      if (token == null) {
-        throw Exception('No user found in local storage');
-      }
       final response = await client
           .get(Endpoints.profile, headers: {'Authorization': 'Bearer $token'});
 
@@ -52,14 +49,14 @@ class ProfileRemoteDataSource {
 
   Future<void> uploadImage(File file) async {
     final token = await AppPreferences.getToken();
-    log('$token');
+    log(token);
     if (file.path.isEmpty) {
       throw Exception('File path is empty');
     }
 
     try {
       // Check if file exists and has content
-      if (!await file.exists()) {
+      if (!file.existsSync()) {
         throw Exception('File does not exist: ${file.path}');
       }
 
@@ -94,13 +91,9 @@ class ProfileRemoteDataSource {
       final responseData = await streamedResponse.stream.toBytes();
       final responseString = String.fromCharCodes(responseData);
 
-      log('Response status: ${streamedResponse.statusCode}');
-      log('Response body: $responseString');
-
       if (streamedResponse.statusCode == 200 ||
           streamedResponse.statusCode == 201) {
-        final jsonData = jsonDecode(responseString);
-        log('Upload successful: $jsonData');
+        jsonDecode(responseString);
         return; // Successfully uploaded
       } else {
         Map<String, dynamic> errorResponse;
@@ -110,19 +103,15 @@ class ProfileRemoteDataSource {
               errorResponse['msg'] as String? ?? 'Unknown server error';
           throw ServerException(errorMessage);
         } catch (e) {
-          log('Error parsing response: $e');
           throw ServerException(
               'Error uploading image: ${streamedResponse.statusCode}');
         }
       }
     } on NetworkException catch (e) {
-      log('Network exception: ${e.message}');
       throw NetworkException(e.message);
     } on ServerException catch (e) {
-      log('Server exception: ${e.message}');
       throw ServerException(e.message);
     } catch (e) {
-      log('Unexpected error: $e');
       throw ServerException('An unexpected error occurred: $e');
     }
   }
@@ -253,7 +242,7 @@ class ProfileRemoteDataSource {
       if (decoded.containsKey('msg')) {
         throw ServerException(decoded['msg'].toString());
       }
-      return  User.fromNewApiResponse(decoded);
+      return User.fromNewApiResponse(decoded);
     } on SocketException catch (e) {
       throw NetworkException(e.message);
     } on ServerException catch (e) {
