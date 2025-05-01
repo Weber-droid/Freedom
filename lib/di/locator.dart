@@ -28,7 +28,11 @@ Future<void> locator() async {
   getIt
     ..registerSingleton<BaseApiClients>(freedomClient)
     ..registerLazySingleton(RegisterLocalDataSource.new)
-    ..registerFactory<HomeCubit>(() => HomeCubit(repository: getIt()))
+    ..registerFactory<HomeCubit>(
+      () => HomeCubit(
+        repository: getIt(),
+      ),
+    )
     ..registerLazySingleton<LocationRepository>(
       () => LocationRepositoryImpl(
         remoteDataSource: getIt(),

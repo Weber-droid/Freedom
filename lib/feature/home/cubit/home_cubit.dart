@@ -3,8 +3,13 @@ import 'dart:developer' as dev;
 
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
+import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/location_search/repository/location_repository.dart';
 import 'package:freedom/feature/location_search/repository/models/PlacePrediction.dart';
+import 'package:freedom/feature/location_search/repository/models/location.dart'
+    as loc;
+import 'package:freedom/feature/location_search/use_cases/get_recent_locations.dart';
 import 'package:freedom/shared/enums/enums.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:geolocator/geolocator.dart';
@@ -19,6 +24,27 @@ class HomeCubit extends Cubit<HomeState> {
         super(
           const HomeState(currentLocation: HomeState.defaultInitialPosition),
         );
+
+  ///setters and getters for locations
+  void isPickUpLocation({required bool isPickUpLocation}) {
+    emit(state.copyWith(isPickUpLocation: isPickUpLocation));
+  }
+
+  void isDestinationLocation({required bool isDestinationLocation}) {
+    emit(state.copyWith(isDestinationLocation: isDestinationLocation));
+  }
+
+  void showRecentPickUpLocations(
+      {required bool showRecentlySearchedLocations}) {
+    emit(state.copyWith(isPickUpLocation: showRecentlySearchedLocations));
+  }
+
+  void showDestinationRecentlySearchedLocations(
+      {required bool showDestinationRecentlySearchedLocations}) {
+    emit(state.copyWith(
+        isDestinationLocation: showDestinationRecentlySearchedLocations));
+  }
+
   Timer? _debounce;
   final LocationRepository _repository;
   void addDestination() {
@@ -44,39 +70,6 @@ class HomeCubit extends Cubit<HomeState> {
 
   int get fieldIndex => state.fieldIndexSetter ?? 0;
 
-  Future<void> onSearchQueryChanged(
-    String query,
-  ) async {
-    if (query.isEmpty) {
-      emit(state.copyWith(predictions: [], status: MapSearchStatus.success));
-      return;
-    }
-
-    _debounce?.cancel();
-
-    _debounce = Timer(const Duration(milliseconds: 500), () async {
-      emit(state.copyWith(predictions: [], status: MapSearchStatus.loading));
-
-      try {
-        final predictions = await _repository.getPlacePredictions(query);
-        emit(
-          state.copyWith(
-            predictions: predictions,
-            status: MapSearchStatus.success,
-          ),
-        );
-      } catch (e) {
-        emit(
-          state.copyWith(
-            predictions: [],
-            status: MapSearchStatus.error,
-            locationSearchErrorMessage: 'Failed to fetch predictions: $e',
-          ),
-        );
-      }
-    });
-  }
-
   void addMarker(Marker marker) {
     final currentMarkers = Set<Marker>.from(state.markers)..add(marker);
     emit(state.copyWith(markers: currentMarkers));
@@ -84,6 +77,10 @@ class HomeCubit extends Cubit<HomeState> {
 
   void setMarkers(Set<Marker> markers) {
     emit(state.copyWith(markers: markers));
+  }
+
+  void setPolylines(Set<Polyline> polylines) {
+    emit(state.copyWith(polylines: polylines, status: MapSearchStatus.success));
   }
 
   void clearMarkers() {
@@ -224,6 +221,117 @@ class HomeCubit extends Cubit<HomeState> {
         ),
       );
       await getUserAddressFromLatLng(HomeState.defaultInitialPosition);
+    }
+  }
+
+  Future<void> fetchPredictions(String query) async {
+    try {
+      assert(query.isNotEmpty, 'Query cannot be empty');
+      _debounce?.cancel();
+
+      _debounce = Timer(const Duration(milliseconds: 500), () async {
+        emit(state.copyWith(status: MapSearchStatus.loading));
+        final predictions = await _repository.getPlacePredictions(query);
+        if (state.isPickUpLocation) {
+          emit(
+            state.copyWith(
+              pickUpPredictions: predictions,
+              status: MapSearchStatus.success,
+            ),
+          );
+        } else if (state.isDestinationLocation) {
+          emit(
+            state.copyWith(
+              destinationPredictions: predictions,
+              status: MapSearchStatus.success,
+            ),
+          );
+        }
+      });
+    } catch (e) {
+      emit(
+        state.copyWith(
+          status: MapSearchStatus.error,
+          pickUpPredictions: [],
+          destinationPredictions: [],
+          locationSearchErrorMessage: 'Failed to fetch predictions: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> fetchRecentLocations() async {
+    try {
+      final recentLocations = await getIt<GetRecentLocations>()();
+      emit(
+        state.copyWith(
+          recentLocations: recentLocations,
+          status: MapSearchStatus.success,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          serviceStatus: LocationServiceStatus.error,
+          errorMessage: 'Failed to fetch recent locations: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> handlePickUpLocation(
+    PlacePrediction prediction,
+    FocusNode pickUpFocusNode,
+    FocusNode destinationFocusNode,
+    TextEditingController pickUpController,
+    TextEditingController destinationController,
+  ) async {
+    pickUpFocusNode.unfocus();
+    destinationFocusNode.unfocus();
+    emit(state.copyWith(status: MapSearchStatus.loading));
+    try {
+      final placesDetails =
+          await _repository.getPlaceDetails(prediction.placeId);
+      if (placesDetails != null && pickUpController.text.isNotEmpty) {
+        pickUpController.text = placesDetails.address;
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          serviceStatus: LocationServiceStatus.error,
+          errorMessage: 'Failed to handle pick up location: $e',
+        ),
+      );
+    }
+  }
+
+  Future<void> handleDestinationLocation(
+    PlacePrediction prediction,
+    FocusNode destinationFocusNode,
+    TextEditingController destinationController,
+  ) async {
+    destinationFocusNode.unfocus();
+    emit(state.copyWith(status: MapSearchStatus.loading));
+    try {
+      final placesDetails =
+          await _repository.getPlaceDetails(prediction.placeId);
+      if (placesDetails != null && destinationController.text.isNotEmpty) {
+        destinationController.text = placesDetails.address;
+        final recentLocation = await getIt<GetRecentLocations>()();
+        emit(
+          state.copyWith(
+            recentLocations: recentLocation,
+            status: MapSearchStatus.success,
+          ),
+        );
+      }
+    } catch (e) {
+      emit(
+        state.copyWith(
+          serviceStatus: LocationServiceStatus.error,
+          errorMessage: 'Failed to handle destination location: $e',
+        ),
+      );
     }
   }
 }

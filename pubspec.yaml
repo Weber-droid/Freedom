@@ -49,6 +49,7 @@ dependencies:
   internet_connection_checker: ^3.0.1
   flutter_google_maps_webservices: ^1.1.1
   flutter_dotenv: ^5.2.1
+  flutter_polyline_points: ^2.1.0
 dev_dependencies:
   bloc_test: ^9.1.7
   retrofit_generator: ^9.1.3
