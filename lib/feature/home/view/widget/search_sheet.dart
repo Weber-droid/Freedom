@@ -1,16 +1,10 @@
 import 'dart:async';
-import 'dart:developer' as dev;
-import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:freedom/core/services/map_services.dart';
-import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/location_search/repository/models/PlacePrediction.dart';
 import 'package:freedom/feature/location_search/repository/models/location.dart';
@@ -53,12 +47,8 @@ class SearchSheet extends StatefulWidget {
 
 class _SearchSheetState extends State<SearchSheet>
     with SingleTickerProviderStateMixin {
-  bool isPickUpLocation = false;
-  bool isDestinationLocation = false;
   bool isInitialDestinationField = false;
-  List<Location> _recentLocations = [];
   bool _isLoading = false;
-  bool _showResults = false;
   Timer? _debounce;
   Location? _pickUpLocation;
   Location? _destinationLocation;
@@ -90,7 +80,7 @@ class _SearchSheetState extends State<SearchSheet>
 
     _loadLocations();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      createMotorcycleIcon();
+      context.read<HomeCubit>().createMotorcycleIcon();
     });
 
     // Listen for focus changes
@@ -113,68 +103,65 @@ class _SearchSheetState extends State<SearchSheet>
 
   void destinationNodeFocusListener() {
     _destinationNode.addListener(() {
+      final cubit = context.read<HomeCubit>();
       if (_destinationNode.hasFocus) {
-        dev.log('Destination field focused');
-        context.read<HomeCubit>().isDestinationLocation(
-              isDestinationLocation: true,
-            );
-        context.read<HomeCubit>().isPickUpLocation(
-              isPickUpLocation: false,
-            );
-        context.read<HomeCubit>().showDestinationRecentlySearchedLocations(
-              showDestinationRecentlySearchedLocations: true,
-            );
+        cubit
+          ..isDestinationLocation(isDestinationLocation: true)
+          ..isPickUpLocation(isPickUpLocation: false)
+          ..showDestinationRecentlySearchedLocations(
+            showDestinationRecentlySearchedLocations: true,
+          );
         _animationController.forward();
       } else {
         _animationController.reverse().then((_) {
-          context.read<HomeCubit>().isDestinationLocation(
-                isDestinationLocation: false,
-              );
-          context.read<HomeCubit>().isPickUpLocation(
-                isPickUpLocation: false,
-              );
-          context.read<HomeCubit>().showDestinationRecentlySearchedLocations(
-                showDestinationRecentlySearchedLocations: false,
-              );
+          cubit
+            ..isDestinationLocation(isDestinationLocation: false)
+            ..isPickUpLocation(isPickUpLocation: false)
+            ..showDestinationRecentlySearchedLocations(
+              showDestinationRecentlySearchedLocations: false,
+            );
         });
       }
     });
   }
 
   void pickNodeFocusListener() {
-    dev.log('PickUpNode listener added');
+    final cubit = context.read<HomeCubit>();
     _pickUpNode.addListener(() {
       if (_pickUpNode.hasFocus) {
-        dev.log('Pickup location field focused');
-        context.read<HomeCubit>().isPickUpLocation(isPickUpLocation: true);
-        context
-            .read<HomeCubit>()
-            .isDestinationLocation(isDestinationLocation: false);
-        context
-            .read<HomeCubit>()
-            .showRecentPickUpLocations(showRecentlySearchedLocations: true);
-        context.read<HomeCubit>().showDestinationRecentlySearchedLocations(
-            showDestinationRecentlySearchedLocations: false);
+        cubit
+          ..isPickUpLocation(isPickUpLocation: true)
+          ..isDestinationLocation(isDestinationLocation: false)
+          ..showRecentPickUpLocations(showRecentlySearchedLocations: true)
+          ..showDestinationRecentlySearchedLocations(
+            showDestinationRecentlySearchedLocations: false,
+          );
+        if (widget.pickUpLocationController.text.isEmpty) {
+          cubit.showRecentPickUpLocations(showRecentlySearchedLocations: true);
+        }
+
         _animationController.forward();
       } else {
         _animationController.reverse().then((_) {
-          context.read<HomeCubit>().isPickUpLocation(isPickUpLocation: false);
-          context
-              .read<HomeCubit>()
-              .isDestinationLocation(isDestinationLocation: false);
-          context
-              .read<HomeCubit>()
-              .showRecentPickUpLocations(showRecentlySearchedLocations: false);
+          cubit
+            ..isPickUpLocation(isPickUpLocation: false)
+            ..isDestinationLocation(isDestinationLocation: false)
+            ..showRecentPickUpLocations(showRecentlySearchedLocations: false);
         });
       }
     });
   }
 
   void _onSearchChangedPickup() {
-    context.read<HomeCubit>().isPickUpLocation(isPickUpLocation: true);
-    context
-        .read<HomeCubit>()
-        .fetchPredictions(widget.pickUpLocationController.text);
+    final cubit = context.read<HomeCubit>()
+      ..isPickUpLocation(isPickUpLocation: true);
+    if (widget.pickUpLocationController.text.isEmpty) {
+      cubit
+        ..clearPredictions()
+        ..showRecentPickUpLocations(showRecentlySearchedLocations: true);
+    } else {
+      cubit.fetchPredictions(widget.pickUpLocationController.text);
+    }
   }
 
   void _onSearchChangedDestination() {
@@ -193,266 +180,6 @@ class _SearchSheetState extends State<SearchSheet>
     } catch (e) {
       print('Error loading locations: $e');
     }
-  }
-
-  void upDateMarkers() {
-    final newMarkersMap = Map<String, Marker>.from(_markersMap);
-
-    if (_pickUpLocation != null && bikeIcon != null) {
-      const pickupMarkerId = 'pickup';
-      dev.log('Adding pickup marker with ID: $pickupMarkerId');
-
-      newMarkersMap[pickupMarkerId] = Marker(
-        markerId: const MarkerId(pickupMarkerId),
-        position: LatLng(
-          _pickUpLocation!.latitude,
-          _pickUpLocation!.longitude,
-        ),
-        infoWindow: InfoWindow(
-          title: 'Pickup',
-          snippet: _pickUpLocation?.name,
-        ),
-        icon: bikeIcon ??
-            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-      );
-    }
-
-    if (_destinationLocation != null) {
-      const destinationMarkerId = 'destination';
-
-      newMarkersMap[destinationMarkerId] = Marker(
-        markerId: const MarkerId(destinationMarkerId),
-        position: LatLng(
-          _destinationLocation!.latitude,
-          _destinationLocation!.longitude,
-        ),
-        infoWindow: InfoWindow(
-          title: 'Destination',
-          snippet: _destinationLocation?.name,
-        ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      );
-    }
-
-    setState(() {
-      _markersMap = newMarkersMap;
-    });
-
-    if (context.mounted) {
-      context.read<HomeCubit>().setMarkers(_markersMap.values.toSet());
-    }
-  }
-
-  Future<void> createMotorcycleIcon({int width = 15, int height = 15}) async {
-    final imageData = await rootBundle.load('assets/images/bike_marker.png');
-    final originalBytes = imageData.buffer.asUint8List();
-
-    final codec = await ui.instantiateImageCodec(originalBytes);
-    final frameInfo = await codec.getNextFrame();
-    final image = frameInfo.image;
-
-    final recorder = ui.PictureRecorder();
-    Canvas(recorder).drawImageRect(
-      image,
-      Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-      Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-      Paint(),
-    );
-
-    final picture = recorder.endRecording();
-    final resizedImage = await picture.toImage(width, height);
-    final resizedByteData =
-        await resizedImage.toByteData(format: ui.ImageByteFormat.png);
-
-    if (resizedByteData != null) {
-      bikeIcon = BitmapDescriptor.bytes(resizedByteData.buffer.asUint8List());
-    } else {
-      bikeIcon = BitmapDescriptor.bytes(originalBytes);
-    }
-  }
-
-  Future<void> upDateLocation() async {
-    final mapServices = getIt<MapService>();
-    if (_pickUpLocation != null) {
-      await mapServices.controller?.animateCamera(
-        CameraUpdate.newCameraPosition(
-          CameraPosition(
-            target: LatLng(
-              _pickUpLocation!.latitude,
-              _pickUpLocation!.longitude,
-            ),
-            zoom: 15,
-          ),
-        ),
-      );
-    }
-  }
-
-  void addDriverMarker(String driverId, LatLng position,
-      {bool isOnline = true}) {
-    if (!isOnline) {
-      removeDriverMarker(driverId);
-      return;
-    }
-
-    final markerId = 'driver_$driverId';
-
-    final driverMarker = Marker(
-      markerId: MarkerId(markerId),
-      position: position,
-      infoWindow: InfoWindow(
-        title: 'Driver $driverId',
-        snippet: isOnline ? 'Online' : 'Offline',
-      ),
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-    );
-
-    setState(() {
-      _markersMap[markerId] = driverMarker;
-    });
-
-    if (context.mounted) {
-      context.read<HomeCubit>().setMarkers(_markersMap.values.toSet());
-    }
-  }
-
-  void removeDriverMarker(String driverId) {
-    final markerId = 'driver_$driverId';
-
-    // Remove from map if exists
-    if (_markersMap.containsKey(markerId)) {
-      setState(() {
-        _markersMap.remove(markerId);
-      });
-
-      // Update the map with the updated set of markers
-      if (context.mounted) {
-        context.read<HomeCubit>().setMarkers(_markersMap.values.toSet());
-      }
-    }
-  }
-
-  void updateDriverStatus(String driverId, LatLng position, {bool? isOnline}) {
-    if (isOnline != null) {
-      // Update or add driver marker
-      addDriverMarker(driverId, position);
-    } else {
-      removeDriverMarker(driverId);
-    }
-  }
-
-  Marker? getMarkerById(String markerId) {
-    return _markersMap[markerId];
-  }
-
-  Future<void> getRoutePoints() async {
-    if (_pickUpLocation == null || _destinationLocation == null) {
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      // Create PolylinePoints object
-      final polylinePoints = PolylinePoints();
-      final result = await polylinePoints.getRouteBetweenCoordinates(
-        googleApiKey: dotenv.env['DIRECTIONS_API_KEY'],
-        request: PolylineRequest(
-          origin: PointLatLng(
-            _pickUpLocation!.latitude,
-            _pickUpLocation!.longitude,
-          ),
-          destination: PointLatLng(
-            _destinationLocation!.latitude,
-            _destinationLocation!.longitude,
-          ),
-          mode: TravelMode.driving,
-        ),
-      );
-
-      dev.log('result: ${result.points}');
-      // Clear previous route
-      _routeCoordinates.clear();
-
-      // Add all points to the route
-      if (result.points.isNotEmpty) {
-        dev.log('Adding points to route');
-        for (var point in result.points) {
-          _routeCoordinates.add(LatLng(point.latitude, point.longitude));
-        }
-      }
-
-      // Create polyline
-      final polyline = Polyline(
-        polylineId: _polylineId,
-        color: Colors.orange,
-        points: _routeCoordinates,
-        width: 5,
-        patterns: [
-          PatternItem.dash(20),
-          PatternItem.gap(10)
-        ], // Optional: Creates a dashed line
-      );
-
-      // Update polylines
-      setState(() {
-        _polylines = {polyline};
-        _isLoading = false;
-      });
-
-      // Update the map with the new polylines
-      if (context.mounted) {
-        context.read<HomeCubit>().setPolylines(_polylines);
-      }
-
-      // Zoom the map to fit the route
-      _centerCameraWithZoom();
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      dev.log('Error getting route: $e');
-    }
-  }
-
-// Add this function to fit both markers and route on map
-  void _centerCameraWithZoom() {
-    if (_pickUpLocation == null || _destinationLocation == null) {
-      return;
-    }
-
-    // Calculate center point between origin and destination
-    final centerLat =
-        (_pickUpLocation!.latitude + _destinationLocation!.latitude) / 2;
-    final centerLng =
-        (_pickUpLocation!.longitude + _destinationLocation!.longitude) / 2;
-
-    // Calculate approximate zoom level based on distance
-    // This is a simple approach - you might want to refine this calculation
-    final latDiff =
-        (_pickUpLocation!.latitude - _destinationLocation!.latitude).abs();
-    final lngDiff =
-        (_pickUpLocation!.longitude - _destinationLocation!.longitude).abs();
-    final double maxDiff = max(latDiff, lngDiff);
-
-    // Simple logarithmic scale for zoom - adjust constants as needed
-    // Lower value = more zoomed out
-    double zoom = 14; // Default medium zoom
-    if (maxDiff > 0.1) zoom = 11;
-    if (maxDiff > 0.5) zoom = 9;
-    if (maxDiff > 1.0) zoom = 7;
-
-    // Animate to center with calculated zoom
-    getIt<MapService>().controller?.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              target: LatLng(centerLat, centerLng),
-              zoom: zoom,
-            ),
-          ),
-        );
   }
 
   @override
@@ -520,56 +247,15 @@ class _SearchSheetState extends State<SearchSheet>
                               controller: widget.pickUpLocationController,
                               fillColor: textFieldFillColor,
                               focusNode: _pickUpNode,
-                              suffixIcon: isPickUpLocation
+                              suffixIcon: context.select<HomeCubit, bool>(
+                                (icon) => icon.state.isPickUpLocation,
+                              )
                                   ? _isLoading
-                                      ? Container(
-                                          width: 24,
-                                          height: 24,
-                                          padding: const EdgeInsets.all(12),
-                                          child:
-                                              const CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                              Colors.orange,
-                                            ),
-                                          ),
-                                        )
+                                      ? const LoadingWidget()
                                       : widget.pickUpLocationController.text
                                               .isNotEmpty
-                                          ? Padding(
-                                              padding: const EdgeInsets.only(
-                                                top: 12,
-                                                bottom: 12,
-                                                left: 15.5,
-                                                right: 7,
-                                              ),
-                                              child: GestureDetector(
-                                                onTap: () {
-                                                  widget
-                                                      .pickUpLocationController
-                                                      .clear();
-                                                },
-                                                child: Container(
-                                                  decoration: ShapeDecoration(
-                                                    color: const Color(
-                                                      0xFFE61D2A,
-                                                    ),
-                                                    shape:
-                                                        RoundedRectangleBorder(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        7,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.close,
-                                                    color: Colors.white,
-                                                    size: 16,
-                                                  ),
-                                                ),
-                                              ),
+                                          ? ClearFieldAndResetState(
+                                              widget: widget,
                                             )
                                           : null
                                   : Padding(
@@ -681,9 +367,16 @@ class _SearchSheetState extends State<SearchSheet>
                           },
                           builder: (context, state) {
                             return TextFieldFactory.location(
+                              controller: widget.destinationController,
                               fillColor: textFieldFillColor,
                               focusNode: _destinationNode,
                               hinText: 'Enter Destination',
+                              suffixIcon:
+                                  widget.destinationController.text.isNotEmpty
+                                      ? ClearFieldAndResetState(
+                                          widget: widget,
+                                        )
+                                      : null,
                               prefixText: Padding(
                                 padding: const EdgeInsets.only(
                                   top: 6,
@@ -706,7 +399,6 @@ class _SearchSheetState extends State<SearchSheet>
                                 color: const Color(0xFFBEBCBC),
                                 fontWeight: FontWeight.w500,
                               ),
-                              controller: widget.destinationController,
                             );
                           },
                         ),
@@ -724,7 +416,7 @@ class _SearchSheetState extends State<SearchSheet>
                         return const SizedBox.shrink();
                       }
                     },
-                  )
+                  ),
                 ],
               ),
             ),
@@ -735,78 +427,93 @@ class _SearchSheetState extends State<SearchSheet>
   }
 
   SizeTransition _buildRecentLocation(BuildContext context) {
+    final isPickUpLocation = context
+        .select<HomeCubit, bool>((cubit) => cubit.state.isPickUpLocation);
+    final isDestinationLocation = context
+        .select<HomeCubit, bool>((cubit) => cubit.state.isDestinationLocation);
     final pickUpPredictions =
         context.select((HomeCubit c) => c.state.pickUpPredictions);
     final destinationPredictions =
         context.select((HomeCubit c) => c.state.destinationPredictions);
     final recentLocations =
         context.select((HomeCubit c) => c.state.recentLocations);
-    dev.log('recentLocations: $recentLocations');
+    final pickupText = widget.pickUpLocationController.text;
+    final destinationText = widget.destinationController.text;
+
     return SizeTransition(
       sizeFactor: _animation,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (_isLoading)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(),
-              ),
-            )
-          else if (pickUpPredictions.isNotEmpty ||
-              destinationPredictions.isNotEmpty) ...[
-            if (isPickUpLocation && pickUpPredictions.isNotEmpty) ...[
-              ...pickUpPredictions.map((prediction) {
-                return Builder(
-                  builder: (context) {
+      child: BlocBuilder<HomeCubit, HomeState>(
+        builder: (context, state) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: CircularProgressIndicator(),
+                  ),
+                )
+              else if (pickUpPredictions.isNotEmpty ||
+                  destinationPredictions.isNotEmpty) ...[
+                if (isPickUpLocation && pickUpPredictions.isNotEmpty) ...[
+                  ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: pickUpPredictions.length,
+                    itemBuilder: (context, index) {
+                      final prediction = pickUpPredictions[index];
+                      return GestureDetector(
+                        onTap: () async {
+                          await context.read<HomeCubit>().handlePickUpLocation(
+                                prediction,
+                                _pickUpNode,
+                                _destinationNode,
+                                widget.pickUpLocationController,
+                                widget.destinationController,
+                              );
+                          if (context.mounted) {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        child: buildPredictionList(
+                          context,
+                          getIconData(prediction.iconType),
+                          prediction,
+                        ),
+                      );
+                    },
+                  ),
+                ] else if (isDestinationLocation &&
+                    destinationPredictions.isNotEmpty) ...[
+                  ...destinationPredictions.map((destination) {
                     return GestureDetector(
                       onTap: () async {
-                        await context.read<HomeCubit>().handlePickUpLocation(
-                              prediction,
-                              _pickUpNode,
+                        await context
+                            .read<HomeCubit>()
+                            .handleDestinationLocation(
+                              destination,
                               _destinationNode,
-                              widget.pickUpLocationController,
                               widget.destinationController,
                             );
-                        if (context.mounted) {
-                          Navigator.of(context).pop();
-                        }
+                        Navigator.of(context).pop();
                       },
                       child: buildPredictionList(
                         context,
-                        getIconData(prediction.iconType),
-                        prediction,
+                        getIconData(destination.iconType),
+                        destination,
                       ),
                     );
-                  },
-                );
-              }),
-            ] else if (isDestinationLocation &&
-                destinationPredictions.isNotEmpty) ...[
-              ...destinationPredictions.map((destination) {
-                return GestureDetector(
-                  onTap: () async {
-                    await context.read<HomeCubit>().handleDestinationLocation(
-                        destination,
-                        _destinationNode,
-                        widget.destinationController);
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  child: buildPredictionList(
-                    context,
-                    getIconData(destination.iconType),
-                    destination,
-                  ),
-                );
-              }),
+                  }),
+                ],
+              ] else if (recentLocations.isNotEmpty &&
+                  ((isPickUpLocation && pickupText.isEmpty) ||
+                      (isDestinationLocation && destinationText.isEmpty))) ...[
+                ...recentLocations.map((e) => buildRecentLocation(context, e)),
+              ],
             ],
-          ] else if (recentLocations.isNotEmpty) ...[
-            ...recentLocations.map((e) => buildRecentLocation(context, e)),
-          ],
-        ],
+          );
+        },
       ),
     );
   }
@@ -956,5 +663,88 @@ class _SearchSheetState extends State<SearchSheet>
       default:
         return Icons.location_on;
     }
+  }
+}
+
+class ClearFieldAndResetState extends StatelessWidget {
+  const ClearFieldAndResetState({
+    required this.widget,
+    super.key,
+  });
+
+  final SearchSheet widget;
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(
+        top: 12,
+        bottom: 12,
+        left: 15.5,
+        right: 7,
+      ),
+      child: GestureDetector(
+        onTap: () {
+          if (widget.pickUpLocationController.text.isNotEmpty) {
+            widget.pickUpLocationController.clear();
+            context.read<HomeCubit>().clearPredictions().then((_) {
+              if (context.mounted) {
+                context.read<HomeCubit>().showRecentPickUpLocations(
+                      showRecentlySearchedLocations: true,
+                    );
+              }
+            });
+          } else if (widget.destinationController.text.isNotEmpty) {
+            widget.destinationController.clear();
+            context.read<HomeCubit>().clearPredictions().then((_) {
+              if (context.mounted) {
+                context
+                    .read<HomeCubit>()
+                    .showDestinationRecentlySearchedLocations(
+                      showDestinationRecentlySearchedLocations: true,
+                    );
+              }
+            });
+          }
+        },
+        child: Container(
+          decoration: ShapeDecoration(
+            color: const Color(
+              0xFFE61D2A,
+            ),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(
+                7,
+              ),
+            ),
+          ),
+          child: const Icon(
+            Icons.close,
+            color: Colors.white,
+            size: 16,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class LoadingWidget extends StatelessWidget {
+  const LoadingWidget({
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 24,
+      height: 24,
+      padding: const EdgeInsets.all(12),
+      child: const CircularProgressIndicator(
+        strokeWidth: 2,
+        valueColor: AlwaysStoppedAnimation<Color>(
+          Colors.orange,
+        ),
+      ),
+    );
   }
 }

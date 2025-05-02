@@ -9,7 +9,7 @@ class HomeState extends Equatable {
     this.destinationPredictions = const [],
     this.locationSearchErrorMessage = '',
     this.status = MapSearchStatus.initial,
-    this.markers = const <Marker>{},
+    this.markers = const <MarkerId, Marker>{},
     this.polylines = const {},
     this.currentLocation,
     this.serviceStatus = LocationServiceStatus.initial,
@@ -22,6 +22,7 @@ class HomeState extends Equatable {
     this.showDestinationRecentLocations = false,
     this.destinationFocusNode,
     this.pickUpFocusNode,
+    this.bikeMarkerIcon,
   });
 
   final List<String> locations;
@@ -31,7 +32,7 @@ class HomeState extends Equatable {
   final List<PlacePrediction> destinationPredictions;
   final String locationSearchErrorMessage;
   final MapSearchStatus status;
-  final Set<Marker> markers;
+  final Map<MarkerId, Marker> markers;
   final Set<Polyline> polylines;
   final LatLng? currentLocation;
   final LocationServiceStatus serviceStatus;
@@ -44,6 +45,7 @@ class HomeState extends Equatable {
   final bool showDestinationRecentLocations;
   final FocusNode? pickUpFocusNode;
   final FocusNode? destinationFocusNode;
+  final BitmapDescriptor? bikeMarkerIcon;
 
   static const LatLng defaultInitialPosition = LatLng(6.6667, -1.6167);
 
@@ -60,7 +62,7 @@ class HomeState extends Equatable {
     List<PlacePrediction>? destinationPredictions,
     String? locationSearchErrorMessage,
     MapSearchStatus? status,
-    Set<Marker>? markers,
+    Map<MarkerId, Marker>? markers,
     Set<Polyline>? polylines,
     LatLng? currentLocation,
     LocationServiceStatus? serviceStatus,
@@ -71,6 +73,7 @@ class HomeState extends Equatable {
     List<loc.Location>? recentLocations,
     bool? showRecentPickUpLocations,
     bool? showDestinationRecentLocations,
+    BitmapDescriptor? bikeMarkerIcon,
   }) {
     return HomeState(
       locations: locations ?? this.locations,
@@ -94,6 +97,7 @@ class HomeState extends Equatable {
           isDestinationLocation ?? this.isDestinationLocation,
       showRecentPickUpLocations:
           showRecentPickUpLocations ?? this.showRecentPickUpLocations,
+      bikeMarkerIcon: bikeMarkerIcon ?? this.bikeMarkerIcon,
     );
   }
 
@@ -119,5 +123,6 @@ class HomeState extends Equatable {
         showDestinationRecentLocations,
         pickUpFocusNode,
         destinationFocusNode,
+        bikeMarkerIcon,
       ];
 }

@@ -84,7 +84,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     state.serviceStatus == LocationServiceStatus.located,
                 compassEnabled: false,
                 mapToolbarEnabled: false,
-                markers: context.select((HomeCubit c) => c.state.markers),
+                markers: context
+                    .select((HomeCubit c) => c.state.markers.values.toSet()),
                 polylines: state.polylines,
                 onMapCreated: (GoogleMapController controller) {
                   getIt.registerSingleton<GoogleMapController>(controller);
