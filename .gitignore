@@ -23,6 +23,7 @@ migrate_working_dir/
 .project
 .settings/
 .vscode/*
+.vscode/
 
 # packages file containing multi-root paths
 .packages.generated
@@ -42,6 +43,7 @@ linked_*.ds
 unlinked.ds
 unlinked_spec.ds
 .fvm/
+.env
 
 
 # Android related
