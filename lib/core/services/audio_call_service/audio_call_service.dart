@@ -1,7 +1,10 @@
 // ignore_for_file: inference_failure_on_instance_creation
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:freedom/app_preference.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart';
 
@@ -26,7 +29,7 @@ abstract class CallServiceInterface {
 }
 
 class StreamCallService implements CallServiceInterface {
-  static const String _apiKey = 't3737j3jqbgn';
+  static final String _apiKey = dotenv.env['STREAM_CALL_API_KEY'] ?? '';
 
   late StreamVideo _client;
   Call? _currentCall;
@@ -35,10 +38,38 @@ class StreamCallService implements CallServiceInterface {
   @override
   Future<void> initialize(
       {required String userId, required String userName}) async {
+    log('show id $userId');
     if (_isInitialized) return;
     try {
-      // In a real app, you would get this token from your backend
-      final user = await RegisterLocalDataSource().getUser();
+      final userTokenRaw = await AppPreferences.getToken();
+
+      // Decode the token
+      final parts = userTokenRaw.split('.');
+      if (parts.length != 3) throw Exception('Invalid JWT token format');
+
+      // Get all three parts
+      final header = parts[0];
+      final payload = parts[1];
+      final signature = parts[2];
+
+      // Decode the payload
+      final normalizedPayload = base64Url.normalize(payload);
+      final jsonPayload = utf8.decode(base64Url.decode(normalizedPayload));
+      final decodedPayload = jsonDecode(jsonPayload) as Map<String, dynamic>;
+
+      // Create a new payload with user_id field
+      final newPayload = {
+        ...decodedPayload,
+        'user_id': decodedPayload['id'],
+      };
+
+      // Re-encode the payload
+      final encodedNewPayload =
+          base64Url.encode(utf8.encode(jsonEncode(newPayload)));
+
+      // Reconstruct the token with the original header and signature
+      final newToken = '$header.$encodedNewPayload.$signature';
+      log('new token $newToken');
 
       _client = StreamVideo(
         _apiKey,
@@ -46,7 +77,7 @@ class StreamCallService implements CallServiceInterface {
           userId: userId,
           name: userName,
         ),
-        userToken: user!.token,
+        userToken: newToken,
       );
       _isInitialized = true;
 

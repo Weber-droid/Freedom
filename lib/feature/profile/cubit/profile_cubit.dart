@@ -38,6 +38,13 @@ class ProfileCubit extends Cubit<ProfileState> {
           if (currentUser != null) {
             final updatedUser = currentUser.copyWith(
               userImage: profile.data.profilePicture,
+              firstName: profile.data.firstName,
+              email: profile.data.email,
+              phone: profile.data.phone,
+              surname: profile.data.surname,
+              userId: profile.data.id,
+              isPhoneVerified: profile.data.isPhoneVerified,
+              isEmailVerified: profile.data.isEmailVerified,
             );
             await RegisterLocalDataSource().saveUser(updatedUser);
             if (getIt.isRegistered<User>()) {
@@ -156,12 +163,10 @@ class ProfileCubit extends Cubit<ProfileState> {
 
       final response = await _profileRepository.verifyPhoneUpDate(otp);
       response.fold(
-            (l) =>
-            emit(OtpVerificationError(l.message, phoneNumber: _phoneNumber)),
-            (profile) => emit(
+        (l) => emit(OtpVerificationError(l.message, phoneNumber: _phoneNumber)),
+        (profile) => emit(
           OtpVerified(
-              isVerified: profile.success ?? false,
-              phoneNumber: _phoneNumber),
+              isVerified: profile.success ?? false, phoneNumber: _phoneNumber),
         ),
       );
     } catch (e) {
@@ -221,10 +226,7 @@ class ProfileCubit extends Cubit<ProfileState> {
     if (state is ProfileLoaded) {
       final currentState = state as ProfileLoaded;
       // When country code is changed, also set active field to phone
-      emit(currentState.copyWith(
-          countryCode: newCode,
-          activeField: 'phone'
-      ));
+      emit(currentState.copyWith(countryCode: newCode, activeField: 'phone'));
       log('Updated country code to: $newCode');
     }
   }

@@ -1198,8 +1198,7 @@ class _RiderContainerAndRideActionsState
                 // Second Icon
                 GestureDetector(
                   onTap: () {
-                    final callId =
-                        'call_MWCHb02GD5m6_${DateTime.now().millisecondsSinceEpoch}';
+                    final callId = '${DateTime.now().millisecondsSinceEpoch}';
                     Navigator.of(context).push(
                       MaterialPageRoute<dynamic>(
                         builder: (context) => AudioCallScreen(

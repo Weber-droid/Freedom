@@ -3,6 +3,7 @@ import 'dart:developer';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/services/map_services.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
@@ -40,19 +41,17 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     context.read<HomeCubit>().checkPermissionStatus();
     context.read<ProfileCubit>().getUserProfile();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      initCallCubit();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final user = await RegisterLocalDataSource().getUser();
+
+      await context
+          .read<CallCubit>()
+          .initialize(userId: user!.userId!, userName: user.firstName!);
     });
   }
 
   Future<void> initCallCubit() async {
-    final user = await RegisterLocalDataSource().getUser();
-    log('user: ${user!.token}');
-    if (mounted) {
-      await context
-          .read<CallCubit>()
-          .initialize(userId: user.id!, userName: user.firstName!);
-    }
+    if (mounted) {}
   }
 
   @override
