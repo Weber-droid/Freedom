@@ -1,57 +1,82 @@
 part of 'profile_cubit.dart';
 
-// IMPROVED STATE CLASSES
-// Make ProfileModel nullable in all relevant states to avoid null checks
+abstract class ProfileState extends Equatable {
+  const ProfileState(
+      {this.activeField,
+      this.originalEmail,
+      this.originalPhone,
+      this.countryCode = '+233'});
+  final String? activeField;
+  final String? originalEmail;
+  final String? originalPhone;
+  final String? countryCode;
 
-abstract class ProfileState {}
+  @override
+  List<Object?> get props =>
+      [activeField, originalEmail, originalPhone, countryCode];
+}
 
 class ProfileInitial extends ProfileState {}
 
 class ProfileLoading extends ProfileState {}
 
 class ProfileLoaded extends ProfileState {
-  ProfileLoaded({this.user, this.cloudinaryUrl});
+  const ProfileLoaded({
+    this.user,
+    super.activeField,
+    super.originalEmail,
+    super.originalPhone,
+    super.countryCode,
+  });
   final ProfileModel? user;
-  final String? cloudinaryUrl;
 
   ProfileLoaded copyWith({
     ProfileModel? user,
     String? cloudinaryUrl,
+    String? activeField,
+    String? originalEmail,
+    String? originalPhone,
+    String? countryCode,
   }) {
     return ProfileLoaded(
       user: user ?? this.user,
-      cloudinaryUrl: cloudinaryUrl ?? this.cloudinaryUrl,
+      activeField: activeField ?? this.activeField,
+      originalEmail: originalEmail ?? this.originalEmail,
+      originalPhone: originalPhone ?? this.originalPhone,
+      countryCode: countryCode ?? this.countryCode,
     );
   }
+
+  @override
+  List<Object?> get props =>
+      [user, activeField, originalEmail, originalPhone, countryCode];
 }
 
 class ProfileError extends ProfileState {
-  ProfileError(this.message);
+  const ProfileError(this.message);
   final String message;
 }
 
 class UploadingImage extends ProfileState {}
 
 class ImageUploaded extends ProfileState {
-  ImageUploaded({this.isUploaded = false, this.user});
+  const ImageUploaded({this.isUploaded = false, this.user});
   final bool isUploaded;
   final ProfileModel? user;
 }
 
 class ImageUploadError extends ProfileState {
-  ImageUploadError(this.message);
+  const ImageUploadError(this.message);
   final String message;
 }
 
 class UpdatingNumber extends ProfileState {
-
-  UpdatingNumber({required this.phoneNumber});
+  const UpdatingNumber({required this.phoneNumber});
   final String phoneNumber;
 }
 
 class NumberUpdated extends ProfileState {
-
-  NumberUpdated({
+  const NumberUpdated({
     this.isUpdated = false,
     this.message = '',
     required this.phoneNumber,
@@ -62,16 +87,14 @@ class NumberUpdated extends ProfileState {
 }
 
 class NumberUpdateError extends ProfileState {
-
-  NumberUpdateError(this.message);
+  const NumberUpdateError(this.message);
   final String message;
 }
 
 class UpdatingEmail extends ProfileState {}
 
 class EmailUpdated extends ProfileState {
-
-  EmailUpdated({
+  const EmailUpdated({
     this.isUpdated = false,
     this.message = '',
   });
@@ -80,20 +103,17 @@ class EmailUpdated extends ProfileState {
 }
 
 class EmailUpdateError extends ProfileState {
-
-  EmailUpdateError(this.message);
+  const EmailUpdateError(this.message);
   final String message;
 }
 
 class VerifyingOtp extends ProfileState {
-
-  VerifyingOtp({required this.phoneNumber});
+  const VerifyingOtp({required this.phoneNumber});
   final String phoneNumber;
 }
 
 class OtpVerified extends ProfileState {
-
-  OtpVerified({
+  const OtpVerified({
     required this.isVerified,
     required this.phoneNumber,
   });
@@ -102,8 +122,25 @@ class OtpVerified extends ProfileState {
 }
 
 class OtpVerificationError extends ProfileState {
-
-  OtpVerificationError(this.message, {required this.phoneNumber});
+  const OtpVerificationError(this.message, {required this.phoneNumber});
   final String message;
   final String phoneNumber;
+}
+
+class UpdateUserNamesInProgress extends ProfileState {}
+
+class UserNamesUpdated extends ProfileState {
+  const UserNamesUpdated({
+    this.isUpdated = false,
+    this.message = '',
+    this.user,
+  });
+  final bool isUpdated;
+  final String message;
+  final User? user;
+}
+
+class UserNamesUpdateError extends ProfileState {
+  const UserNamesUpdateError(this.message);
+  final String message;
 }

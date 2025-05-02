@@ -30,7 +30,13 @@
       "request": "launch",
       "type": "dart",
       "program": "lib/main_production.dart",
-      "args": ["--flavor", "production", "--target", "lib/main_production.dart"]
+      "args": [
+        "--flavor",
+        "production",
+        "--target",
+        "lib/main_production.dart",
+        "--dart-define=MAPS_API_KEY=AIzaSyAG5ZidnV3a-wuHwUg8bd_hLrEVbTvWAno"
+      ]
     }
   ]
 }

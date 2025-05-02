@@ -3,6 +3,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:bloc/bloc.dart';
+import 'package:equatable/equatable.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
@@ -37,6 +38,13 @@ class ProfileCubit extends Cubit<ProfileState> {
           if (currentUser != null) {
             final updatedUser = currentUser.copyWith(
               userImage: profile.data.profilePicture,
+              firstName: profile.data.firstName,
+              email: profile.data.email,
+              phone: profile.data.phone,
+              surname: profile.data.surname,
+              userId: profile.data.id,
+              isPhoneVerified: profile.data.isPhoneVerified,
+              isEmailVerified: profile.data.isEmailVerified,
             );
             await RegisterLocalDataSource().saveUser(updatedUser);
             if (getIt.isRegistered<User>()) {
@@ -44,7 +52,14 @@ class ProfileCubit extends Cubit<ProfileState> {
             }
             getIt.registerSingleton<User>(updatedUser);
           }
-          emit(ProfileLoaded(user: profile));
+          emit(
+            ProfileLoaded(
+              user: profile,
+              originalEmail: profile.data.email,
+              originalPhone: profile.data.phone,
+              countryCode: extractCountryCode(profile.data.phone),
+            ),
+          );
         } catch (e) {
           emit(ProfileError('Error updating local user data: $e'));
         }
@@ -70,13 +85,13 @@ class ProfileCubit extends Cubit<ProfileState> {
           final fileSize = file.lengthSync();
           final megabytes = fileSize / (1024 * 1024);
           if (megabytes > 5) {
-            emit(ProfileError('Image size should be less than 5MB'));
+            emit(const ProfileError('Image size should be less than 5MB'));
             return;
           } else {
             emit(ProfileLoading());
             final response = await _profileRepository.updateProfile(file);
             response.fold((l) => emit(ProfileError(l.message)),
-                (profile) => emit(ImageUploaded()));
+                (profile) => emit(const ImageUploaded()));
           }
         }
       } else {
@@ -103,52 +118,116 @@ class ProfileCubit extends Cubit<ProfileState> {
 
   Future<void> requestNumberUpdate(String number) async {
     try {
-      // Store the phone number in the class variable
-      _phoneNumber = number;
-      // Emit state with the phone number
-      emit(UpdatingNumber(phoneNumber: number));
+      if (state is ProfileLoaded) {
+        _phoneNumber = number;
+        emit(UpdatingNumber(phoneNumber: number));
 
-      final response = await _profileRepository.requestNumberUpdate(number);
-      response.fold(
+        final response = await _profileRepository.requestNumberUpdate(number);
+        response.fold(
           (l) => emit(NumberUpdateError(l.message)),
-          (profile) => emit(NumberUpdated(
+          (profile) => emit(
+            NumberUpdated(
               isUpdated: profile.success ?? false,
-              phoneNumber: number, // Pass the phone number here
-              message: profile.message ?? '')));
+              phoneNumber: number,
+              message: profile.message!,
+            ),
+          ),
+        );
+      }
     } catch (e) {
       emit(NumberUpdateError('Error updating phone number: $e'));
     }
   }
 
   Future<void> requestEmailUpdate(String email) async {
-    try {
-      emit(UpdatingEmail());
-      final response = await _profileRepository.requestEmailUpdate(email);
-      response.fold(
+    if (state is ProfileLoaded) {
+      try {
+        emit(UpdatingEmail());
+        final response = await _profileRepository.requestEmailUpdate(email);
+        response.fold(
           (l) => emit(EmailUpdateError(l.message)),
-          (profile) => emit(EmailUpdated(
-              isUpdated: profile.success ?? false,
-              message: profile.message ?? '')));
-    } catch (e) {
-      emit(EmailUpdateError('Error updating email: $e'));
+          (profile) => emit(
+            EmailUpdated(
+                isUpdated: profile.success ?? false, message: profile.message!),
+          ),
+        );
+      } catch (e) {
+        emit(EmailUpdateError('Error updating email: $e'));
+      }
     }
   }
 
   Future<void> verifyPhoneNumberUpdate(String otp) async {
     try {
-      // Use the stored phone number
       emit(VerifyingOtp(phoneNumber: _phoneNumber));
 
       final response = await _profileRepository.verifyPhoneUpDate(otp);
       response.fold(
-          (l) =>
-              emit(OtpVerificationError(l.message, phoneNumber: _phoneNumber)),
-          (profile) => emit(OtpVerified(
-              isVerified: profile.success ?? false,
-              phoneNumber: _phoneNumber))); // Pass the stored phone number
+        (l) => emit(OtpVerificationError(l.message, phoneNumber: _phoneNumber)),
+        (profile) => emit(
+          OtpVerified(
+              isVerified: profile.success ?? false, phoneNumber: _phoneNumber),
+        ),
+      );
     } catch (e) {
-      emit(OtpVerificationError('Error verifying OTP: $e',
-          phoneNumber: _phoneNumber));
+      emit(
+        OtpVerificationError('Error verifying OTP: $e',
+            phoneNumber: _phoneNumber),
+      );
+    }
+  }
+
+  Future<void> updateUserNames(String firstName, String surname) async {
+    if (state is ProfileLoaded) {
+      try {
+        emit(UpdateUserNamesInProgress());
+        final response =
+            await _profileRepository.updateUserNames(firstName, surname);
+        response.fold(
+          (l) => emit(UserNamesUpdateError(l.message)),
+          (profile) => emit(
+            UserNamesUpdated(
+              isUpdated: profile.success!,
+              message: profile.message!,
+            ),
+          ),
+        );
+      } catch (e) {
+        emit(UserNamesUpdateError('Error updating user names: $e'));
+      }
+    }
+  }
+
+  String extractCountryCode(String phone) {
+    if (phone.startsWith('+')) {
+      final countryCodeMatch = RegExp(r'^\+\d+').firstMatch(phone);
+      if (countryCodeMatch != null) {
+        return countryCodeMatch.group(0) ?? '+233';
+      }
+    }
+    return '+233';
+  }
+
+  void startEditingField(String field) {
+    if (state is ProfileLoaded) {
+      final currentState = state as ProfileLoaded;
+      emit(currentState.copyWith(activeField: field));
+    }
+  }
+
+  void cancelEdit() {
+    if (state is ProfileLoaded) {
+      final currentState = state as ProfileLoaded;
+      emit(currentState.copyWith(activeField: null));
+    }
+  }
+
+  void updateCountryCode(String newCode) {
+    if (state is ProfileLoaded) {
+      final currentState = state as ProfileLoaded;
+      // When country code is changed, also set active field to phone
+      emit(currentState.copyWith(countryCode: newCode, activeField: 'phone'));
+      log('Updated country code to: $newCode');
     }
   }
 }

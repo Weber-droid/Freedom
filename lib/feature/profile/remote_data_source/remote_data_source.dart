@@ -9,7 +9,6 @@ import 'package:freedom/core/client/endpoints.dart';
 import 'package:freedom/core/config/api_constants.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
-import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/profile/model/profile_model.dart';
 import 'package:freedom/feature/profile/model/update_use_details.dart';
 import 'package:freedom/feature/profile/model/verify_phone_update_model.dart';
@@ -22,9 +21,6 @@ class ProfileRemoteDataSource {
   Future<ProfileModel> fetchUserProfile() async {
     try {
       final token = await AppPreferences.getToken();
-      if (token == null) {
-        throw Exception('No user found in local storage');
-      }
       final response = await client
           .get(Endpoints.profile, headers: {'Authorization': 'Bearer $token'});
 
@@ -53,14 +49,14 @@ class ProfileRemoteDataSource {
 
   Future<void> uploadImage(File file) async {
     final token = await AppPreferences.getToken();
-    log('$token');
+    log(token);
     if (file.path.isEmpty) {
       throw Exception('File path is empty');
     }
 
     try {
       // Check if file exists and has content
-      if (!await file.exists()) {
+      if (!file.existsSync()) {
         throw Exception('File does not exist: ${file.path}');
       }
 
@@ -95,13 +91,9 @@ class ProfileRemoteDataSource {
       final responseData = await streamedResponse.stream.toBytes();
       final responseString = String.fromCharCodes(responseData);
 
-      log('Response status: ${streamedResponse.statusCode}');
-      log('Response body: $responseString');
-
       if (streamedResponse.statusCode == 200 ||
           streamedResponse.statusCode == 201) {
-        final jsonData = jsonDecode(responseString);
-        log('Upload successful: $jsonData');
+        jsonDecode(responseString);
         return; // Successfully uploaded
       } else {
         Map<String, dynamic> errorResponse;
@@ -111,32 +103,30 @@ class ProfileRemoteDataSource {
               errorResponse['msg'] as String? ?? 'Unknown server error';
           throw ServerException(errorMessage);
         } catch (e) {
-          log('Error parsing response: $e');
           throw ServerException(
               'Error uploading image: ${streamedResponse.statusCode}');
         }
       }
     } on NetworkException catch (e) {
-      log('Network exception: ${e.message}');
       throw NetworkException(e.message);
     } on ServerException catch (e) {
-      log('Server exception: ${e.message}');
       throw ServerException(e.message);
     } catch (e) {
-      log('Unexpected error: $e');
       throw ServerException('An unexpected error occurred: $e');
     }
   }
 
-  Future<UpdateUserDetailsData> updatePhoneNumber(String number) async{
+  Future<UpdateUserDetailsData> updatePhoneNumber(String number) async {
     try {
-    final token = await AppPreferences.getToken();
+      final token = await AppPreferences.getToken();
       final response = await client.post(Endpoints.requestPhoneNumberUpdate,
           headers: {
             'Content-Type': 'application/json',
             'authorization': 'Bearer $token'
           },
-          body: {'newPhone': number});
+          body: {
+            'newPhone': number
+          });
       final decoded = json.decode(response.body) as Map<String, dynamic>;
       log('updatePhoneNumber(): $decoded');
       if (decoded.containsKey('msg')) {
@@ -152,15 +142,16 @@ class ProfileRemoteDataSource {
       throw ServerException(e.toString());
     }
   }
-  Future<VerifyPhoneUpdateModel> verifyUpdatePhone(String otp) async{
+
+  Future<VerifyPhoneUpdateModel> verifyUpdatePhone(String otp) async {
     try {
       final token = await AppPreferences.getToken();
-      final response = await client.post(Endpoints.verifyPhoneUpdate,
-          headers: {
-            'Content-Type': 'application/json',
-            'authorization': 'Bearer $token'
-          },
-          body: {'verificationCode': otp});
+      final response = await client.post(Endpoints.verifyPhoneUpdate, headers: {
+        'Content-Type': 'application/json',
+        'authorization': 'Bearer $token'
+      }, body: {
+        'verificationCode': otp
+      });
       final decoded = json.decode(response.body) as Map<String, dynamic>;
       log('updatePhoneNumber(): $decoded');
       if (decoded.containsKey('msg')) {
@@ -177,7 +168,7 @@ class ProfileRemoteDataSource {
     }
   }
 
-  Future<UpdateUserDetails> upDateEmail(String email) async{
+  Future<UpdateUserDetails> upDateEmail(String email) async {
     try {
       final token = await AppPreferences.getToken();
       final response = await client.post(Endpoints.requestEmailUpdate,
@@ -185,7 +176,9 @@ class ProfileRemoteDataSource {
             'Content-Type': 'application/json',
             'authorization': 'Bearer $token'
           },
-          body: {'newEmail': email});
+          body: {
+            'newEmail': email
+          });
       final decoded = json.decode(response.body) as Map<String, dynamic>;
       log('updateEmail(): $decoded');
       if (decoded.containsKey('msg')) {
@@ -202,15 +195,15 @@ class ProfileRemoteDataSource {
     }
   }
 
-  Future<VerifyPhoneUpdateModel> verifyUpdateEmail(String otp) async{
+  Future<VerifyPhoneUpdateModel> verifyUpdateEmail(String otp) async {
     try {
       final token = await AppPreferences.getToken();
-      final response = await client.post(Endpoints.verifyPhoneUpdate,
-          headers: {
-            'Content-Type': 'application/json',
-            'authorization': 'Bearer $token'
-          },
-          body: {'verificationCode': otp});
+      final response = await client.post(Endpoints.verifyPhoneUpdate, headers: {
+        'Content-Type': 'application/json',
+        'authorization': 'Bearer $token'
+      }, body: {
+        'verificationCode': otp
+      });
       final decoded = json.decode(response.body) as Map<String, dynamic>;
       log('updatePhoneNumber(): $decoded');
       if (decoded.containsKey('msg')) {
@@ -218,6 +211,38 @@ class ProfileRemoteDataSource {
       }
       final val = VerifyPhoneUpdateModel.fromJson(decoded);
       return val;
+    } on SocketException catch (e) {
+      throw NetworkException(e.message);
+    } on ServerException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  Future<User> updateUserNames(
+    String firstName,
+    String surname,
+  ) async {
+    try {
+      final token = await AppPreferences.getToken();
+      final response = await client.patch(
+        Endpoints.updateUserNames,
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': 'Bearer $token',
+        },
+        body: {
+          'firstName': firstName,
+          'surname': surname,
+          'otherName': surname,
+        },
+      );
+      final decoded = json.decode(response.body) as Map<String, dynamic>;
+      if (decoded.containsKey('msg')) {
+        throw ServerException(decoded['msg'].toString());
+      }
+      return User.fromNewApiResponse(decoded);
     } on SocketException catch (e) {
       throw NetworkException(e.message);
     } on ServerException catch (e) {

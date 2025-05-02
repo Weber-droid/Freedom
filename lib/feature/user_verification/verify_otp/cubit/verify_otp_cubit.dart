@@ -32,13 +32,13 @@ class VerifyOtpCubit extends Cubit<VerifyOtpState> {
       await AppPreferences.setToken(r.token!);
       final dataSource = RegisterLocalDataSource();
       await dataSource.saveUser(r);
-      // emit(
-      //   state.copyWith(
-      //     status: VerifyOtpStatus.success,
-      //     isVerified: r.success,
-      //     user: r,
-      //   ),
-      // );
+      emit(
+        state.copyWith(
+          status: VerifyOtpStatus.success,
+          isVerified: r.success,
+          user: r,
+        ),
+      );
     });
   }
 

@@ -1,0 +1,2 @@
+/Users/godwinekainu/StudioProjects/freedom/android/app/.cxx/Debug/2r5i393v/armeabi-v7a/CMakeFiles/edit_cache.dir
+/Users/godwinekainu/StudioProjects/freedom/android/app/.cxx/Debug/2r5i393v/armeabi-v7a/CMakeFiles/rebuild_cache.dir

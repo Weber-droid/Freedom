@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freedom/core/services/audio_call_service/audio_call_service.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart';
 import 'package:stream_video_flutter/stream_video_flutter.dart' as stream_video;
 
@@ -29,18 +28,22 @@ class CallCubit extends Cubit<AudioCallState> {
       );
       emit(state.copyWith(status: CustomCallStatus.idle));
     } catch (e) {
-      emit(state.copyWith(
-        status: CustomCallStatus.error,
-        errorMessage: 'Failed to initialize call service: $e',
-      ));
+      emit(
+        state.copyWith(
+          status: CustomCallStatus.error,
+          errorMessage: 'Failed to initialize call service: $e',
+        ),
+      );
     }
   }
 
   Future<void> startCall({required String callId}) async {
-    emit(state.copyWith(
-      status: CustomCallStatus.connecting,
-      callId: callId,
-    ));
+    emit(
+      state.copyWith(
+        status: CustomCallStatus.connecting,
+        callId: callId,
+      ),
+    );
 
     try {
       await _callService.makeCall(callId: callId);
@@ -51,19 +54,23 @@ class CallCubit extends Cubit<AudioCallState> {
 
         if (call != null) {
           _subscribeToCallState(call);
-          emit(state.copyWith(
-            status: CustomCallStatus.connected,
-            participants: call.state.value.callParticipants.toList(),
-            isMicEnabled:
-                call.state.value.localParticipant?.isAudioEnabled ?? true,
-          ));
+          emit(
+            state.copyWith(
+              status: CustomCallStatus.connected,
+              participants: call.state.value.callParticipants.toList(),
+              isMicEnabled:
+                  call.state.value.localParticipant?.isAudioEnabled ?? true,
+            ),
+          );
         }
       }
     } catch (e) {
-      emit(state.copyWith(
-        status: CustomCallStatus.error,
-        errorMessage: 'Failed to start call: $e',
-      ));
+      emit(
+        state.copyWith(
+          status: CustomCallStatus.error,
+          errorMessage: 'Failed to start call: $e',
+        ),
+      );
     }
   }
 
@@ -77,10 +84,12 @@ class CallCubit extends Cubit<AudioCallState> {
 
       emit(const AudioCallState());
     } catch (e) {
-      emit(state.copyWith(
-        status: CustomCallStatus.error,
-        errorMessage: 'Failed to end call: $e',
-      ));
+      emit(
+        state.copyWith(
+          status: CustomCallStatus.error,
+          errorMessage: 'Failed to end call: $e',
+        ),
+      );
     }
   }
 
@@ -89,20 +98,24 @@ class CallCubit extends Cubit<AudioCallState> {
       await _callService.toggleMicrophone();
       emit(state.copyWith(isMicEnabled: !state.isMicEnabled));
     } catch (e) {
-      emit(state.copyWith(
-        errorMessage: 'Failed to toggle microphone: $e',
-      ));
+      emit(
+        state.copyWith(
+          errorMessage: 'Failed to toggle microphone: $e',
+        ),
+      );
     }
   }
 
   void _subscribeToCallState(Call call) {
     _callStateSubscription?.cancel();
     _callStateSubscription = call.state.listen((callState) {
-      emit(state.copyWith(
-        participants: callState.callParticipants.toList(),
-        isMicEnabled:
-            callState.localParticipant?.isAudioEnabled ?? state.isMicEnabled,
-      ));
+      emit(
+        state.copyWith(
+          participants: callState.callParticipants.toList(),
+          isMicEnabled:
+              callState.localParticipant?.isAudioEnabled ?? state.isMicEnabled,
+        ),
+      );
     });
   }
 

@@ -6,6 +6,7 @@ import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
+import 'package:freedom/shared/widgets/custom_dropdown_button.dart';
 import 'package:freedom/shared/widgets/stacked_bottom_sheet.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -40,6 +41,8 @@ class _StackedBottomSheetComponentState
       TextEditingController();
   final TextEditingController _itemDestinationHomeNumberController =
       TextEditingController();
+  String defaultValue = 'Now';
+  List<String> dropdownItems = ['Now', 'Later'];
 
   @override
   Widget build(BuildContext context) {
@@ -84,19 +87,40 @@ class _StackedBottomSheetComponentState
                         ),
                         const VSpace(8),
                         Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xA3FFFCF8),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(
-                              color: const Color(0xFFEBECEB),
+                            decoration: BoxDecoration(
+                              color: const Color(0xfffffaf0),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(
+                                color: Colors.white,
+                              ),
                             ),
-                          ),
-                          child: LocationSearchTextField(
-                            onTap: () {
-                              _showCalenderPicker(context);
-                            },
-                          ),
-                        ),
+                            padding: const EdgeInsets.only(
+                                left: 5, right: 5, top: 5, bottom: 5),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Your destination',
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.black,
+                                    fontSize: 10.89,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                const Spacer(),
+                                CustomDropDown(
+                                  items: dropdownItems,
+                                  initialValue: defaultValue,
+                                  onChanged: (value) {
+                                    setState(() {
+                                      defaultValue = value;
+                                    });
+                                    if (value == 'Later') {
+                                      _showCalenderPicker(context);
+                                    }
+                                  },
+                                ),
+                              ],
+                            )),
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 500),
                           height: _spacing,

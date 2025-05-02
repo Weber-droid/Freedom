@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:freedom/feature/profile/view/profile_screen.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/shared/sections_tiles.dart';
 import 'package:freedom/shared/theme/app_colors.dart';

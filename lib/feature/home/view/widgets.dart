@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/cupertino.dart';
@@ -5,10 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/location_cubit/location_cubit.dart';
-import 'package:freedom/feature/home/models/home_history_model.dart';
-import 'package:freedom/feature/home/view/welcome_screen.dart';
+import 'package:freedom/feature/home/view/widget/search_sheet.dart';
 import 'package:freedom/feature/home/widgets/audio_call_widget.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
@@ -18,7 +19,6 @@ import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
 import 'package:freedom/shared/widgets/custom_dropdown_button.dart';
 import 'package:freedom/shared/widgets/text_field_factory.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:gradient_borders/box_borders/gradient_box_border.dart';
 
@@ -107,9 +107,11 @@ class ChoosePayMentMethodState extends State<ChoosePayMentMethod> {
 }
 
 class LocationSearchTextField extends StatefulWidget {
-  const LocationSearchTextField({required this.onTap, super.key});
+  const LocationSearchTextField(
+      {required this.onTap, super.key, required this.onSearch});
 
   final VoidCallback onTap;
+  final VoidCallback onSearch;
 
   @override
   State<LocationSearchTextField> createState() =>
@@ -128,6 +130,7 @@ class _LocationSearchTextFieldState extends State<LocationSearchTextField> {
   Widget build(BuildContext context) {
     return TextField(
       cursorColor: Colors.black,
+      onTap: widget.onSearch,
       decoration: InputDecoration(
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -635,7 +638,6 @@ Future<void> showLogisticsBottomSheet(
 }
 
 int trackSelectedIndex = 0;
-bool _isDestinationFieldVisible = false;
 
 Future<void> showMotorCycleBottomSheet(
   BuildContext context, {
@@ -648,210 +650,91 @@ Future<void> showMotorCycleBottomSheet(
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
     builder: (BuildContext context) {
-      return BlocBuilder<HomeCubit, HomeState>(
-        builder: (context, state) {
-          return Container(
-            height: MediaQuery.of(context).size.height * 0.8,
-            padding: const EdgeInsets.only(top: 18),
-            decoration: BoxDecoration(
-                gradient: whiteAmberGradient,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(14.32),
-                  topRight: Radius.circular(14.32),
-                )),
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.only(right: 11, bottom: 11),
-                      decoration: ShapeDecoration(
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(
-                            strokeAlign: BorderSide.strokeAlignOutside,
-                            color: Colors.black.withOpacity(0.059),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const HSpace(6.4),
-                          const Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Padding(
-                                padding: EdgeInsets.only(
-                                    left: 12, bottom: 4.62, top: 6.38),
-                                child: Text(
-                                  'Pickup Location',
-                                  style: TextStyle(
-                                    fontSize: 10.13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          PickupLocationFieldWidget(
-                            state: state,
-                            pickupController: pickUpLocationController,
-                            hintText: 'Pickup Location',
-                            iconPath: 'assets/images/location_pointer_icon.svg',
-                            iconBaseColor: Colors.orange,
-                            isPickUpLocation: true,
-                            isInitialDestinationField: false,
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Padding(
-                                padding: EdgeInsets.only(
-                                  left: 12,
-                                ),
-                                child: Text(
-                                  'Destination',
-                                  style: TextStyle(
-                                    fontSize: 10.13,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  top: 4,
-                                  right: 9,
-                                  bottom: 1,
-                                ),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    destinationControllers.add(
-                                      TextEditingController(),
-                                    );
-                                    context.read<HomeCubit>().addDestination();
-                                    _isDestinationFieldVisible = true;
-                                  },
-                                  child: Container(
-                                    width: 23,
-                                    height: 23,
-                                    decoration: ShapeDecoration(
-                                      color: Colors.black,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(7)),
-                                    ),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.add,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const VSpace(3),
-                          DestinationLocationFieldWidget(
-                            isPickUpLocation: false,
-                            isInitialDestinationField: true,
-                            state: state,
-                            destinationController: destinationController,
-                            hintText: 'Destination',
-                            iconPath: 'assets/images/maps_icon.svg',
-                            iconBaseColor: Colors.red,
-                          ),
-                          const VSpace(14),
-                          if (_isDestinationFieldVisible)
-                            Column(
-                              children: List.generate(state.locations.length,
-                                  (index) {
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 10),
-                                  child: DestinationLocationFieldWidget(
-                                    isPickUpLocation: false,
-                                    isInitialDestinationField: false,
-                                    state: state,
-                                    destinationController:
-                                        destinationControllers[index],
-                                    hintText: 'Destination ${index + 1}',
-                                    iconPath: 'assets/images/maps_icon.svg',
-                                    iconBaseColor: Colors.red,
-                                  ),
-                                );
-                              }),
-                            )
-                          else
-                            const SizedBox(),
-                        ],
-                      ),
-                    ),
-                    const VSpace(19.65),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Your last Trip',
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(
-                            color: Colors.black,
-                            fontSize: 11.68,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        SvgPicture.asset('assets/images/history_icon.svg'),
-                      ],
-                    ),
-                    ...homeHistoryList.map((e) {
-                      return Column(
-                        children: [
-                          Divider(
-                            thickness: 2,
-                            color: Colors.black.withOpacity(0.019),
-                          ),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(3),
-                                width: 30,
-                                height: 30,
-                                decoration: ShapeDecoration(
-                                  color: Colors.white.withOpacity(0.55),
-                                  shape: RoundedRectangleBorder(
-                                    side: BorderSide(
-                                      strokeAlign:
-                                          BorderSide.strokeAlignOutside,
-                                      color: Colors.black.withOpacity(0.05),
-                                    ),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                ),
-                                child: e.image,
-                              ),
-                              SvgPicture.asset(
-                                'assets/images/top-right_icon.svg',
-                              )
-                            ],
-                          ),
-                        ],
-                      );
-                    }),
-                    Divider(
-                      thickness: 2,
-                      color: Colors.black.withOpacity(0.019),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
+      return SearchSheet(
+        destinationController: destinationController,
+        pickUpLocationController: pickUpLocationController,
+        destinationControllers: destinationControllers,
+        clearRecentLocations: getIt(),
+        getPlaceDetails: getIt(),
+        getPlacePredictions: getIt(),
+        getRecentLocations: getIt(),
+        getSavedLocations: getIt(),
       );
     },
+  );
+}
+
+// Build section header widget
+Widget buildSectionHeader(String title) {
+  return Padding(
+    padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
+    child: Text(
+      title,
+      style: TextStyle(
+        fontSize: 11.68,
+        fontWeight: FontWeight.w600,
+        color: Colors.grey[700],
+      ),
+    ),
+  );
+}
+
+// Build location item widget
+Widget buildLocationItem({
+  required IconData iconData,
+  required String title,
+  required String subtitle,
+  required VoidCallback onTap,
+}) {
+  return InkWell(
+    onTap: onTap,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              iconData,
+              color: Colors.orange,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (subtitle.isNotEmpty)
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 10.13,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
   );
 }
 
@@ -1035,7 +918,6 @@ class RiderFoundBottomSheet extends StatelessWidget {
                             height: 0,
                           ),
                         ),
-                        // const Spacer(),
                         const RiderTimeLine(
                           pickUpDetails: 'Ghana, Kumasi',
                           destinationDetails: 'Chale ,Kumasi',
@@ -1316,8 +1198,7 @@ class _RiderContainerAndRideActionsState
                 // Second Icon
                 GestureDetector(
                   onTap: () {
-                    final callId =
-                        'call_MWCHb02GD5m6_${DateTime.now().millisecondsSinceEpoch}';
+                    final callId = '${DateTime.now().millisecondsSinceEpoch}';
                     Navigator.of(context).push(
                       MaterialPageRoute<dynamic>(
                         builder: (context) => AudioCallScreen(
@@ -1362,7 +1243,7 @@ class UserFloatingAccessBar extends StatelessWidget {
       super.key})
       : _scaffoldKey = scaffoldKey;
   final GlobalKey<ScaffoldState> _scaffoldKey;
-  final LocationState state;
+  final HomeState state;
 
   @override
   Widget build(BuildContext context) {
@@ -1412,10 +1293,8 @@ class UserFloatingAccessBar extends StatelessWidget {
                           children: [
                             GestureDetector(
                               onTap: () {
-                                context
-                                    .read<LocationCubit>()
-                                    .checkPermissionStatus(
-                                        requestPermissions: true);
+                                context.read<HomeCubit>().checkPermissionStatus(
+                                    requestPermissions: true);
                               },
                               child: SvgPicture.asset(
                                   'assets/images/map_location_icon.svg'),

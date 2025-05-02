@@ -23,7 +23,7 @@ PODS:
   - firebase_core (3.12.1):
     - Firebase/CoreOnly (= 11.8.0)
     - Flutter
-  - FirebaseAppCheckInterop (11.10.0)
+  - FirebaseAppCheckInterop (11.12.0)
   - FirebaseAuth (11.8.1):
     - FirebaseAppCheckInterop (~> 11.0)
     - FirebaseAuthInterop (~> 11.0)
@@ -33,7 +33,7 @@ PODS:
     - GoogleUtilities/Environment (~> 8.0)
     - GTMSessionFetcher/Core (< 5.0, >= 3.4)
     - RecaptchaInterop (~> 100.0)
-  - FirebaseAuthInterop (11.10.0)
+  - FirebaseAuthInterop (11.12.0)
   - FirebaseCore (11.8.1):
     - FirebaseCoreInternal (~> 11.8.0)
     - GoogleUtilities/Environment (~> 8.0)
@@ -116,11 +116,11 @@ PODS:
     - FlutterMacOS
   - permission_handler_apple (9.3.0):
     - Flutter
-  - PhoneNumberKit (3.7.10):
-    - PhoneNumberKit/PhoneNumberKitCore (= 3.7.10)
-    - PhoneNumberKit/UIKit (= 3.7.10)
-  - PhoneNumberKit/PhoneNumberKitCore (3.7.10)
-  - PhoneNumberKit/UIKit (3.7.10):
+  - PhoneNumberKit (3.3.4):
+    - PhoneNumberKit/PhoneNumberKitCore (= 3.3.4)
+    - PhoneNumberKit/UIKit (= 3.3.4)
+  - PhoneNumberKit/PhoneNumberKitCore (3.3.4)
+  - PhoneNumberKit/UIKit (3.3.4):
     - PhoneNumberKit/PhoneNumberKitCore
   - RecaptchaInterop (100.0.0)
   - shared_preferences_foundation (0.0.1):
@@ -159,6 +159,7 @@ DEPENDENCIES:
   - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
   - path_provider_foundation (from `.symlinks/plugins/path_provider_foundation/darwin`)
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
+  - PhoneNumberKit (~> 3.3.4)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - sqflite_darwin (from `.symlinks/plugins/sqflite_darwin/darwin`)
   - stream_video_flutter (from `.symlinks/plugins/stream_video_flutter/ios`)
@@ -241,9 +242,9 @@ SPEC CHECKSUMS:
   Firebase: d80354ed7f6df5f9aca55e9eb47cc4b634735eaf
   firebase_auth: 9ebbd83276bf977dea1c74dfc199acf9d2a2f42f
   firebase_core: 8d552814f6c01ccde5d88939fced4ec26f2f5510
-  FirebaseAppCheckInterop: 9664c858489710f682766ef54e2b6741d3b62070
+  FirebaseAppCheckInterop: 73b173e5ec45192e2d522ad43f526a82ad10b852
   FirebaseAuth: ad59a1a7b161e75f74c39f70179d2482d40e2737
-  FirebaseAuthInterop: 01a804fb074424fd58b92dd50dd0272277199356
+  FirebaseAuthInterop: b583210c039a60ed3f1e48865e1f3da44a796595
   FirebaseCore: 99fe0c4b44a39f37d99e6404e02009d2db5d718d
   FirebaseCoreExtension: 3d3f2017a00d06e09ab4ebe065391b0bb642565e
   FirebaseCoreInternal: df24ce5af28864660ecbd13596fc8dd3a8c34629
@@ -266,7 +267,7 @@ SPEC CHECKSUMS:
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   path_provider_foundation: 080d55be775b7414fd5a5ef3ac137b97b097e564
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
-  PhoneNumberKit: 3d9a20cfe8ee68f35c2a3ae9474093133f72a8a1
+  PhoneNumberKit: 441e8b26ec88d598e3591de9061eff18f5dd12e8
   RecaptchaInterop: 7d1a4a01a6b2cb1610a47ef3f85f0c411434cb21
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
   sqflite_darwin: 20b2a3a3b70e43edae938624ce550a3cbf66a3d0
@@ -275,6 +276,6 @@ SPEC CHECKSUMS:
   thermal: d4c48be750d1ddbab36b0e2dcb2471531bc8df41
   WebRTC-SDK: 79942c006ea64f6fb48d7da8a4786dfc820bc1db
 
-PODFILE CHECKSUM: 1959d098c91d8a792531a723c4a9d7e9f6a01e38
+PODFILE CHECKSUM: ff63698e17c99f286c05572e8de6c504148b1e20
 
 COCOAPODS: 1.16.2

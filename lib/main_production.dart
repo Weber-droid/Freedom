@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:freedom/app/app.dart';
 import 'package:freedom/bootstrap.dart';
 import 'package:freedom/core/config/environment_config.dart';
@@ -14,6 +15,7 @@ void main() async{
     options: DefaultFirebaseOptions.currentPlatform,
   );
   EnvironmentConfig.setEnvironment(Environment.development);
+  await dotenv.load(fileName: ".env");
   await locator();
   await initializeStorage();
   final callService = StreamCallService();

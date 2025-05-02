@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_otp_cubit.dart';
@@ -43,6 +42,7 @@ class _PhoneUpdateVerificationScreenState
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _otpFocusNode.requestFocus();
+      _startTimer();
     });
   }
 
@@ -244,11 +244,6 @@ class _PhoneUpdateVerificationScreenState
                     borderRadius: BorderRadius.circular(10),
                     width: double.infinity,
                     title: state is VerifyingOtp ? 'Loading' : 'Verify',
-                    child: state is VerifyingOtp
-                        ? const CircularProgressIndicator(
-                            strokeWidth: 2,
-                          )
-                        : null,
                     onPressed: () => _onVerifyPressed(context),
                   ),
                 ],
@@ -257,7 +252,7 @@ class _PhoneUpdateVerificationScreenState
           );
           if (state is VerifyingOtp) {
             return BlurredLoadingOverlay(
-              isLoading: state is VerifyingOtp,
+              isLoading: true,
               child: mainContent,
             );
           }
@@ -271,6 +266,7 @@ class _PhoneUpdateVerificationScreenState
     BuildContext context,
   ) {
     if (_otpFormKey.currentState!.validate()) {
+      log('caller here');
       context.read<ProfileCubit>().verifyPhoneNumberUpdate(_otpController.text);
     }
   }

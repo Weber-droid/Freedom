@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_positional_boolean_parameters
+
 import 'dart:developer';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,8 +25,8 @@ class AppPreferences {
 
   static Future<void> setToken(String token) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(tokenKey, token);
+      final pref = await SharedPreferences.getInstance();
+      await pref.setString(tokenKey, token);
       _cachedToken = token;
       log('Token saved: $token');
     } catch (e) {
@@ -37,15 +39,15 @@ class AppPreferences {
   static Future<bool> isFirstTimer() async {
     if (_cachedIsFirstTimer != null) return _cachedIsFirstTimer!;
 
-    final prefs = await SharedPreferences.getInstance();
-    _cachedIsFirstTimer = prefs.getBool(firstTimerKey) ?? true;
+    final pref = await SharedPreferences.getInstance();
+    _cachedIsFirstTimer = pref.getBool(firstTimerKey) ?? true;
     return _cachedIsFirstTimer!;
   }
 
   static Future<void> setFirstTimer(bool isFirstTimer) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(firstTimerKey, isFirstTimer);
+      final pref = await SharedPreferences.getInstance();
+      await pref.setBool(firstTimerKey, isFirstTimer);
       _cachedIsFirstTimer = isFirstTimer;
       log('First timer flag saved: $isFirstTimer');
     } catch (e) {
@@ -58,15 +60,15 @@ class AppPreferences {
   static Future<bool> isOnboardingCompleted() async {
     if (_cachedOnboardingCompleted != null) return _cachedOnboardingCompleted!;
 
-    final prefs = await SharedPreferences.getInstance();
-    _cachedOnboardingCompleted = prefs.getBool(onboardingCompletedKey) ?? false;
+    final pref = await SharedPreferences.getInstance();
+    _cachedOnboardingCompleted = pref.getBool(onboardingCompletedKey) ?? false;
     return _cachedOnboardingCompleted!;
   }
 
   static Future<void> setOnboardingCompleted(bool completed) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(onboardingCompletedKey, completed);
+      final pref = await SharedPreferences.getInstance();
+      await pref.setBool(onboardingCompletedKey, completed);
       _cachedOnboardingCompleted = completed;
       log('Onboarding completion flag saved: $completed');
     } catch (e) {
@@ -77,8 +79,8 @@ class AppPreferences {
 
   static Future<void> clearAll() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
+      final pref = await SharedPreferences.getInstance();
+      await pref.clear();
       _cachedToken = null;
       _cachedIsFirstTimer = null;
       log('All preferences cleared');

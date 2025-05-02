@@ -1,8 +1,11 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
 import 'package:freedom/feature/home/widgets/audio_controls.dart';
 import 'package:freedom/feature/home/widgets/call_participants.dart';
+import 'package:freedom/feature/home/widgets/call_timer.dart';
+import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 
 class AudioCallScreen extends StatefulWidget {
   const AudioCallScreen({
@@ -20,104 +23,106 @@ class AudioCallScreen extends StatefulWidget {
 }
 
 class _AudioCallScreenState extends State<AudioCallScreen> {
+  DateTime? _callStartTime;
+
   @override
   void initState() {
     super.initState();
-    // Start the call when the screen is opened
     context.read<CallCubit>().startCall(callId: widget.callId);
   }
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) {
-          await context.read<CallCubit>().endCall();
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Audio Call'),
-          centerTitle: true,
-          backgroundColor: Colors.black,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () async {
-              await context.read<CallCubit>().endCall();
-              if (mounted) {
-                Navigator.of(context).popUntil((route) {
-                  return route.settings.name == '/';
-                });
-              }
-            },
-          ),
-        ),
-        body: BlocConsumer<CallCubit, AudioCallState>(
-          listener: (context, state) {
-            if (state.status == CustomCallStatus.error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                    content: Text(state.errorMessage ?? 'An error occurred')),
-              );
-            }
-
-            // When call is ended or disconnected
-            if (state.status == CustomCallStatus.idle && state.callId == null) {
-              Navigator.of(context).pop();
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Audio Call'),
+        centerTitle: true,
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () async {
+            await context.read<CallCubit>().endCall();
+            if (mounted) {
+              // Navigator.of(context).pop();
             }
           },
-          builder: (context, state) {
-            if (state.status == CustomCallStatus.connecting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
+        ),
+      ),
+      body: BlocConsumer<CallCubit, AudioCallState>(
+        listener: (context, state) {
+          if (state.status == CustomCallStatus.error) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.errorMessage ?? 'An error occurred'),
+              ),
+            );
+          }
+          if (state.status == CustomCallStatus.connected &&
+              _callStartTime == null) {
+            setState(() {
+              _callStartTime = DateTime.now();
+            });
+          }
+          // When call is ended or disconnected
+          if (state.status == CustomCallStatus.idle && state.callId == null) {
+            Navigator.of(context).popUntil((route) {
+              return route.isFirst ||
+                  route.settings.name == MainActivityScreen.routeName;
+            });
+          }
+        },
+        builder: (context, state) {
+          if (state.status == CustomCallStatus.connecting) {
             return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black,
-                    Colors.grey.shade900,
+              decoration: const BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/images/caller.jpg'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const VSpace(48),
+                    const CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                    const VSpace(16),
+                    Text(
+                      'Calling ${widget.driverName}...',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
               ),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Column(
+            );
+          }
+
+          return Stack(
+            children: [
+              // Main content
+              Container(
+                decoration: const BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('assets/images/caller.jpg'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Driver/Rider image
-                        const CircleAvatar(
-                            radius: 60,
-                            backgroundImage:
-                                AssetImage('assets/images/default_avatar.png')),
-                        const SizedBox(height: 24),
-
-                        // Driver/Rider name
-                        Text(
-                          widget.driverName,
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-
-                        const SizedBox(height: 12),
-
-                        // Call status
-                        Text(
-                          _getCallStatusText(state.status),
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey.shade300,
-                          ),
-                        ),
-
                         const SizedBox(height: 48),
 
                         // Participants list (showing only remote participants)
@@ -127,11 +132,69 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
                           ),
                       ],
                     ),
-                  ),
+                    // Add padding at the bottom to account for the controls
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.25),
+                  ],
+                ),
+              ),
 
-                  // Call controls
-                  // In your AudioCallScreen
-                  AudioCallControls(
+              Positioned(
+                top: 50,
+                right: 40,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(13),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 19.87, sigmaY: 19.87),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Text(
+                            widget.driverName,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Column(
+                            children: [
+                              if (state.status == CustomCallStatus.connected &&
+                                  _callStartTime != null) ...[
+                                // Call duration timer
+                                CallDurationTimer(
+                                  startTime: _callStartTime!,
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.grey.shade300,
+                                  ),
+                                ),
+                              ],
+                              Text(
+                                _getCallStatusText(state.status),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              // Positioned controls at the bottom
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: SafeArea(
+                  child: AudioCallControls(
                     isMicEnabled: state.participants.any((p) => p.isLocal)
                         ? state.participants
                             .firstWhere((p) => p.isLocal)
@@ -141,18 +204,13 @@ class _AudioCallScreenState extends State<AudioCallScreen> {
                         context.read<CallCubit>().toggleMicrophone(),
                     onEndCall: () async {
                       await context.read<CallCubit>().endCall();
-                      if (mounted) {
-                        Navigator.of(context).popUntil((route) {
-                          return route.settings.name == '/';
-                        });
-                      }
                     },
                   ),
-                ],
+                ),
               ),
-            );
-          },
-        ),
+            ],
+          );
+        },
       ),
     );
   }
