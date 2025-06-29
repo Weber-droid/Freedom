@@ -1,0 +1,18 @@
+<svg width="152" height="152" viewBox="0 0 152 152" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="iconamoon:location-duotone">
+<g id="Group">
+<path id="Vector" opacity="0.16" d="M33.263 63.1751L107.11 28.0124C117.876 22.8824 129.112 34.1241 123.988 44.8971L88.8253 118.737C84.0183 128.826 69.4517 128.206 65.525 117.737L59.027 100.39C58.3921 98.6974 57.4023 97.1606 56.1242 95.8825C54.8461 94.6044 53.3093 93.6147 51.617 92.9797L34.2637 86.4754C23.801 82.5488 23.174 67.9821 33.263 63.1751Z" fill="url(#paint0_linear_1_1083)"/>
+<path id="Vector_2" d="M33.263 63.1751L107.11 28.0124C117.876 22.8824 129.112 34.1241 123.988 44.8971L88.8253 118.737C84.0183 128.826 69.4517 128.206 65.525 117.737L59.027 100.39C58.3921 98.6974 57.4023 97.1606 56.1242 95.8825C54.8461 94.6044 53.3093 93.6147 51.617 92.9797L34.2637 86.4754C23.801 82.5488 23.174 67.9821 33.263 63.1751Z" stroke="url(#paint1_linear_1_1083)" stroke-width="12.6667" stroke-linecap="round" stroke-linejoin="round"/>
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_1_1083" x1="26.0477" y1="76.3455" x2="125.266" y2="76.3455" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F59E0B"/>
+<stop offset="1" stop-color="#E61D2A"/>
+</linearGradient>
+<linearGradient id="paint1_linear_1_1083" x1="26.0477" y1="76.3455" x2="125.266" y2="76.3455" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F59E0B"/>
+<stop offset="1" stop-color="#E61D2A"/>
+</linearGradient>
+</defs>
+</svg>

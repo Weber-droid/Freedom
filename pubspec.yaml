@@ -1,0 +1,130 @@
+name: freedom
+description: "User end for freedom"
+
+
+publish_to: 'none' 
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  bloc: ^8.1.4
+  country_code_picker: ^3.1.0
+  dio: ^5.8.0+1
+  dotted_border: ^2.1.0
+  flutter_bloc: ^8.1.6
+  flutter_localizations:
+    sdk: flutter
+  flutter_screenutil: ^5.9.3
+  flutter_svg: ^2.0.10+1
+  get_it: ^8.0.3
+  google_fonts: ^6.2.1
+  google_maps_flutter: ^2.9.0
+  intl: ^0.20.0
+  intl_phone_number_input: ^0.7.4
+  pin_code_fields: ^8.0.1
+  shared_preferences: ^2.3.2
+  smooth_page_indicator: ^1.2.0+3
+  gradient_borders: ^1.0.1
+  dotted_line: ^3.2.3
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  lottie: ^3.2.0
+  cached_network_image: ^3.4.1
+  dartz: ^0.10.1
+  http: ^1.3.0
+  firebase_core: ^3.12.1
+  firebase_auth: ^5.5.1
+  google_sign_in: ^6.3.0
+  path_provider: ^2.1.5
+  geolocator: ^13.0.4
+  permission_handler: ^11.4.0
+  http_parser: ^4.1.2
+  image_picker: ^1.1.2
+  stream_video_flutter: ^0.8.4
+  geocoding: ^3.0.0
+  flutter_secure_storage: ^9.2.4
+  internet_connection_checker: ^3.0.1
+  flutter_google_maps_webservices: ^1.1.1
+  flutter_dotenv: ^5.2.1
+  flutter_polyline_points: ^2.1.0
+  firebase_messaging: ^15.2.5
+  socket_io_client: ^3.1.2
+  stream_chat_flutter: ^9.9.0
+  json_annotation: ^4.9.0
+  awesome_notifications: ^0.10.1
+  equatable: ^2.0.7
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  bloc_test: ^9.1.7
+  retrofit_generator: ^9.1.3
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.15
+  json_serializable: ^6.9.0
+  freezed: ^2.5.7
+  flutter_native_splash: ^2.4.2
+  flutter_launcher_icons: ^0.14.2
+  freezed_annotation: ^2.4.4
+  mocktail: ^1.0.4
+  very_good_analysis: ^6.0.0
+  flutter_lints: ^5.0.0
+flutter_launcher_icons:
+  # Default configuration
+  android: "launcher_icon"
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/images/bold_bcg.jpg"
+  min_sdk_android: 21
+  adaptive_icon_background: "#de4a0a"
+  adaptive_icon_foreground: "assets/images/bold_bcg.jpg"
+  
+dependency_overrides:
+  intl: ^0.20.0
+ 
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/images/nav_icon/active/
+    - assets/images/nav_icon/inactive/
+    - .env
+    - assets/images/bike_marker.png
+
+  
+  
+  
+  
+
+  
+  
+
+  
+  
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
