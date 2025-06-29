@@ -1,0 +1,305 @@
+import 'package:flutter/material.dart';
+
+enum ToastPosition {
+  top,
+  bottom,
+  center,
+}
+
+enum ToastType {
+  success,
+  error,
+  info,
+  warning,
+}
+
+class CustomToast {
+  factory CustomToast() => _instance;
+  CustomToast._internal();
+  static final CustomToast _instance = CustomToast._internal();
+
+  static OverlayEntry? _overlayEntry;
+  static bool _isVisible = false;
+  static OverlayState? _overlayState; // Add this to track the overlay state
+
+  static void show({
+    required BuildContext context,
+    required String message,
+    ToastPosition position = ToastPosition.bottom,
+    ToastType type = ToastType.info,
+    Duration duration = const Duration(seconds: 2),
+    double width = 300,
+    VoidCallback? onDismiss,
+  }) {
+    try {
+      // Dismiss any existing toast first
+      if (_isVisible) {
+        dismiss();
+      }
+
+      // Get the overlay and store it
+      _overlayState = Overlay.of(context, rootOverlay: true);
+
+      if (_overlayState == null) {
+        return;
+      }
+
+      _overlayEntry = OverlayEntry(
+        builder: (BuildContext context) => _ToastWidget(
+          message: message,
+          position: position,
+          type: type,
+          width: width,
+          onDismiss: onDismiss,
+        ),
+      );
+
+      _isVisible = true;
+      _overlayState!.insert(_overlayEntry!);
+
+      Future.delayed(duration, dismiss);
+    } catch (e) {
+      print('Error showing toast: $e');
+      _isVisible = false;
+      _overlayEntry = null;
+    }
+  }
+
+  static void dismiss() {
+    try {
+      if (_isVisible && _overlayEntry != null) {
+        _overlayEntry?.remove();
+        _overlayEntry = null;
+        _isVisible = false;
+      }
+    } catch (e) {
+      print('Error dismissing toast: $e');
+      // Reset state even if there's an error
+      _overlayEntry = null;
+      _isVisible = false;
+    }
+  }
+}
+
+class _ToastWidget extends StatefulWidget {
+  const _ToastWidget({
+    required this.message,
+    required this.position,
+    required this.type,
+    required this.width,
+    super.key,
+    this.onDismiss,
+  });
+  final String message;
+  final ToastPosition position;
+  final ToastType type;
+  final double width;
+  final VoidCallback? onDismiss;
+
+  @override
+  State<_ToastWidget> createState() => _ToastWidgetState();
+}
+
+class _ToastWidgetState extends State<_ToastWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+
+    // Different slide animations based on position
+    Offset beginOffset;
+    switch (widget.position) {
+      case ToastPosition.top:
+        beginOffset = const Offset(0.0, -1.0);
+      case ToastPosition.center:
+        beginOffset = const Offset(0.0, 0.2);
+      case ToastPosition.bottom:
+      beginOffset = const Offset(0.0, 1.0);
+    }
+
+    _slideAnimation = Tween<Offset>(
+      begin: beginOffset,
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeIn,
+    ));
+
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  IconData _getIconForType() {
+    switch (widget.type) {
+      case ToastType.success:
+        return Icons.check_circle_outline;
+      case ToastType.error:
+        return Icons.error_outline;
+      case ToastType.warning:
+        return Icons.warning_amber_outlined;
+      case ToastType.info:
+      default:
+        return Icons.info_outline;
+    }
+  }
+
+  Color _getColorForType() {
+    switch (widget.type) {
+      case ToastType.success:
+        return Colors.green;
+      case ToastType.error:
+        return Colors.red;
+      case ToastType.warning:
+        return Colors.orange;
+      case ToastType.info:
+      default:
+        return Colors.blue;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Align(
+        alignment: _getAlignmentForPosition(),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: Material(
+                elevation: 6.0,
+                borderRadius: BorderRadius.circular(12.0),
+                color: Colors.white,
+                child: Container(
+                  width: widget.width,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12.0),
+                    border: Border.all(
+                      color: _getColorForType().withOpacity(0.3),
+                      width: 1.0,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: _getColorForType().withOpacity(0.1),
+                        blurRadius: 12,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 6,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: _getColorForType(),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(12.0),
+                            bottomLeft: Radius.circular(12.0),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Icon(
+                          _getIconForType(),
+                          color: _getColorForType(),
+                          size: 28,
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 12.0),
+                          child: Text(
+                            widget.message,
+                            style: const TextStyle(
+                              fontSize: 14.0,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 18),
+                        onPressed: () {
+                          _dismissToast();
+                        },
+                        color: Colors.black54,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Alignment _getAlignmentForPosition() {
+    switch (widget.position) {
+      case ToastPosition.top:
+        return Alignment.topCenter;
+      case ToastPosition.center:
+        return Alignment.center;
+      case ToastPosition.bottom:
+      default:
+        return Alignment.bottomCenter;
+    }
+  }
+
+  void _dismissToast() {
+    _animationController.reverse().then((value) {
+      if (widget.onDismiss != null) {
+        widget.onDismiss!();
+      }
+      CustomToast.dismiss();
+    });
+  }
+}
+
+// Extension method for easier usage with BuildContext
+extension ToastExtension on BuildContext {
+  void showToast({
+    required String message,
+    ToastPosition position = ToastPosition.bottom,
+    ToastType type = ToastType.info,
+    Duration duration = const Duration(seconds: 2),
+    double width = 300,
+    VoidCallback? onDismiss,
+  }) {
+    CustomToast.show(
+      context: this,
+      message: message,
+      position: position,
+      type: type,
+      duration: duration,
+      width: width,
+      onDismiss: onDismiss,
+    );
+  }
+}
