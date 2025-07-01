@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
@@ -7,7 +9,6 @@ import 'package:freedom/feature/History/enums.dart';
 import 'package:freedom/feature/History/view/history_detailed_screen.dart';
 import 'package:freedom/feature/History/widgets/ride_enum_tab.dart';
 import 'package:freedom/feature/home/view/widget/rider_time_line.dart';
-import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -21,12 +22,20 @@ class HistoryScreen extends StatefulWidget {
 class _HistoryScreenState extends State<HistoryScreen>
     with TickerProviderStateMixin {
   late TabController tabController;
+  late BlocProvider<HistoryCubit> historyCubit;
   RideTabEnum rideTabEnum = RideTabEnum.logistics;
   @override
   void initState() {
     super.initState();
-    getIt<HistoryCubit>().getRides('completed', 1, 10);
+    historyCubit = BlocProvider(
+      create: (context) => HistoryCubit(rideRequestRepository: getIt()),
+    );
     tabController = TabController(length: 2, vsync: this);
+    getHistoryRides();
+  }
+
+  void getHistoryRides() {
+    context.read<HistoryCubit>().getRides('completed', 1, 10);
   }
 
   @override
@@ -44,7 +53,7 @@ class _HistoryScreenState extends State<HistoryScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            height: 150,
+            height: MediaQuery.of(context).padding.top + 50,
             padding: const EdgeInsets.symmetric(horizontal: 27),
             decoration: const BoxDecoration(color: Colors.white),
             child: Row(
@@ -103,30 +112,37 @@ class MotorCycleTab extends StatelessWidget {
     return Expanded(
       child: BlocBuilder<HistoryCubit, HistoryState>(
         builder: (context, state) {
+          log('History Status: ${state.historyStatus}');
           if (state.historyStatus == RideHistoryStatus.loading) {
+            log('Loading history rides...');
             return const Center(child: CircularProgressIndicator.adaptive());
-          } else if (state.historyStatus == RideHistoryStatus.failure) {
+          } else if (state.historyStatus == RideHistoryStatus.failure &&
+              state.historyModel.isEmpty) {
             return Center(
-              child: Column(
-                children: [
-                  Text(
-                    'Failed to fetch Rides... Click the button to try again',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () {
-                      context.read<HistoryCubit>().getRides('completed', 1, 10);
-                    },
-                    child: const Text('Retry'),
-                  ),
-                ],
+              child: Text(
+                'No Ride History Found',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFFB0B0B0),
+                ),
               ),
             );
           }
-          if (state.historyStatus == RideHistoryStatus.success) {
+          if (state.historyStatus == RideHistoryStatus.success &&
+              state.historyModel.isEmpty) {
+            return Center(
+              child: Text(
+                'No completed rides found',
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFFB0B0B0),
+                ),
+              ),
+            );
+          } else if (state.historyStatus == RideHistoryStatus.success &&
+              state.historyModel.isNotEmpty) {
             return BuildRideDetails(state: state);
           } else {
             return BuildRideDetails(state: state);
@@ -149,7 +165,7 @@ class _BuildRideDetailsState extends State<BuildRideDetails> {
   @override
   Widget build(BuildContext context) {
     return ListView.builder(
-      itemCount: widget.state.historyDetails.length,
+      itemCount: widget.state.historyModel.length,
       itemBuilder:
           (context, index) => GestureDetector(
             onTap:
@@ -188,7 +204,7 @@ class _BuildRideDetailsState extends State<BuildRideDetails> {
                               image: AssetImage(
                                 widget
                                     .state
-                                    .historyDetails[index]
+                                    .historyModel[index]
                                     .driver
                                     .profilePicture,
                               ),
@@ -201,7 +217,7 @@ class _BuildRideDetailsState extends State<BuildRideDetails> {
                                   Text(
                                     widget
                                         .state
-                                        .historyDetails[index]
+                                        .historyModel[index]
                                         .driver
                                         .name,
                                     style: GoogleFonts.poppins(
@@ -210,7 +226,7 @@ class _BuildRideDetailsState extends State<BuildRideDetails> {
                                     ),
                                   ),
                                   Text(
-                                    widget.state.historyDetails[index].id,
+                                    widget.state.historyModel[index].id,
                                     style: GoogleFonts.poppins(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w400,
@@ -243,19 +259,19 @@ class _BuildRideDetailsState extends State<BuildRideDetails> {
                           destinationDetails:
                               widget
                                   .state
-                                  .historyDetails[index]
+                                  .historyModel[index]
                                   .dropoffLocation
                                   .address,
                           pickUpDetails:
                               widget
                                   .state
-                                  .historyDetails[index]
+                                  .historyModel[index]
                                   .pickupLocation
                                   .address,
                           destinationLocation: const [],
                         ),
                         const Spacer(),
-                        if (widget.state.historyDetails[index].status ==
+                        if (widget.state.historyModel[index].status ==
                             'completed')
                           SvgPicture.asset('assets/images/checked_icon.svg'),
                         const HSpace(4),
@@ -263,7 +279,7 @@ class _BuildRideDetailsState extends State<BuildRideDetails> {
                           style: TextButton.styleFrom(padding: EdgeInsets.zero),
                           onPressed: () {},
                           child: Text(
-                            widget.state.historyDetails[index].status,
+                            widget.state.historyModel[index].status,
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,

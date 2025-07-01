@@ -38,9 +38,7 @@ abstract class RideRequestRepository {
 }
 
 class RideRequestRepositoryImpl implements RideRequestRepository {
-  RideRequestRepositoryImpl({
-    required this.remoteDataSource,
-  });
+  RideRequestRepositoryImpl({required this.remoteDataSource});
 
   final RideRemoteDataSource remoteDataSource;
 
@@ -91,8 +89,12 @@ class RideRequestRepositoryImpl implements RideRequestRepository {
     int limit,
   ) async {
     try {
-      final history =
-          await remoteDataSource.getRideHistory(status, page, limit);
+      final history = await remoteDataSource.getRideHistory(
+        status,
+        page,
+        limit,
+      );
+      log('Request is successful, history: ${history.success}');
       return Right(history);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -140,10 +142,13 @@ class RideRequestRepositoryImpl implements RideRequestRepository {
     MultipleStopRideModel requestRideModel,
   ) async {
     try {
-      log('Requesting multiple stop ride with model: ${json.encode(requestRideModel.toJson())}');
+      log(
+        'Requesting multiple stop ride with model: ${json.encode(requestRideModel.toJson())}',
+      );
 
-      final model =
-          await remoteDataSource.requestMultipleStopRide(requestRideModel);
+      final model = await remoteDataSource.requestMultipleStopRide(
+        requestRideModel,
+      );
       log('from Repository(multiple stop model): ${model.toJson()}');
 
       return Right(model);

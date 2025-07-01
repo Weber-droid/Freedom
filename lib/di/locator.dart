@@ -64,7 +64,6 @@ Future<void> locator() async {
       ),
     )
     ..registerFactory<DeliveryCubit>(() => DeliveryCubit(getIt(), getIt()))
-    ..registerFactory(() => HistoryCubit(rideRequestRepository: getIt()))
     ..registerLazySingleton<LocationRepository>(
       () => LocationRepositoryImpl(
         remoteDataSource: getIt(),
