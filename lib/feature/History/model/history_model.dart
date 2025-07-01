@@ -13,9 +13,10 @@ class RideHistoryResponse {
       count: json['count'] as int,
       totalPages: json['totalPages'] as int,
       currentPage: json['currentPage'] as int,
-      data: (json['data'] as List<dynamic>)
-          .map((e) => RideData.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      data:
+          (json['data'] as List<dynamic>)
+              .map((e) => RideData.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
   }
   final bool success;
@@ -57,10 +58,12 @@ class RideData {
       id: json['_id'] as String,
       userId: json['user'] as String,
       driver: Driver.fromJson(json['driver'] as Map<String, dynamic>),
-      pickupLocation:
-      Location.fromJson(json['pickupLocation'] as Map<String, dynamic>),
-      dropoffLocation:
-      Location.fromJson(json['dropoffLocation'] as Map<String, dynamic>),
+      pickupLocation: Location.fromJson(
+        json['pickupLocation'] as Map<String, dynamic>,
+      ),
+      dropoffLocation: Location.fromJson(
+        json['dropoffLocation'] as Map<String, dynamic>,
+      ),
       status: json['status'] as String,
       totalFare: json['totalFare'] as int,
       currency: json['currency'] as String,
@@ -139,10 +142,7 @@ class Driver {
 
 // Vehicle class
 class Vehicle {
-  Vehicle({
-    required this.type,
-    required this.color,
-  });
+  Vehicle({required this.type, required this.color});
 
   factory Vehicle.fromJson(Map<String, dynamic> json) {
     return Vehicle(
@@ -154,10 +154,7 @@ class Vehicle {
   final String color;
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'color': color,
-    };
+    return {'type': type, 'color': color};
   }
 }
 
@@ -172,9 +169,10 @@ class Location {
   factory Location.fromJson(Map<String, dynamic> json) {
     return Location(
       type: json['type'] as String,
-      coordinates: (json['coordinates'] as List<dynamic>)
-          .map((e) => e as double)
-          .toList(),
+      coordinates:
+          (json['coordinates'] as List<dynamic>)
+              .map((e) => e as double)
+              .toList(),
       address: json['address'] as String,
     );
   }
@@ -183,10 +181,6 @@ class Location {
   final String address;
 
   Map<String, dynamic> toJson() {
-    return {
-      'type': type,
-      'coordinates': coordinates,
-      'address': address,
-    };
+    return {'type': type, 'coordinates': coordinates, 'address': address};
   }
 }

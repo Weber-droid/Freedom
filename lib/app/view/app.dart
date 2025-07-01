@@ -14,6 +14,7 @@ import 'package:freedom/feature/emergency/cubit/emergency_cubit.dart';
 import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/delivery_cubit/delivery_cubit.dart';
+import 'package:freedom/feature/home/repository/ride_request_repository.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
 import 'package:freedom/feature/message_driver/cache/in_app_message_cache.dart';
@@ -58,7 +59,9 @@ class App extends StatelessWidget {
           BlocProvider(create: (context) => EmergencyCubit()),
           BlocProvider(create: (context) => getIt<HomeCubit>()),
           BlocProvider(create: (context) => getIt<RideCubit>()),
-          BlocProvider(create: (context) => getIt<HistoryCubit>()),
+          BlocProvider(
+            create: (context) => HistoryCubit(rideRequestRepository: getIt()),
+          ),
           BlocProvider(create: (context) => ProfileCubit()),
           BlocProvider(
             create:
@@ -75,9 +78,6 @@ class App extends StatelessWidget {
           BlocProvider(
             create: (context) => GoogleAuthCubit(RegisterRepository()),
           ),
-          // BlocProvider(
-          //   create: (context) => getIt<MessageDriverCubit>(),
-          // ),
           BlocProvider(create: (context) => getIt<DeliveryCubit>()),
           BlocProvider(create: (context) => getIt<InAppMessageCubit>()),
         ],

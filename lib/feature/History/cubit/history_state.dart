@@ -4,13 +4,13 @@ enum RideHistoryStatus { initial, loading, success, failure }
 
 class HistoryState extends Equatable {
   const HistoryState({
-    this.historyDetails = const [],
+    this.historyModel = const [],
     this.isLoading = false,
     this.rideTabEnum = RideTabEnum.logistics,
     this.historyStatus = RideHistoryStatus.initial,
     this.errorMessage = '',
   });
-  final List<RideData> historyDetails;
+  final List<RideData> historyModel;
   final bool isLoading;
   final RideTabEnum rideTabEnum;
   final RideHistoryStatus historyStatus;
@@ -22,17 +22,22 @@ class HistoryState extends Equatable {
     RideTabEnum? rideTabEnum,
     RideHistoryStatus? historyStatus,
     String? errorMessage,
-    List<RideData>? historyDetails,
   }) {
     return HistoryState(
-        isLoading: isLoading ?? false,
-        rideTabEnum: rideTabEnum ?? this.rideTabEnum,
-        historyStatus: historyStatus ?? this.historyStatus,
-        errorMessage: errorMessage ?? this.errorMessage,
-        historyDetails: historyDetails ?? this.historyDetails);
+      isLoading: isLoading ?? false,
+      rideTabEnum: rideTabEnum ?? this.rideTabEnum,
+      historyStatus: historyStatus ?? this.historyStatus,
+      errorMessage: errorMessage ?? this.errorMessage,
+      historyModel: historyModel ?? this.historyModel,
+    );
   }
 
   @override
-  List<Object?> get props =>
-      [historyDetails, isLoading, rideTabEnum, historyStatus, errorMessage];
+  List<Object?> get props => [
+    historyModel,
+    isLoading,
+    rideTabEnum,
+    historyStatus,
+    errorMessage,
+  ];
 }

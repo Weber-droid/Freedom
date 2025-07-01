@@ -66,7 +66,6 @@ class RouteService {
     }
   }
 
-  /// Gets routes for multiple destinations
   Future<MultipleRoutesResult> getRoutesForMultipleDestinations(
     LatLng startLocation,
     List<LatLng> destinationLocations, {
