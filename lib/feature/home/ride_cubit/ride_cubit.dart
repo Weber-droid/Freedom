@@ -1263,7 +1263,7 @@ class RideCubit extends Cubit<RideState> {
               ),
             );
             _setupRealTimeDriverTracking();
-            await _startRealTimeTracking(); // Start tracking if ride is in progress
+            await _startRealTimeTracking();
           } else if (currentStatus == 'completed') {
             _clearRouteDisplay();
             emit(
