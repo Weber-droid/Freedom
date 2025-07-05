@@ -9,9 +9,10 @@ class DeliveryRequestResponse {
     return DeliveryRequestResponse(
       success: json['success'] as bool,
       message: json['message'] as String,
-      data: json['data'] != null
-          ? DeliveryData.fromJson(json['data'] as Map<String, dynamic>)
-          : null,
+      data:
+          json['data'] != null
+              ? DeliveryData.fromJson(json['data'] as Map<String, dynamic>)
+              : null,
     );
   }
   final bool success;
@@ -19,11 +20,7 @@ class DeliveryRequestResponse {
   final DeliveryData? data;
 
   Map<String, dynamic> toJson() {
-    return {
-      'success': success,
-      'message': message,
-      'data': data?.toJson(),
-    };
+    return {'success': success, 'message': message, 'data': data?.toJson()};
   }
 }
 
@@ -45,14 +42,17 @@ class DeliveryData {
   factory DeliveryData.fromJson(Map<String, dynamic> json) {
     return DeliveryData(
       deliveryId: json['deliveryId'] as String,
-      fare: json['fare'] as double,
+      fare: json['fare'] as int,
       currency: json['currency'] as String,
-      estimatedDistance: DistanceTime.fromJson(
-          json['estimatedDistance'] as Map<String, dynamic>),
-      estimatedDuration: DistanceTime.fromJson(
-          json['estimatedDuration'] as Map<String, dynamic>),
-      fareBreakdown:
-          FareBreakdown.fromJson(json['fareBreakdown'] as Map<String, dynamic>),
+      estimatedDistance: EstimatedDistanceAndTimer.fromJson(
+        json['estimatedDistance'] as Map<String, dynamic>,
+      ),
+      estimatedDuration: EstimatedDistanceAndTimer.fromJson(
+        json['estimatedDuration'] as Map<String, dynamic>,
+      ),
+      fareBreakdown: FareBreakdown.fromJson(
+        json['fareBreakdown'] as Map<String, dynamic>,
+      ),
       status: json['status'] as String,
       driversNotified: json['driversNotified'] as int,
       paymentMethod: json['paymentMethod'] as String,
@@ -61,10 +61,10 @@ class DeliveryData {
     );
   }
   final String deliveryId;
-  final double fare;
+  final int fare;
   final String currency;
-  final DistanceTime estimatedDistance;
-  final DistanceTime estimatedDuration;
+  final EstimatedDistanceAndTimer estimatedDistance;
+  final EstimatedDistanceAndTimer estimatedDuration;
   final FareBreakdown fareBreakdown;
   final String status;
   final int driversNotified;
@@ -89,14 +89,11 @@ class DeliveryData {
   }
 }
 
-class DistanceTime {
-  DistanceTime({
-    required this.value,
-    required this.text,
-  });
+class EstimatedDistanceAndTimer {
+  EstimatedDistanceAndTimer({required this.value, required this.text});
 
-  factory DistanceTime.fromJson(Map<String, dynamic> json) {
-    return DistanceTime(
+  factory EstimatedDistanceAndTimer.fromJson(Map<String, dynamic> json) {
+    return EstimatedDistanceAndTimer(
       value: json['value'] as int,
       text: json['text'] as String,
     );
@@ -105,10 +102,7 @@ class DistanceTime {
   final String text;
 
   Map<String, dynamic> toJson() {
-    return {
-      'value': value,
-      'text': text,
-    };
+    return {'value': value, 'text': text};
   }
 }
 
@@ -123,14 +117,14 @@ class FareBreakdown {
 
   factory FareBreakdown.fromJson(Map<String, dynamic> json) {
     return FareBreakdown(
-      baseFare: json['baseFare'] as double,
+      baseFare: json['baseFare'] as int,
       distanceFare: json['distanceFare'] as double,
       timeFare: json['timeFare'] as double,
       packageSizeMultiplier: json['packageSizeMultiplier'] as double,
       surgeMultiplier: json['surgeMultiplier'] as double,
     );
   }
-  final double baseFare;
+  final int baseFare;
   final double distanceFare;
   final double timeFare;
   final double packageSizeMultiplier;

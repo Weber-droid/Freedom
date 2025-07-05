@@ -48,11 +48,11 @@ class Driver {
 }
 
 class DriverArrived {
-  DriverArrived(this.driverId, this.status);
+  DriverArrived(this.rideId, this.status);
   factory DriverArrived.fromJson(Map<String, dynamic> json) {
     return DriverArrived(json['rideId'] as String, json['status'] as String);
   }
-  final String driverId;
+  final String rideId;
   final String? status;
 }
 

@@ -21,13 +21,17 @@ class DeliveryState extends Equatable {
     this.isLoadingPredictions = false,
     this.activeDestinationIndex = 0,
     this.islocationSelected = false,
+    this.showDeliverySearchSheet = false,
+    this.searchTimeElapsed = 0,
+    this.isSearching = false,
+    this.riderFound = false,
   });
 
   final List<TextEditingController> deliveryControllers;
   final bool isMultipleDestination;
   final DeliveryStatus status;
   final String? errorMessage;
-  final dynamic deliveryData;
+  final DeliveryData? deliveryData;
 
   // Location search related state
   final List<PlacePrediction> pickupPredictions;
@@ -44,13 +48,17 @@ class DeliveryState extends Equatable {
   final bool isLoadingPredictions;
   final int activeDestinationIndex;
   final bool islocationSelected;
+  final bool showDeliverySearchSheet;
+  final int searchTimeElapsed;
+  final bool isSearching;
+  final bool riderFound;
 
   DeliveryState copyWith({
     List<TextEditingController>? deliveryControllers,
     bool? isMultipleDestination,
     DeliveryStatus? status,
     String? errorMessage,
-    dynamic deliveryData,
+    DeliveryData? deliveryData,
     List<PlacePrediction>? pickupPredictions,
     List<PlacePrediction>? destinationPredictions,
     bool? showPickupPredictions,
@@ -63,6 +71,10 @@ class DeliveryState extends Equatable {
     bool? isLoadingPredictions,
     int? activeDestinationIndex,
     bool? islocationSelected,
+    bool? showDeliverySearchSheet,
+    int? searchTimeElapsed,
+    bool? isSearching,
+    bool? riderFound,
   }) {
     return DeliveryState(
       deliveryControllers: deliveryControllers ?? this.deliveryControllers,
@@ -90,27 +102,36 @@ class DeliveryState extends Equatable {
       activeDestinationIndex:
           activeDestinationIndex ?? this.activeDestinationIndex,
       islocationSelected: islocationSelected ?? this.islocationSelected,
+      showDeliverySearchSheet:
+          showDeliverySearchSheet ?? this.showDeliverySearchSheet,
+      searchTimeElapsed: searchTimeElapsed ?? this.searchTimeElapsed,
+      isSearching: isSearching ?? this.isSearching,
+      riderFound: riderFound ?? this.riderFound,
     );
   }
 
   @override
   List<Object?> get props => [
-        deliveryControllers,
-        isMultipleDestination,
-        status,
-        errorMessage,
-        deliveryData,
-        pickupPredictions,
-        destinationPredictions,
-        showPickupPredictions,
-        showDestinationPredictions,
-        isPickUpLocation,
-        isDestinationLocation,
-        recentLocations,
-        showRecentPickUpLocations,
-        showRecentDestinationLocations,
-        isLoadingPredictions,
-        activeDestinationIndex,
-        islocationSelected
-      ];
+    deliveryControllers,
+    isMultipleDestination,
+    status,
+    errorMessage,
+    deliveryData,
+    pickupPredictions,
+    destinationPredictions,
+    showPickupPredictions,
+    showDestinationPredictions,
+    isPickUpLocation,
+    isDestinationLocation,
+    recentLocations,
+    showRecentPickUpLocations,
+    showRecentDestinationLocations,
+    isLoadingPredictions,
+    activeDestinationIndex,
+    islocationSelected,
+    showDeliverySearchSheet,
+    searchTimeElapsed,
+    isSearching,
+    riderFound,
+  ];
 }

@@ -76,9 +76,9 @@ class _LogisticsBottomSheetContentState
       final text = widget.pickUpController.text;
 
       context.read<DeliveryCubit>().searchLocationDebounced(
-            text,
-            isPickup: true,
-          );
+        text,
+        isPickup: true,
+      );
     });
 
     void mainDestinationListener() {
@@ -87,10 +87,7 @@ class _LogisticsBottomSheetContentState
 
       context.read<DeliveryCubit>()
         ..setActiveDestinationIndex(0)
-        ..searchLocationDebounced(
-          text,
-          isPickup: false,
-        );
+        ..searchLocationDebounced(text, isPickup: false);
     }
 
     widget.itemDestinationController.addListener(mainDestinationListener);
@@ -109,10 +106,7 @@ class _LogisticsBottomSheetContentState
 
           context.read<DeliveryCubit>()
             ..setActiveDestinationIndex(i)
-            ..searchLocationDebounced(
-              text,
-              isPickup: false,
-            );
+            ..searchLocationDebounced(text, isPickup: false);
         }
 
         controller.addListener(listener);
@@ -140,7 +134,8 @@ class _LogisticsBottomSheetContentState
           ..isPickUpLocation(isPickUpLocation: false)
           ..setActiveDestinationIndex(0)
           ..showDestinationRecentlySearchedLocations(
-              showDestinationRecentlySearchedLocations: true);
+            showDestinationRecentlySearchedLocations: true,
+          );
       }
     });
   }
@@ -178,7 +173,6 @@ class _LogisticsBottomSheetContentState
 
   @override
   void dispose() {
-    // Clean up all controllers and focus nodes
     _destinationListeners
       ..forEach((controller, listener) {
         controller.removeListener(listener);
@@ -214,20 +208,29 @@ class _LogisticsBottomSheetContentState
         dev.log('Delivery state changed: ${state.status}');
         if (state.status == DeliveryStatus.success) {
           context.showToast(
-              message: 'Delivery request successful',
-              position: ToastPosition.top);
+            message: 'Delivery request successful',
+            position: ToastPosition.top,
+          );
+          Navigator.pop(context);
         }
         if (state.status == DeliveryStatus.failure) {
           context.showToast(
-              message: 'Delivery request failed', position: ToastPosition.top);
+            message: 'Delivery request failed',
+            position: ToastPosition.top,
+          );
         }
       },
       builder: (context, state) {
-        final additionalHeight = state.isMultipleDestination
-            ? (state.deliveryControllers.length - 1) * 70.h
-            : 0;
+        final additionalHeight =
+            state.isMultipleDestination
+                ? (state.deliveryControllers.length - 1) * 70.h
+                : 0;
 
         final bottom = MediaQuery.of(context).viewInsets.bottom;
+
+        final showRiderFoundSheet = context.select<DeliveryCubit, bool>(
+          (DeliveryCubit cubit) => cubit.state.showDeliverySearchSheet,
+        );
 
         return Padding(
           padding: EdgeInsets.only(bottom: bottom),
@@ -261,9 +264,10 @@ class _LogisticsBottomSheetContentState
                               Text(
                                 'Delivery Details',
                                 style: GoogleFonts.poppins(
-                                    fontSize: 13.22.sp,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.black),
+                                  fontSize: 13.22.sp,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.black,
+                                ),
                               ),
                               InkWell(
                                 onTap: () {
@@ -277,7 +281,8 @@ class _LogisticsBottomSheetContentState
                                     color: Colors.white,
                                   ),
                                   child: SvgPicture.asset(
-                                      'assets/images/cancel_icon.svg'),
+                                    'assets/images/cancel_icon.svg',
+                                  ),
                                 ),
                               ),
                             ],
@@ -311,50 +316,54 @@ class _LogisticsBottomSheetContentState
                             fillColor: fillColor2,
                             enabledBorderColor: Colors.white,
                             hinText: 'Enter Pick Up Location',
-                            enabledBorderRadius:
-                                const BorderRadius.all(Radius.circular(10)),
+                            enabledBorderRadius: const BorderRadius.all(
+                              Radius.circular(10),
+                            ),
                             hintTextStyle: GoogleFonts.poppins(
-                                color: hintTextColor, fontSize: 11.50),
+                              color: hintTextColor,
+                              fontSize: 11.50,
+                            ),
                             prefixText: const LogisticsPrefixIcon(
                               imageName: 'street_map',
                             ),
                             focusNode: _pickUpNode,
-                            suffixIcon: state.isLoadingPredictions &&
-                                    state.isPickUpLocation
-                                ? const LoadingWidget()
-                                : widget.pickUpController.text.isNotEmpty
+                            suffixIcon:
+                                state.isLoadingPredictions &&
+                                        state.isPickUpLocation
+                                    ? const LoadingWidget()
+                                    : widget.pickUpController.text.isNotEmpty
                                     ? GestureDetector(
-                                        onTap: () {
-                                          widget.pickUpController.clear();
-                                          context.read<DeliveryCubit>()
-                                            ..clearPredictions()
-                                            ..showRecentPickUpLocations(
-                                                showRecentlySearchedLocations:
-                                                    true);
-                                        },
-                                        child: Padding(
-                                          padding: const EdgeInsets.only(
-                                            top: 12,
-                                            bottom: 12,
-                                            left: 15.5,
-                                            right: 7,
+                                      onTap: () {
+                                        widget.pickUpController.clear();
+                                        context.read<DeliveryCubit>()
+                                          ..clearPredictions()
+                                          ..showRecentPickUpLocations(
+                                            showRecentlySearchedLocations: true,
+                                          );
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 12,
+                                          bottom: 12,
+                                          left: 15.5,
+                                          right: 7,
+                                        ),
+                                        child: Container(
+                                          decoration: ShapeDecoration(
+                                            color: const Color(0xFFE61D2A),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(7),
+                                            ),
                                           ),
-                                          child: Container(
-                                            decoration: ShapeDecoration(
-                                              color: const Color(0xFFE61D2A),
-                                              shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(7),
-                                              ),
-                                            ),
-                                            child: const Icon(
-                                              Icons.close,
-                                              color: Colors.white,
-                                              size: 16,
-                                            ),
+                                          child: const Icon(
+                                            Icons.close,
+                                            color: Colors.white,
+                                            size: 16,
                                           ),
                                         ),
-                                      )
+                                      ),
+                                    )
                                     : null,
                           ),
                         ),
@@ -378,13 +387,16 @@ class _LogisticsBottomSheetContentState
                             fillColor: fillColor2,
                             hintText: 'Enter Phone Number',
                             enabledColorBorder: Colors.white,
-                            enabledBorderRadius:
-                                const BorderRadius.all(Radius.circular(10)),
+                            enabledBorderRadius: const BorderRadius.all(
+                              Radius.circular(10),
+                            ),
                             prefixText: const LogisticsPrefixIcon(
                               imageName: 'push_arrow',
                             ),
                             hintTextStyle: GoogleFonts.poppins(
-                                color: hintTextColor, fontSize: 11.50),
+                              color: hintTextColor,
+                              fontSize: 11.50,
+                            ),
                             suffixIcon: const Padding(
                               padding: EdgeInsets.only(right: 10),
                               child: LogisticsPrefixIcon(
@@ -407,49 +419,59 @@ class _LogisticsBottomSheetContentState
                         ),
                         const VSpace(7),
                         ...List.generate(
-                            state.deliveryControllers.isNotEmpty
-                                ? state.deliveryControllers.length
-                                : 1, (index) {
-                          final controller =
-                              state.deliveryControllers.isNotEmpty
-                                  ? state.deliveryControllers[index]
-                                  : widget.itemDestinationController;
+                          state.deliveryControllers.isNotEmpty
+                              ? state.deliveryControllers.length
+                              : 1,
+                          (index) {
+                            final controller =
+                                state.deliveryControllers.isNotEmpty
+                                    ? state.deliveryControllers[index]
+                                    : widget.itemDestinationController;
 
-                          final focusNode = index == 0
-                              ? _destinationNode
-                              : (index < _destinationNodes.length
-                                  ? _destinationNodes[index]
-                                  : FocusNode());
+                            final focusNode =
+                                index == 0
+                                    ? _destinationNode
+                                    : (index < _destinationNodes.length
+                                        ? _destinationNodes[index]
+                                        : FocusNode());
 
-                          return Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 13, vertical: 4),
-                            child: Row(
-                              children: [
-                                Flexible(
-                                  flex: 5,
-                                  child: TextFieldFactory.location(
-                                    controller: controller,
-                                    fillColor: fillColor2,
-                                    enabledBorderColor: Colors.white,
-                                    hinText: index == 0
-                                        ? 'Enter Delivery Location'
-                                        : 'Enter Delivery Location ${index + 1}',
-                                    focusNode: focusNode,
-                                    enabledBorderRadius: const BorderRadius.all(
-                                        Radius.circular(10)),
-                                    hintTextStyle: GoogleFonts.poppins(
-                                        color: hintTextColor, fontSize: 11.50),
-                                    prefixText: const LogisticsPrefixIcon(
-                                      imageName: 'street_map',
-                                    ),
-                                    suffixIcon: state.isLoadingPredictions &&
-                                            state.isDestinationLocation &&
-                                            state.activeDestinationIndex ==
-                                                index
-                                        ? const LoadingWidget()
-                                        : controller.text.isNotEmpty
-                                            ? GestureDetector(
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 13,
+                                vertical: 4,
+                              ),
+                              child: Row(
+                                children: [
+                                  Flexible(
+                                    flex: 5,
+                                    child: TextFieldFactory.location(
+                                      controller: controller,
+                                      fillColor: fillColor2,
+                                      enabledBorderColor: Colors.white,
+                                      hinText:
+                                          index == 0
+                                              ? 'Enter Delivery Location'
+                                              : 'Enter Delivery Location ${index + 1}',
+                                      focusNode: focusNode,
+                                      enabledBorderRadius:
+                                          const BorderRadius.all(
+                                            Radius.circular(10),
+                                          ),
+                                      hintTextStyle: GoogleFonts.poppins(
+                                        color: hintTextColor,
+                                        fontSize: 11.50,
+                                      ),
+                                      prefixText: const LogisticsPrefixIcon(
+                                        imageName: 'street_map',
+                                      ),
+                                      suffixIcon:
+                                          state.isLoadingPredictions &&
+                                                  state.isDestinationLocation &&
+                                                  state.activeDestinationIndex ==
+                                                      index
+                                              ? const LoadingWidget()
+                                              : controller.text.isNotEmpty
+                                              ? GestureDetector(
                                                 onTap: () {
                                                   controller.clear();
                                                   context
@@ -459,20 +481,21 @@ class _LogisticsBottomSheetContentState
                                                 child: Padding(
                                                   padding:
                                                       const EdgeInsets.only(
-                                                    top: 12,
-                                                    bottom: 12,
-                                                    left: 15.5,
-                                                    right: 7,
-                                                  ),
+                                                        top: 12,
+                                                        bottom: 12,
+                                                        left: 15.5,
+                                                        right: 7,
+                                                      ),
                                                   child: Container(
                                                     decoration: ShapeDecoration(
                                                       color: const Color(
-                                                          0xFFE61D2A),
-                                                      shape:
-                                                          RoundedRectangleBorder(
+                                                        0xFFE61D2A,
+                                                      ),
+                                                      shape: RoundedRectangleBorder(
                                                         borderRadius:
-                                                            BorderRadius
-                                                                .circular(7),
+                                                            BorderRadius.circular(
+                                                              7,
+                                                            ),
                                                       ),
                                                     ),
                                                     child: const Icon(
@@ -483,86 +506,101 @@ class _LogisticsBottomSheetContentState
                                                   ),
                                                 ),
                                               )
-                                            : null,
+                                              : null,
+                                    ),
                                   ),
-                                ),
-                                if (index == 0) ...[
-                                  const HSpace(10),
-                                  Flexible(
-                                    child: InkWell(
-                                      onTap: () {
-                                        context
-                                            .read<DeliveryCubit>()
-                                            .addDeliveryDestination(widget
-                                                .itemDestinationController);
-                                        _updateDestinationFocusNodes(
-                                          state.deliveryControllers.length + 1,
-                                        );
+                                  if (index == 0) ...[
+                                    const HSpace(10),
+                                    Flexible(
+                                      child: InkWell(
+                                        onTap: () {
+                                          context
+                                              .read<DeliveryCubit>()
+                                              .addDeliveryDestination(
+                                                widget
+                                                    .itemDestinationController,
+                                              );
+                                          _updateDestinationFocusNodes(
+                                            state.deliveryControllers.length +
+                                                1,
+                                          );
 
-                                        _setupTextControllerListeners();
-                                      },
-                                      child: Container(
-                                        height:
-                                            MediaQuery.of(context).size.height *
-                                                0.05,
-                                        width:
-                                            MediaQuery.of(context).size.height *
-                                                0.05,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(5),
-                                          color: Colors.white,
-                                        ),
-                                        child: const Icon(
-                                          Icons.add,
-                                          color: Colors.black,
-                                          size: 20,
+                                          _setupTextControllerListeners();
+                                        },
+                                        child: Container(
+                                          height:
+                                              MediaQuery.of(
+                                                context,
+                                              ).size.height *
+                                              0.05,
+                                          width:
+                                              MediaQuery.of(
+                                                context,
+                                              ).size.height *
+                                              0.05,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                              5,
+                                            ),
+                                            color: Colors.white,
+                                          ),
+                                          child: const Icon(
+                                            Icons.add,
+                                            color: Colors.black,
+                                            size: 20,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                                if (state.isMultipleDestination &&
-                                    index != 0) ...[
-                                  const HSpace(10),
-                                  Flexible(
-                                    child: InkWell(
-                                      onTap: () {
-                                        context
-                                            .read<DeliveryCubit>()
-                                            .removeDestination(index);
+                                  ],
+                                  if (state.isMultipleDestination &&
+                                      index != 0) ...[
+                                    const HSpace(10),
+                                    Flexible(
+                                      child: InkWell(
+                                        onTap: () {
+                                          context
+                                              .read<DeliveryCubit>()
+                                              .removeDestination(index);
 
-                                        _updateDestinationFocusNodes(
+                                          _updateDestinationFocusNodes(
                                             state.deliveryControllers.length -
-                                                1);
+                                                1,
+                                          );
 
-                                        _setupTextControllerListeners();
-                                      },
-                                      child: Container(
-                                        height:
-                                            MediaQuery.of(context).size.height *
-                                                0.05,
-                                        width:
-                                            MediaQuery.of(context).size.height *
-                                                0.05,
-                                        decoration: BoxDecoration(
-                                          borderRadius:
-                                              BorderRadius.circular(5),
-                                          color: Colors.white,
-                                        ),
-                                        child: const Icon(
-                                          Icons.remove,
-                                          color: Colors.black,
-                                          size: 20,
+                                          _setupTextControllerListeners();
+                                        },
+                                        child: Container(
+                                          height:
+                                              MediaQuery.of(
+                                                context,
+                                              ).size.height *
+                                              0.05,
+                                          width:
+                                              MediaQuery.of(
+                                                context,
+                                              ).size.height *
+                                              0.05,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(
+                                              5,
+                                            ),
+                                            color: Colors.white,
+                                          ),
+                                          child: const Icon(
+                                            Icons.remove,
+                                            color: Colors.black,
+                                            size: 20,
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
+                                  ],
                                 ],
-                              ],
-                            ),
-                          );
-                        }),
+                              ),
+                            );
+                          },
+                        ),
                         if (state.showDestinationPredictions &&
                             state.destinationPredictions.isNotEmpty) ...[
                           _buildPredictionsPanel(
@@ -601,8 +639,9 @@ class _LogisticsBottomSheetContentState
                             hinText:
                                 'Example: Big Sized Sneaker boxed nike - Red carton',
                             enabledBorderColor: Colors.white,
-                            enabledBorderRadius:
-                                const BorderRadius.all(Radius.circular(10)),
+                            enabledBorderRadius: const BorderRadius.all(
+                              Radius.circular(10),
+                            ),
                             hintTextStyle: GoogleFonts.poppins(
                               color: hintTextColor,
                               fontSize: 10.18,
@@ -633,9 +672,7 @@ class _LogisticsBottomSheetContentState
                     if (state.status == DeliveryStatus.loading)
                       ColoredBox(
                         color: Colors.black.withValues(alpha: 0.3),
-                        child: const Center(
-                          child: CircularProgressIndicator(),
-                        ),
+                        child: const Center(child: CircularProgressIndicator()),
                       ),
                   ],
                 ),
@@ -708,23 +745,26 @@ class _LogisticsBottomSheetContentState
                       if (_destinationListeners[destinationController] !=
                           null) {
                         destinationController.removeListener(
-                            _destinationListeners[destinationController]!);
+                          _destinationListeners[destinationController]!,
+                        );
                       }
                     },
                     () {
                       if (_destinationListeners[destinationController] !=
                           null) {
                         destinationController.addListener(
-                            _destinationListeners[destinationController]!);
+                          _destinationListeners[destinationController]!,
+                        );
                       }
                     },
                   );
                 } else {
                   // Handle destination location selection based on active index
-                  final activeIndex = context
-                      .read<DeliveryCubit>()
-                      .state
-                      .activeDestinationIndex;
+                  final activeIndex =
+                      context
+                          .read<DeliveryCubit>()
+                          .state
+                          .activeDestinationIndex;
 
                   if (activeIndex == 0) {
                     // Main destination
@@ -736,14 +776,16 @@ class _LogisticsBottomSheetContentState
                         if (_destinationListeners[destinationController] !=
                             null) {
                           destinationController?.removeListener(
-                              _destinationListeners[destinationController]!);
+                            _destinationListeners[destinationController]!,
+                          );
                         }
                       },
                       () {
                         if (_destinationListeners[destinationController] !=
                             null) {
                           destinationController?.addListener(
-                              _destinationListeners[destinationController]!);
+                            _destinationListeners[destinationController]!,
+                          );
                         }
                       },
                     );
@@ -755,47 +797,50 @@ class _LogisticsBottomSheetContentState
                             .state
                             .deliveryControllers
                             .length) {
-                      final controller = context
-                          .read<DeliveryCubit>()
-                          .state
-                          .deliveryControllers[activeIndex];
-                      final focusNode = activeIndex < _destinationNodes.length
-                          ? _destinationNodes[activeIndex]
-                          : FocusNode();
+                      final controller =
+                          context
+                              .read<DeliveryCubit>()
+                              .state
+                              .deliveryControllers[activeIndex];
+                      final focusNode =
+                          activeIndex < _destinationNodes.length
+                              ? _destinationNodes[activeIndex]
+                              : FocusNode();
 
                       context
                           .read<DeliveryCubit>()
                           .handleAdditionalDestinationLocation(
-                        prediction,
-                        focusNode,
-                        controller,
-                        activeIndex,
-                        () {
-                          if (_destinationListeners[controller] != null) {
-                            controller.removeListener(
-                                _destinationListeners[controller]!);
-                          }
-                        },
-                        () {
-                          if (_destinationListeners[controller] != null) {
-                            controller.addListener(
-                                _destinationListeners[controller]!);
-                          }
-                        },
-                      );
+                            prediction,
+                            focusNode,
+                            controller,
+                            activeIndex,
+                            () {
+                              if (_destinationListeners[controller] != null) {
+                                controller.removeListener(
+                                  _destinationListeners[controller]!,
+                                );
+                              }
+                            },
+                            () {
+                              if (_destinationListeners[controller] != null) {
+                                controller.addListener(
+                                  _destinationListeners[controller]!,
+                                );
+                              }
+                            },
+                          );
                     }
                   }
                 }
               },
               child: Column(
                 children: [
-                  Divider(
-                    thickness: 1,
-                    color: Colors.black.withOpacity(0.05),
-                  ),
+                  Divider(thickness: 1, color: Colors.black.withOpacity(0.05)),
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 8,
+                    ),
                     child: Row(
                       children: [
                         Container(
@@ -899,17 +944,5 @@ class _LogisticsBottomSheetContentState
     );
 
     context.read<DeliveryCubit>().requestDelivery(model);
-    Future.delayed(Duration.zero, () {
-      final currentState = context.read<DeliveryCubit>().state;
-      if (currentState.status == DeliveryStatus.success) {
-        Navigator.pop(context);
-      } else if (currentState.status == DeliveryStatus.failure) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content:
-                  Text(currentState.errorMessage ?? 'Failed to save order')),
-        );
-      }
-    });
   }
 }

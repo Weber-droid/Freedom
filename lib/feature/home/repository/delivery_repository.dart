@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:dartz/dartz.dart';
 import 'package:freedom/core/client/data_layer_exceptions.dart';
 import 'package:freedom/feature/auth/repository/repository_exceptions.dart';
@@ -7,23 +9,26 @@ import 'package:freedom/feature/home/models/delivery_request_response.dart';
 
 abstract class IDeliveryRepository {
   Future<Either<Failure, DeliveryRequestResponse>> requestDelivery(
-      DeliveryModel deliveryRequestModel);
+    DeliveryModel deliveryRequestModel,
+  );
   Future<void> cancelDelivery(String deliveryId, String reason);
   Future<void> updateDeliveryStatus(String deliveryId, String status);
   Future<void> trackDelivery(String deliveryId);
 }
 
 class DeliveryRepositoryImpl implements IDeliveryRepository {
-  DeliveryRepositoryImpl({
-    required this.remoteDataSource,
-  });
+  DeliveryRepositoryImpl({required this.remoteDataSource});
   final IDeliveryRemoteDataSource remoteDataSource;
   @override
   Future<Either<Failure, void>> cancelDelivery(
-      String deliveryId, String reason) async {
+    String deliveryId,
+    String reason,
+  ) async {
     try {
-      final response =
-          await remoteDataSource.cancelDelivery(deliveryId, reason);
+      final response = await remoteDataSource.cancelDelivery(
+        deliveryId,
+        reason,
+      );
       return Right(response);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));
@@ -34,12 +39,15 @@ class DeliveryRepositoryImpl implements IDeliveryRepository {
 
   @override
   Future<Either<Failure, DeliveryRequestResponse>> requestDelivery(
-      DeliveryModel deliveryRequestModel) async {
+    DeliveryModel deliveryRequestModel,
+  ) async {
     try {
-      final response =
-          await remoteDataSource.requestDelivery(deliveryRequestModel);
+      final response = await remoteDataSource.requestDelivery(
+        deliveryRequestModel,
+      );
       return Right(response);
     } on ServerException catch (e) {
+      log('requestDelivery() error: ${e.message}');
       return Left(ServerFailure(e.message));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
