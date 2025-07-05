@@ -44,11 +44,9 @@ abstract class SectionFactory extends StatelessWidget {
           const SizedBox(width: 16),
           Text(
             item.title,
-            style: sectionTextStyle ??
-                GoogleFonts.poppins(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
+            style:
+                sectionTextStyle ??
+                GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
           ),
           const Spacer(),
           if (item.subtitle != null)
@@ -66,8 +64,10 @@ abstract class SectionFactory extends StatelessWidget {
               padding: const EdgeInsets.only(right: 22),
               child: SvgPicture.asset(
                 'assets/images/arrow_right_icon.svg',
-                colorFilter:
-                const ColorFilter.mode(Colors.black, BlendMode.srcIn),
+                colorFilter: const ColorFilter.mode(
+                  Colors.black,
+                  BlendMode.srcIn,
+                ),
               ),
             ),
         ],
@@ -87,7 +87,8 @@ abstract class SectionFactory extends StatelessWidget {
             Text(
               sectionTitle,
               textAlign: TextAlign.center,
-              style: titleStyle ??
+              style:
+                  titleStyle ??
                   GoogleFonts.poppins(
                     color: Colors.black,
                     fontSize: 10.94,
@@ -130,7 +131,6 @@ abstract class SectionFactory extends StatelessWidget {
 }
 
 class SectionItem {
-
   const SectionItem({
     required this.title,
     this.iconPath,
@@ -146,16 +146,17 @@ class SectionItem {
 }
 
 class PersonalDataSection extends SectionFactory {
-  const PersonalDataSection(
-      {super.key,
-        super.onItemTap,
-        super.padding,
-        super.backgroundColor,
-        super.titleStyle,
-        super.sectionTextStyle,
-        super.paddingSection,
-        this.onProfileTap,
-        this.onWalletTap});
+  const PersonalDataSection({
+    super.key,
+    super.onItemTap,
+    super.padding,
+    super.backgroundColor,
+    super.titleStyle,
+    super.sectionTextStyle,
+    super.paddingSection,
+    this.onProfileTap,
+    this.onWalletTap,
+  });
   final VoidCallback? onProfileTap;
 
   final VoidCallback? onWalletTap;
@@ -200,17 +201,18 @@ class MoreSection extends SectionFactory {
 
   @override
   List<SectionItem> get sectionItems => [
+    // SectionItem(
+    //     title: 'Address',
+    //     iconPath: 'assets/images/address_icon.svg',
+    //     onTap: onTapAddress),
+    // SectionItem(
+    //     title: 'Security and Privacy',
+    //     iconPath: 'assets/images/security_icon.svg',
+    //     onTap: onTapSecurity),
     SectionItem(
-        title: 'Address',
-        iconPath: 'assets/images/address_icon.svg',
-        onTap: onTapAddress),
-    SectionItem(
-        title: 'Security and Privacy',
-        iconPath: 'assets/images/security_icon.svg',
-        onTap: onTapSecurity),
-    SectionItem(
-        title: 'Logout',
-        iconPath: 'assets/images/free_logout.svg',
-        onTap: onTapLogout),
+      title: 'Logout',
+      iconPath: 'assets/images/free_logout.svg',
+      onTap: onTapLogout,
+    ),
   ];
 }

@@ -66,7 +66,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _checkRideStatus() async {
     final id = await AppPreferences.getRideId();
-    dev.log('🔍 Checking ride status for ID: $id');
     context.read<RideCubit>().checkRideStatus(id);
   }
 
@@ -222,7 +221,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               },
               builder: (context, rideState) {
-                // ENHANCED: Add debug logging for each rebuild
                 dev.log(
                   '🏗️ Building HomeScreen - tracking active: ${rideState.isRealTimeTrackingActive}',
                 );

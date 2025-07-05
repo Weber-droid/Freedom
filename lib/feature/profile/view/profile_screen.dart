@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:freedom/app_preference.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/view/login_view.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
@@ -11,7 +9,6 @@ import 'package:freedom/feature/profile/view/profile_details_screen.dart';
 import 'package:freedom/feature/profile/view/security_screen.dart';
 import 'package:freedom/feature/wallet/view/wallet_screen.dart';
 import 'package:freedom/shared/sections_tiles.dart';
-import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/toasts.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -144,216 +141,250 @@ class ProfileCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      alignment: Alignment.center,
-      clipBehavior: Clip.none,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(4),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      width: double.infinity,
+      child: _buildMainProfileCard(context),
+    );
+  }
+
+  Widget _buildMainProfileCard(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.black,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
-          height: MediaQuery.of(context).size.height * 0.25,
-          width: MediaQuery.of(context).size.width * 0.95,
-          child: Padding(
-            padding: const EdgeInsets.only(left: 15, top: 9, right: 13),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildBackgroundPattern(),
+          Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  '10 Ride Completed',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 11.23,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'Reward',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 11.23,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                SvgPicture.asset('assets/images/arrow_right_icon.svg'),
+                const SizedBox(height: 20),
+                _buildProfileSection(context),
+                const SizedBox(height: 24),
+                _buildContactSection(context),
               ],
             ),
           ),
-        ),
-        Positioned(
-          top: 28,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.black,
-              borderRadius: BorderRadius.circular(4),
-              image: const DecorationImage(
-                image: AssetImage('assets/images/profile_background.png'),
-                fit: BoxFit.cover,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackgroundPattern() {
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
+        child: CustomPaint(painter: PatternPainter()),
+      ),
+    );
+  }
+
+  Widget _buildProfileSection(BuildContext context) {
+    return Column(
+      children: [
+        Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF667eea).withValues(alpha: 0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.all(3),
+              child: _buildProfileImage(context),
+            ),
+            Positioned(
+              bottom: 0,
+              right: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF667eea),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.all(8),
+                child: const Icon(
+                  Icons.camera_alt,
+                  color: Colors.white,
+                  size: 16,
+                ),
               ),
             ),
-            height: 187,
-            width: 372,
-            child: Column(
-              children: [
-                const VSpace(13),
-                Container(
-                  width: 67,
-                  decoration: ShapeDecoration(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(13),
-                    ),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        _buildUserName(),
+      ],
+    );
+  }
+
+  Widget _buildContactSection(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            onTap: () {
+              if (state is ProfileLoaded) {
+                Clipboard.setData(
+                  ClipboardData(text: (state as ProfileLoaded).originalPhone!),
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Phone number copied!'),
+                    duration: Duration(seconds: 2),
                   ),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      _buildProfileImage(context),
-                      Positioned(
-                        bottom: -2,
-                        right: -8,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                            border: Border.all(width: 2),
-                          ),
-                          child: SvgPicture.asset(
-                            'assets/images/edit_profile.svg',
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _buildUserName(),
-                const VSpace(10),
-                Container(
-                  width: 132,
-                  height: 24,
-                  padding: const EdgeInsets.only(left: 10),
-                  decoration: ShapeDecoration(
-                    color: Colors.white.withValues(alpha: 0.34),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(34),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () {
-                          if (state is ProfileLoaded) {
-                            Clipboard.setData(
-                              ClipboardData(text: state.originalPhone!),
-                            );
-                          }
-                        },
-                        child: SvgPicture.asset(
-                          'assets/images/copy_button_icon.svg',
-                        ),
-                      ),
-                      const HSpace(7),
-                      _buildContactInfo(),
-                    ],
-                  ),
-                ),
-                Text(
-                  'Business Suite',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Colors.white,
-                  ),
-                ),
-              ],
+                );
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.copy, color: Colors.white, size: 14),
             ),
           ),
+          const SizedBox(width: 12),
+          _buildContactInfo(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessSuiteSection() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
         ),
-      ],
+        borderRadius: BorderRadius.circular(15),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF667eea).withValues(alpha: 0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.business_center, color: Colors.white, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            'Business Suite',
+            style: GoogleFonts.poppins(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildProfileImage(BuildContext context) {
     return BlocBuilder<ProfileCubit, ProfileState>(
       builder: (context, state) {
-        // For loading state
         if (state is ProfileLoading || state is UploadingImage) {
-          return CircleAvatar(
-            radius: 50,
-            backgroundColor: Colors.grey[200],
-            child: const CircularProgressIndicator.adaptive(strokeWidth: 1),
+          return Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            ),
           );
         }
 
-        if (state is ProfileLoaded) {
-          final profileData = state.user?.data;
+        if (state is ProfileLoaded || state is ImageUploaded) {
+          final profileData =
+              state is ProfileLoaded
+                  ? (state as ProfileLoaded).user?.data
+                  : (state as ImageUploaded).user?.data;
+
           return GestureDetector(
             onTap: () => _showImagePickerOptions(context),
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundImage: _getProfileImage(
-                    profileData?.profilePicture,
-                  ),
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                image: DecorationImage(
+                  image: _getProfileImage(profileData?.profilePicture),
+                  fit: BoxFit.cover,
                 ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           );
         }
-        if (state is ImageUploaded) {
-          final profileData = state.user?.data;
-          return GestureDetector(
-            onTap: () => _showImagePickerOptions(context),
-            child: Stack(
-              children: [
-                CircleAvatar(
-                  radius: 50,
-                  backgroundImage: _getProfileImage(
-                    profileData?.profilePicture,
-                  ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
+
         return GestureDetector(
           onTap: () => _showImagePickerOptions(context),
-          child: CircleAvatar(
-            radius: 50,
-            backgroundImage: _getProfileImage(null),
+          child: Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              image: DecorationImage(
+                image: _getProfileImage(null),
+                fit: BoxFit.cover,
+              ),
+            ),
           ),
         );
       },
@@ -370,29 +401,70 @@ class ProfileCard extends StatelessWidget {
   void _showImagePickerOptions(BuildContext context) {
     showModalBottomSheet<void>(
       context: context,
+      backgroundColor: Colors.transparent,
       builder:
-          (context) => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.camera_alt),
-                title: const Text('Take a photo'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  context.read<ProfileCubit>().pickImage();
-                },
+          (context) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
               ),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Choose from gallery'),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  context.read<ProfileCubit>().pickImage(
-                    source: ImageSource.gallery,
-                  );
-                },
-              ),
-            ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 12),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF667eea).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.camera_alt,
+                      color: Color(0xFF667eea),
+                    ),
+                  ),
+                  title: const Text('Take a photo'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    context.read<ProfileCubit>().pickImage();
+                  },
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF667eea).withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.photo_library,
+                      color: Color(0xFF667eea),
+                    ),
+                  ),
+                  title: const Text('Choose from gallery'),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    context.read<ProfileCubit>().pickImage(
+                      source: ImageSource.gallery,
+                    );
+                  },
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
     );
   }
@@ -401,14 +473,14 @@ class ProfileCard extends StatelessWidget {
     if (state is ProfileLoading) {
       return Text(
         'Loading...',
-        style: GoogleFonts.poppins(fontSize: 10, color: Colors.white),
+        style: GoogleFonts.poppins(fontSize: 16, color: Colors.white70),
       );
     } else if (state is ProfileLoaded) {
       final profileData = (state as ProfileLoaded).user?.data;
       return Text(
         '${profileData!.firstName}',
         style: GoogleFonts.poppins(
-          fontSize: 10,
+          fontSize: 18,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
@@ -417,7 +489,7 @@ class ProfileCard extends StatelessWidget {
       return Text(
         'User Name',
         style: GoogleFonts.poppins(
-          fontSize: 10,
+          fontSize: 18,
           color: Colors.white,
           fontWeight: FontWeight.bold,
         ),
@@ -429,19 +501,50 @@ class ProfileCard extends StatelessWidget {
     if (state is ProfileLoading) {
       return Text(
         'Loading...',
-        style: GoogleFonts.poppins(fontSize: 10, color: Colors.white),
+        style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70),
       );
     } else if (state is ProfileLoaded) {
       final profileData = (state as ProfileLoaded).user!.data;
       return Text(
         profileData.isPhoneVerified ? profileData.phone : 'Phone not verified',
-        style: GoogleFonts.poppins(fontSize: 10, color: Colors.white),
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          color: Colors.white,
+          fontWeight: FontWeight.w500,
+        ),
       );
     } else {
       return Text(
         'User Phone',
-        style: GoogleFonts.poppins(fontSize: 10, color: Colors.white),
+        style: GoogleFonts.poppins(
+          fontSize: 12,
+          color: Colors.white,
+          fontWeight: FontWeight.w500,
+        ),
       );
     }
   }
+}
+
+// Custom painter for background pattern
+class PatternPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint =
+        Paint()
+          ..color = Colors.white.withValues(alpha: 0.05)
+          ..style = PaintingStyle.fill;
+
+    const double spacing = 30;
+    const double dotSize = 2;
+
+    for (double x = 0; x < size.width; x += spacing) {
+      for (double y = 0; y < size.height; y += spacing) {
+        canvas.drawCircle(Offset(x, y), dotSize, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
