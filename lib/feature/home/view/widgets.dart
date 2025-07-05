@@ -613,9 +613,7 @@ class RiderFoundBottomSheet extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Responsive breakpoints
         final isTablet = constraints.maxWidth > 600;
-        // Responsive dimensions
         final baseHeight = getBaseHeight(constraints);
         final horizontalPadding = getHorizontalPadding(constraints);
         final borderRadius = isTablet ? 24.0 : 20.0;
@@ -712,8 +710,6 @@ class RiderFoundBottomSheet extends StatelessWidget {
                               ),
 
                               SizedBox(height: getSpacing(constraints, 8)),
-
-                              // Timeline - make it scrollable if content is long
                               ConstrainedBox(
                                 constraints: BoxConstraints(
                                   maxHeight: constraints.maxHeight * 0.3,

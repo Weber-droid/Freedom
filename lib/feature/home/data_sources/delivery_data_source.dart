@@ -13,7 +13,8 @@ import 'package:http/http.dart';
 
 abstract class IDeliveryRemoteDataSource {
   Future<DeliveryRequestResponse> requestDelivery(
-      DeliveryModel deliveryRequestModel);
+    DeliveryModel deliveryRequestModel,
+  );
   Future<void> cancelDelivery(String deliveryId, String reason);
 
   Future<void> updateDeliveryStatus(String deliveryId, String status);
@@ -27,17 +28,15 @@ class DeliveryDataSourceImpl implements IDeliveryRemoteDataSource {
       final client = getIt<BaseApiClients>();
       final response = await client.post(
         '${Endpoints.cancelDelivery}$deliveryId/cancel',
-        body: {
-          'reason': reason,
-        },
+        body: {'reason': reason},
         headers: {'Authorization': 'Bearer ${await AppPreferences.getToken()}'},
       );
       final decoded = json.decode(response.body) as Map<String, dynamic>;
-      if (decoded.containsKey('msg')) {
+      if (decoded.containsKey('success') && decoded['success'] == false) {
         throw ServerException(decoded['msg'].toString());
+      } else if (decoded.containsKey('message') && decoded['success'] == true) {
+        return DeliveryRequestResponse.fromJson(decoded);
       }
-      log('cancelDelivery(): $decoded');
-      return DeliveryRequestResponse.fromJson(decoded);
     } on SocketException catch (e) {
       throw NetworkException(e.message);
     } on ServerException catch (e) {
@@ -49,7 +48,8 @@ class DeliveryDataSourceImpl implements IDeliveryRemoteDataSource {
 
   @override
   Future<DeliveryRequestResponse> requestDelivery(
-      DeliveryModel deliveryRequestModel) async {
+    DeliveryModel deliveryRequestModel,
+  ) async {
     final client = getIt<BaseApiClients>();
     try {
       final response = await client.post(
@@ -59,7 +59,8 @@ class DeliveryDataSourceImpl implements IDeliveryRemoteDataSource {
       );
       final decoded = json.decode(response.body) as Map<String, dynamic>;
       log('requestDelivery(): $decoded');
-      if (decoded.containsKey('msg')) {
+      if (decoded.containsKey('success') && decoded['success'] == false) {
+        log('requestDelivery() error: ${decoded['msg']}');
         throw ServerException(decoded['msg'].toString());
       }
       return DeliveryRequestResponse.fromJson(decoded);

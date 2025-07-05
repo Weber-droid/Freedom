@@ -1,21 +1,25 @@
 import 'dart:async';
 import 'dart:developer' as dev;
 import 'dart:math' as math;
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:freedom/core/services/service_extension.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:freedom/core/services/route_services.dart';
 import 'package:freedom/di/locator.dart';
+import 'package:geodesy/geodesy.dart' as geo;
+import 'package:latlong2/latlong.dart' as ll;
 
-/// Real-time driver tracking service that handles live driver positions
-/// and dynamic route updates during ride progress
 class RealTimeDriverTrackingService {
   final RouteService _routeService = getIt<RouteService>();
 
   // Tracking state
   bool _isTracking = false;
-  LatLng? _lastKnownDriverPosition;
-  LatLng? _currentDestination;
-  List<LatLng> _currentRoutePoints = [];
+  gmaps.LatLng? _lastKnownDriverPosition;
+  gmaps.LatLng? _currentDestination;
+  List<gmaps.LatLng> _currentRoutePoints =
+      []; // Fixed: Use gmaps.LatLng consistently
   DateTime? _lastPositionUpdate;
+  String? _currentRideId;
+  String? _currentDriverId;
 
   // Route recalculation settings
   static const double _routeDeviationThresholdMeters =
@@ -25,20 +29,31 @@ class RealTimeDriverTrackingService {
   DateTime? _lastRouteRecalculation;
 
   // Callbacks for UI updates
-  void Function(LatLng position, double bearing)? onDriverPositionUpdate;
-  void Function(List<LatLng> newRoute)? onRouteUpdate;
+  void Function(gmaps.LatLng position, double bearing, DriverLocationData data)?
+  onDriverPositionUpdate;
+  void Function(List<gmaps.LatLng> newRoute)? onRouteUpdate;
   void Function(String message)? onTrackingStatusUpdate;
 
   /// Initialize tracking for a ride in progress
   void startTracking({
-    required LatLng destination,
-    required void Function(LatLng position, double bearing) onPositionUpdate,
-    required void Function(List<LatLng> newRoute) onRouteUpdated,
+    required String rideId,
+    required String driverId,
+    required gmaps.LatLng destination,
+    required void Function(
+      gmaps.LatLng position,
+      double bearing,
+      DriverLocationData data,
+    )
+    onPositionUpdate,
+    required void Function(List<gmaps.LatLng> newRoute) onRouteUpdated,
     void Function(String message)? onStatusUpdate,
   }) {
-    dev.log('🔴 Starting real-time driver tracking');
+    dev.log('To wait na waitse');
+    dev.log('🔴 Starting real-time driver tracking for ride: $rideId');
 
     _isTracking = true;
+    _currentRideId = rideId;
+    _currentDriverId = driverId;
     _currentDestination = destination;
     _lastKnownDriverPosition = null;
     _currentRoutePoints.clear();
@@ -61,56 +76,103 @@ class RealTimeDriverTrackingService {
     }
 
     try {
-      final driverLocation = _parseLocationData(locationData);
-      if (driverLocation == null) return;
-
-      dev.log('📍 Processing driver location: $driverLocation');
+      final driverLocationData = _parseLocationData(locationData);
+      if (driverLocationData == null) return;
 
       // Update driver position
-      await _updateDriverPosition(driverLocation, locationData);
+      await _updateDriverPosition(driverLocationData);
 
       // Check if route recalculation is needed
-      await _checkForRouteRecalculation(driverLocation);
+      await _checkForRouteRecalculation(driverLocationData.position);
     } catch (e) {
       dev.log('❌ Error processing driver location: $e');
     }
   }
 
   /// Parse location data from socket
-  LatLng? _parseLocationData(Map<String, dynamic> data) {
+  DriverLocationData? _parseLocationData(Map<String, dynamic> data) {
     try {
-      final latitude = data['latitude'] as double?;
-      final longitude = data['longitude'] as double?;
-
-      if (latitude == null || longitude == null) {
-        dev.log('❌ Invalid location data: missing coordinates');
+      // Extract coordinates array [longitude, latitude]
+      final coordinates = data['coordinates'] as List<dynamic>?;
+      if (coordinates == null || coordinates.length < 2) {
+        dev.log('❌ Invalid location data: missing or invalid coordinates');
         return null;
       }
 
-      return LatLng(latitude, longitude);
+      final longitude = (coordinates[0] as num).toDouble();
+      final latitude = (coordinates[1] as num).toDouble();
+      final position = gmaps.LatLng(latitude, longitude);
+
+      // Extract other fields
+      final driverId = data['driverId'] as String?;
+      final rideId = data['rideId'] as String?;
+      final status = data['status'] as String?;
+      final isMultiStop = data['isMultiStop'] as bool? ?? false;
+      final speed = (data['speed'] as num?)?.toDouble() ?? 0.0;
+      final heading = (data['heading'] as num?)?.toDouble() ?? 0.0;
+      final accuracy = (data['accuracy'] as num?)?.toDouble() ?? 0.0;
+      final isSignificantMovement =
+          data['isSignificantMovement'] as bool? ?? false;
+
+      // Parse ETA
+      EtaData? eta;
+      final etaMap = data['eta'] as Map<String, dynamic>?;
+      if (etaMap != null) {
+        eta = EtaData(
+          value: (etaMap['value'] as num?)?.toDouble() ?? 0.0,
+          text: etaMap['text'] as String? ?? '',
+        );
+      }
+
+      // Parse lastUpdate
+      DateTime? lastUpdate;
+      final lastUpdateStr = data['lastUpdate'] as String?;
+      if (lastUpdateStr != null) {
+        lastUpdate = DateTime.tryParse(lastUpdateStr);
+      }
+
+      return DriverLocationData(
+        driverId: driverId,
+        rideId: rideId,
+        position: position,
+        status: status,
+        isMultiStop: isMultiStop,
+        eta: eta,
+        speed: speed,
+        heading: heading,
+        accuracy: accuracy,
+        lastUpdate: lastUpdate ?? DateTime.now(),
+        isSignificantMovement: isSignificantMovement,
+      );
     } catch (e) {
       dev.log('❌ Error parsing location data: $e');
       return null;
     }
   }
 
+  /// Validate that the location update is for the current ride and driver
+  bool _isValidLocationUpdate(DriverLocationData data) {
+    if (_currentRideId != null && data.rideId != _currentRideId) {
+      return false;
+    }
+    if (_currentDriverId != null && data.driverId != _currentDriverId) {
+      return false;
+    }
+    return true;
+  }
+
   /// Update driver position and notify UI
-  Future<void> _updateDriverPosition(
-    LatLng position,
-    Map<String, dynamic> data,
-  ) async {
-    final bearing = _calculateBearing(position, data);
+  Future<void> _updateDriverPosition(DriverLocationData locationData) async {
+    final position = locationData.position;
+    final bearing = _calculateBearing(position, locationData);
+
     _lastKnownDriverPosition = position;
-    _lastPositionUpdate = DateTime.now();
-
-    // Calculate progress along route
+    _lastPositionUpdate = locationData.lastUpdate;
     final progressInfo = _calculateRouteProgress(position);
-
-    // Notify UI of position update
-    onDriverPositionUpdate?.call(position, bearing);
+    onDriverPositionUpdate?.call(position, bearing, locationData);
 
     dev.log(
-      '📍 Driver position updated: $position (bearing: ${bearing.toStringAsFixed(1)}°)',
+      '📍 Driver position updated: $position (bearing: ${bearing.toStringAsFixed(1)}°, speed: ${locationData.speed} km/h)',
     );
 
     if (progressInfo != null) {
@@ -120,15 +182,14 @@ class RealTimeDriverTrackingService {
     }
   }
 
-  /// Calculate bearing from location data or movement
-  double _calculateBearing(LatLng currentPosition, Map<String, dynamic> data) {
-    // First try to get bearing from socket data
-    final bearingFromData = data['bearing'] as double?;
-    if (bearingFromData != null) {
-      return bearingFromData;
+  double _calculateBearing(
+    gmaps.LatLng currentPosition,
+    DriverLocationData data,
+  ) {
+    if (data.heading != null && data.heading! > 0) {
+      return data.heading!;
     }
 
-    // Calculate bearing from movement if we have previous position
     if (_lastKnownDriverPosition != null) {
       return _calculateBearingBetweenPoints(
         _lastKnownDriverPosition!,
@@ -136,11 +197,10 @@ class RealTimeDriverTrackingService {
       );
     }
 
-    return 0.0; // Default bearing
+    return 0.0;
   }
 
-  /// Calculate bearing between two points
-  double _calculateBearingBetweenPoints(LatLng start, LatLng end) {
+  double _calculateBearingBetweenPoints(gmaps.LatLng start, gmaps.LatLng end) {
     final lat1 = start.latitude * math.pi / 180;
     final lat2 = end.latitude * math.pi / 180;
     final dLng = (end.longitude - start.longitude) * math.pi / 180;
@@ -154,15 +214,11 @@ class RealTimeDriverTrackingService {
     return (bearing + 360) % 360;
   }
 
-  /// Check if route recalculation is needed
-  Future<void> _checkForRouteRecalculation(LatLng driverPosition) async {
+  Future<void> _checkForRouteRecalculation(gmaps.LatLng driverPosition) async {
     if (_currentDestination == null || _currentRoutePoints.isEmpty) {
-      // No route exists, calculate initial route
       await _calculateNewRoute(driverPosition, _currentDestination!);
       return;
     }
-
-    // Check if driver has deviated from route
     final distanceFromRoute = _calculateDistanceFromRoute(driverPosition);
 
     if (distanceFromRoute > _routeDeviationThresholdMeters) {
@@ -170,21 +226,19 @@ class RealTimeDriverTrackingService {
         '🔄 Driver deviated ${distanceFromRoute.toStringAsFixed(1)}m from route',
       );
 
-      // Check cooldown period to prevent spam recalculation
       if (_shouldRecalculateRoute()) {
         await _calculateNewRoute(driverPosition, _currentDestination!);
       }
     }
   }
 
-  /// Calculate distance from current route
-  double _calculateDistanceFromRoute(LatLng driverPosition) {
+  double _calculateDistanceFromRoute(gmaps.LatLng driverPosition) {
     if (_currentRoutePoints.isEmpty) return double.infinity;
 
     double minDistance = double.infinity;
 
     for (int i = 0; i < _currentRoutePoints.length - 1; i++) {
-      final segmentDistance = _distanceToLineSegment(
+      final segmentDistance = distanceToLineSegment(
         driverPosition,
         _currentRoutePoints[i],
         _currentRoutePoints[i + 1],
@@ -199,44 +253,54 @@ class RealTimeDriverTrackingService {
   }
 
   /// Calculate distance from point to line segment
-  double _distanceToLineSegment(
-    LatLng point,
-    LatLng lineStart,
-    LatLng lineEnd,
+  double distanceToLineSegment(
+    gmaps.LatLng point,
+    gmaps.LatLng lineStart,
+    gmaps.LatLng lineEnd,
   ) {
-    // Simplified distance calculation - in production, use proper geospatial calculation
-    final A = point.latitude - lineStart.latitude;
-    final B = point.longitude - lineStart.longitude;
-    final C = lineEnd.latitude - lineStart.latitude;
-    final D = lineEnd.longitude - lineStart.longitude;
+    final geodesy = geo.Geodesy();
 
-    final dot = A * C + B * D;
-    final lenSq = C * C + D * D;
+    // Convert to latlong2 format for geodesy calculations
+    final projectedPoint = geodesy.projectPointOntoGeodesicLine(
+      point.toLatLong2(),
+      lineStart.toLatLong2(),
+      lineEnd.toLatLong2(),
+    );
 
-    if (lenSq == 0) {
-      // Line segment is a point
-      return _calculateDistanceInMeters(point, lineStart);
-    }
+    final distance = geodesy.distanceBetweenTwoGeoPoints(
+      point.toLatLong2(),
+      projectedPoint,
+    );
 
-    final param = dot / lenSq;
+    // Check if projection falls within the line segment
+    final segmentLength = geodesy.distanceBetweenTwoGeoPoints(
+      lineStart.toLatLong2(),
+      lineEnd.toLatLong2(),
+    );
 
-    late LatLng closestPoint;
-    if (param < 0) {
-      closestPoint = lineStart;
-    } else if (param > 1) {
-      closestPoint = lineEnd;
-    } else {
-      closestPoint = LatLng(
-        lineStart.latitude + param * C,
-        lineStart.longitude + param * D,
+    final distanceToProjection = geodesy.distanceBetweenTwoGeoPoints(
+      lineStart.toLatLong2(),
+      projectedPoint,
+    );
+
+    // If projection is outside the segment, return distance to closest endpoint
+    if (distanceToProjection < 0 || distanceToProjection > segmentLength) {
+      final distanceToStart = geodesy.distanceBetweenTwoGeoPoints(
+        point.toLatLong2(),
+        lineStart.toLatLong2(),
       );
+      final distanceToEnd = geodesy.distanceBetweenTwoGeoPoints(
+        point.toLatLong2(),
+        lineEnd.toLatLong2(),
+      );
+      return math.min(distanceToStart.toDouble(), distanceToEnd.toDouble());
     }
 
-    return _calculateDistanceInMeters(point, closestPoint);
+    return distance.toDouble();
   }
 
   /// Calculate distance between two points in meters
-  double _calculateDistanceInMeters(LatLng point1, LatLng point2) {
+  double _calculateDistanceInMeters(gmaps.LatLng point1, gmaps.LatLng point2) {
     const double earthRadius = 6371000; // Earth's radius in meters
 
     final lat1Rad = point1.latitude * math.pi / 180;
@@ -267,7 +331,7 @@ class RealTimeDriverTrackingService {
   }
 
   /// Calculate new route from driver position to destination
-  Future<void> _calculateNewRoute(LatLng from, LatLng to) async {
+  Future<void> _calculateNewRoute(gmaps.LatLng from, gmaps.LatLng to) async {
     try {
       dev.log('🛣️ Calculating new route from $from to $to');
       _lastRouteRecalculation = DateTime.now();
@@ -275,7 +339,11 @@ class RealTimeDriverTrackingService {
       final routeResult = await _routeService.getRoute(from, to);
 
       if (routeResult.isSuccess && routeResult.polyline != null) {
-        _currentRoutePoints = routeResult.polyline!.points;
+        // Convert route points to gmaps.LatLng if they're not already
+        _currentRoutePoints =
+            routeResult.polyline!.points
+                .map((point) => gmaps.LatLng(point.latitude, point.longitude))
+                .toList();
 
         dev.log(
           '✅ New route calculated with ${_currentRoutePoints.length} points',
@@ -295,7 +363,7 @@ class RealTimeDriverTrackingService {
   }
 
   /// Calculate progress along current route
-  RouteProgress? _calculateRouteProgress(LatLng driverPosition) {
+  RouteProgress? _calculateRouteProgress(gmaps.LatLng driverPosition) {
     if (_currentRoutePoints.isEmpty) return null;
 
     // Find closest point on route
@@ -303,7 +371,7 @@ class RealTimeDriverTrackingService {
     int closestSegmentIndex = 0;
 
     for (int i = 0; i < _currentRoutePoints.length - 1; i++) {
-      final distance = _distanceToLineSegment(
+      final distance = distanceToLineSegment(
         driverPosition,
         _currentRoutePoints[i],
         _currentRoutePoints[i + 1],
@@ -355,6 +423,8 @@ class RealTimeDriverTrackingService {
   TrackingStatus getTrackingStatus() {
     return TrackingStatus(
       isTracking: _isTracking,
+      rideId: _currentRideId,
+      driverId: _currentDriverId,
       lastKnownPosition: _lastKnownDriverPosition,
       destination: _currentDestination,
       routePointsCount: _currentRoutePoints.length,
@@ -371,6 +441,8 @@ class RealTimeDriverTrackingService {
     dev.log('🛑 Stopping real-time driver tracking');
 
     _isTracking = false;
+    _currentRideId = null;
+    _currentDriverId = null;
     _lastKnownDriverPosition = null;
     _currentDestination = null;
     _currentRoutePoints.clear();
@@ -392,7 +464,7 @@ class RealTimeDriverTrackingService {
   }
 
   /// Check if driver has reached destination
-  bool hasReachedDestination(LatLng driverPosition) {
+  bool hasReachedDestination(gmaps.LatLng driverPosition) {
     if (_currentDestination == null) return false;
 
     final distanceToDestination = _calculateDistanceInMeters(
@@ -405,16 +477,68 @@ class RealTimeDriverTrackingService {
   }
 
   /// Get current route points
-  List<LatLng> get currentRoutePoints => List.unmodifiable(_currentRoutePoints);
+  List<gmaps.LatLng> get currentRoutePoints =>
+      List.unmodifiable(_currentRoutePoints);
 
   /// Check if tracking is active
   bool get isTracking => _isTracking;
 
   /// Get last known driver position
-  LatLng? get lastKnownDriverPosition => _lastKnownDriverPosition;
+  gmaps.LatLng? get lastKnownDriverPosition => _lastKnownDriverPosition;
 
   /// Get current destination
-  LatLng? get currentDestination => _currentDestination;
+  gmaps.LatLng? get currentDestination => _currentDestination;
+
+  /// Get current ride ID
+  String? get currentRideId => _currentRideId;
+
+  /// Get current driver ID
+  String? get currentDriverId => _currentDriverId;
+}
+
+/// Driver location data from server
+class DriverLocationData {
+  final String? driverId;
+  final String? rideId;
+  final gmaps.LatLng position;
+  final String? status;
+  final bool isMultiStop;
+  final EtaData? eta;
+  final double speed; // km/h
+  final double? heading; // degrees
+  final double accuracy; // meters
+  final DateTime lastUpdate;
+  final bool isSignificantMovement;
+
+  const DriverLocationData({
+    this.driverId,
+    this.rideId,
+    required this.position,
+    this.status,
+    required this.isMultiStop,
+    this.eta,
+    required this.speed,
+    this.heading,
+    required this.accuracy,
+    required this.lastUpdate,
+    required this.isSignificantMovement,
+  });
+
+  @override
+  String toString() {
+    return 'DriverLocationData(driverId: $driverId, rideId: $rideId, position: $position, status: $status, speed: $speed, heading: $heading)';
+  }
+}
+
+/// ETA information
+class EtaData {
+  final double value; // in minutes
+  final String text; // human readable format
+
+  const EtaData({required this.value, required this.text});
+
+  @override
+  String toString() => 'EtaData(value: $value, text: $text)';
 }
 
 /// Route progress information
@@ -458,14 +582,18 @@ class RouteProgress {
 /// Tracking status information
 class TrackingStatus {
   final bool isTracking;
-  final LatLng? lastKnownPosition;
-  final LatLng? destination;
+  final String? rideId;
+  final String? driverId;
+  final gmaps.LatLng? lastKnownPosition;
+  final gmaps.LatLng? destination;
   final int routePointsCount;
   final DateTime? lastUpdateTime;
   final Duration? timeSinceLastUpdate;
 
   const TrackingStatus({
     required this.isTracking,
+    this.rideId,
+    this.driverId,
     this.lastKnownPosition,
     this.destination,
     required this.routePointsCount,

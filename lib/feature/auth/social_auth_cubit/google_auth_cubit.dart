@@ -15,7 +15,6 @@ class GoogleAuthCubit extends Cubit<GoogleAuthState> {
     emit(state.copyWith(formStatus: FormStatus.submitting));
     try {
       final response = await registerRepository.registerOrLoginWithGoogle();
-
       await response.fold(
         (failure) {
           emit(

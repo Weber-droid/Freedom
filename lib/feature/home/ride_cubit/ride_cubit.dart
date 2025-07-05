@@ -1,6 +1,9 @@
+import 'dart:async';
+import 'dart:math' as math;
 import 'dart:developer' as dev;
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
+import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/services/real_time_driver_tracking.dart';
 import 'package:freedom/core/services/push_notification_service/socket_models.dart';
 import 'package:freedom/core/services/route_animation_services.dart';
@@ -37,6 +40,8 @@ class RideCubit extends Cubit<RideState> {
   final RouteService _routeService;
   final RouteAnimationService _animationService;
   final RealTimeDriverTrackingService _realTimeTrackingService;
+
+  // Socket subscriptions
   StreamSubscription<dynamic>? _driverStatusSubscription;
   StreamSubscription<dynamic>? _driverCancelledSubscription;
   StreamSubscription<dynamic>? _driverAcceptedSubscription;
@@ -70,11 +75,11 @@ class RideCubit extends Cubit<RideState> {
   }
 
   Future<void> requestRide(RideRequestModel request) async {
-    log('requestRide from ride cubit: ${request.toJson()}');
+    dev.log('requestRide from ride cubit: ${request.toJson()}');
 
     _currentRideRequest = request;
 
-    log('_currentRideRequest set: ${_currentRideRequest?.toJson()}');
+    dev.log('_currentRideRequest set: ${_currentRideRequest?.toJson()}');
 
     emit(state.copyWith(status: RideRequestStatus.loading, errorMessage: null));
 
@@ -108,6 +113,7 @@ class RideCubit extends Cubit<RideState> {
   }
 
   Future<void> _processSingleDestinationRide(RideRequestModel request) async {
+    emit(state.copyWith(rideRequestModel: request));
     final response = await rideRequestRepository.requestRide(request);
 
     response.fold(
@@ -331,6 +337,7 @@ class RideCubit extends Cubit<RideState> {
         state.copyWith(cancellationStatus: RideCancellationStatus.canceling),
       );
       _stopSearchTimer();
+      _stopRealTimeTracking(); // Stop tracking when canceling
 
       if (state.currentRideId == null) {
         throw Exception('No active ride to cancel');
@@ -372,8 +379,10 @@ class RideCubit extends Cubit<RideState> {
   }
 
   Future<void> _displayRideRoute() async {
-    log('_displayRideRoute(): Displaying route for accepted ride');
-    log('_displayRideRoute(): CURRENT RIDE ${_currentRideRequest?.toJson()}');
+    dev.log('_displayRideRoute(): Displaying route for accepted ride');
+    dev.log(
+      '_displayRideRoute(): CURRENT RIDE ${_currentRideRequest?.toJson()}',
+    );
 
     if (_currentRideRequest == null) {
       dev.log('No current ride request to display route for');
@@ -407,8 +416,10 @@ class RideCubit extends Cubit<RideState> {
   }
 
   Future<void> _displayStaticRideRoute() async {
-    log('_displayStaticRideRoute(): Displaying static route for accepted ride');
-    log(
+    dev.log(
+      '_displayStaticRideRoute(): Displaying static route for accepted ride',
+    );
+    dev.log(
       '_displayStaticRideRoute(): CURRENT RIDE ${_currentRideRequest?.toJson()}',
     );
 
@@ -577,14 +588,16 @@ class RideCubit extends Cubit<RideState> {
     RideRequestModel request,
     LatLng pickup,
   ) async {
-    log('_displaySingleDestinationRoute(): Displaying route for accepted ride');
+    dev.log(
+      '_displaySingleDestinationRoute(): Displaying route for accepted ride',
+    );
     final destination = LatLng(
       request.dropoffLocation.latitude,
       request.dropoffLocation.longitude,
     );
 
     final routeResult = await _routeService.getRoute(pickup, destination);
-    log('routeResult: ${routeResult.interpolatedPoints?.length}');
+    dev.log('routeResult: ${routeResult.interpolatedPoints?.length}');
 
     if (routeResult.isSuccess) {
       final routeMarkers = _routeService.createMarkers(
@@ -758,8 +771,7 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
-  bool get isRealTimeTrackingActiveGetter =>
-      state.isRealTimeTrackingActive;
+  bool get isRealTimeTrackingActiveGetter => state.isRealTimeTrackingActive;
   String? get trackingStatusMessage => state.trackingStatusMessage;
   bool get isRouteRecalculated => state.routeRecalculated;
 
@@ -834,22 +846,23 @@ class RideCubit extends Cubit<RideState> {
           rideInProgress: data.status == 'in_progress',
         ),
       );
-
-      // Start real-time tracking instead of simulation
+      // Start real-time tracking
       await _startRealTimeTracking();
     });
 
     _driverArrivedSubscription = socketService.onDriverArrived.listen((data) {
       dev.log('🚗 Driver arrived at pickup location');
-      _stopRealTimeTracking();
+      // Don't stop tracking here - driver will start the ride next
       emit(state.copyWith(driverArrived: data, driverHasArrived: true));
     });
 
-    // UPDATED: Listen for real-time driver position updates from socket
+    // CRITICAL: Listen for real-time driver position updates from socket
     _driverPositionSubscription = socketService.onDriverLocation.listen((
       locationData,
     ) {
-      _handleRealTimeDriverPosition(locationData);
+      log('🚗 Driver location updated: ${locationData.entries}');
+      // Process location updates through the tracking service
+      _realTimeTrackingService.processDriverLocation(locationData);
     });
 
     _driverCancelledSubscription = socketService.onDriverCancelled.listen((
@@ -879,37 +892,37 @@ class RideCubit extends Cubit<RideState> {
   }
 
   Future<void> _startRealTimeTracking() async {
-    if (_currentRideRequest == null) {
-      dev.log('❌ No ride request available for tracking');
-      return;
-    }
-
     try {
+      if (_currentRideRequest == null) {
+        return;
+      }
+
       final destination = LatLng(
         _currentRideRequest!.dropoffLocation.latitude,
         _currentRideRequest!.dropoffLocation.longitude,
       );
 
-      dev.log('🔴 Starting real-time tracking to destination: $destination');
+      final rideId = state.driverAccepted?.rideId ?? '';
+      final driverId = state.driverAccepted?.driverId ?? '';
+
+      dev.log(
+        'Starting real-time tracking for driver $driverId and ride $rideId',
+      );
 
       _realTimeTrackingService.startTracking(
+        rideId: rideId,
+        driverId: state.driverAccepted?.driverId ?? '',
         destination: destination,
-        onPositionUpdate: (position, bearing) {
-          _updateDriverMarkerPositionRealTime(position, bearing);
-        },
-        onRouteUpdated: (newRoute) {
-          _updateRouteOnMap(newRoute);
-        },
-        onStatusUpdate: (status) {
-          dev.log('📊 Tracking status: $status');
-          _updateTrackingStatus(status);
-        },
+        onPositionUpdate: _updateDriverMarkerPositionRealTime,
+        onRouteUpdated: _updateRouteOnMap,
+        onStatusUpdate: _updateTrackingStatus,
       );
 
       emit(
         state.copyWith(
           shouldUpdateCamera: false,
           isRealTimeTrackingActive: true,
+          trackingStatusMessage: 'Real-time tracking started',
         ),
       );
     } catch (e) {
@@ -918,56 +931,20 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
-  void _handleRealTimeDriverPosition(Map<String, dynamic> locationData) {
-    if (!state.rideInProgress) {
-      dev.log('⚠️ Ignoring location update - ride not in progress');
-      return;
-    }
-
-    try {
-      dev.log('📍 Processing real-time driver location: $locationData');
-
-      _realTimeTrackingService.processDriverLocation(locationData);
-
-      // Update state with raw location data for debugging/info
-      final latitude = locationData['latitude'] as double?;
-      final longitude = locationData['longitude'] as double?;
-      final timestamp = locationData['timestamp'] as String?;
-      final speed = locationData['speed'] as double? ?? 0.0;
-
-      if (latitude != null && longitude != null) {
-        final position = LatLng(latitude, longitude);
-
-        emit(
-          state.copyWith(
-            currentDriverPosition: position,
-            lastPositionUpdate:
-                timestamp != null
-                    ? DateTime.tryParse(timestamp)
-                    : DateTime.now(),
-            currentSpeed: speed,
-          ),
-        );
-
-        // Check if driver has reached destination
-        if (_realTimeTrackingService.hasReachedDestination(position)) {
-          dev.log('🏁 Driver has reached destination');
-          _handleDriverReachedDestination();
-        }
-      }
-    } catch (e) {
-      dev.log('❌ Error handling real-time driver position: $e');
-    }
-  }
-
-  // NEW: Update driver marker position from real-time tracking
-  void _updateDriverMarkerPositionRealTime(LatLng position, double bearing) {
+  // UPDATED: Process driver location updates from the tracking service
+  Future<void> _updateDriverMarkerPositionRealTime(
+    LatLng position,
+    double bearing,
+    DriverLocationData locationData,
+  ) async {
     try {
       final updatedMarkers = Map<MarkerId, Marker>.from(state.routeMarkers);
       const driverMarkerId = MarkerId('driver');
 
       if (!updatedMarkers.containsKey(driverMarkerId)) {
         dev.log('❌ Driver marker not found during real-time update');
+        // Create driver marker if it doesn't exist
+        await _ensureUniqueDriverMarker(position);
         return;
       }
 
@@ -979,10 +956,13 @@ class RideCubit extends Cubit<RideState> {
 
       updatedMarkers[driverMarkerId] = updatedMarker;
 
+      // Update state with new position and tracking data
       emit(
         state.copyWith(
           routeMarkers: updatedMarkers,
           currentDriverPosition: position,
+          lastPositionUpdate: locationData.lastUpdate,
+          currentSpeed: locationData.speed,
           shouldUpdateCamera: false, // Keep camera static during tracking
         ),
       );
@@ -990,15 +970,21 @@ class RideCubit extends Cubit<RideState> {
       // Log periodically to avoid spam
       if (DateTime.now().millisecondsSinceEpoch % 10000 < 200) {
         dev.log(
-          '📍 Real-time marker update: $position (${bearing.toStringAsFixed(1)}°)',
+          '📍 Real-time marker update: $position (${bearing.toStringAsFixed(1)}°, ${locationData.speed}km/h)',
         );
+      }
+
+      // Check if driver has reached destination
+      if (_realTimeTrackingService.hasReachedDestination(position)) {
+        dev.log('🏁 Driver has reached destination');
+        _handleDriverReachedDestination();
       }
     } catch (e) {
       dev.log('❌ Error updating driver marker: $e');
     }
   }
 
-  // NEW: Update route on map when driver changes path
+  // UPDATED: Update route on map when driver changes path
   void _updateRouteOnMap(List<LatLng> newRoutePoints) {
     try {
       if (state.routePolylines.isEmpty) {
@@ -1018,13 +1004,17 @@ class RideCubit extends Cubit<RideState> {
         state.copyWith(
           routePolylines: {updatedPolyline},
           routeRecalculated: true,
+          trackingStatusMessage: 'Route updated - driver changed path',
         ),
       );
 
       dev.log('✅ Route updated on map');
 
+      // Show notification to user about route change
+      _showRouteChangeNotification();
+
       // Reset the flag after a short delay
-      Future.delayed(const Duration(seconds: 2), () {
+      Future.delayed(const Duration(seconds: 3), () {
         if (!isClosed) {
           emit(state.copyWith(routeRecalculated: false));
         }
@@ -1034,19 +1024,37 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
-  // NEW: Update tracking status
-  void _updateTrackingStatus(String status) {
-    emit(state.copyWith(trackingStatusMessage: status));
+  // NEW: Show notification when route changes
+  void _showRouteChangeNotification() {
+    emit(
+      state.copyWith(
+        trackingStatusMessage: 'Driver took a different route. ETA updated.',
+      ),
+    );
 
-    // Clear status message after a few seconds
-    Future.delayed(const Duration(seconds: 3), () {
+    // Clear notification after 5 seconds
+    Future.delayed(const Duration(seconds: 5), () {
       if (!isClosed) {
         emit(state.copyWith(trackingStatusMessage: null));
       }
     });
   }
 
-  // NEW: Handle when driver reaches destination
+  // UPDATED: Update tracking status with better user feedback
+  void _updateTrackingStatus(String status) {
+    dev.log('📊 Tracking status: $status');
+
+    emit(state.copyWith(trackingStatusMessage: status));
+
+    // Clear status message after a few seconds
+    Future.delayed(const Duration(seconds: 4), () {
+      if (!isClosed) {
+        emit(state.copyWith(trackingStatusMessage: null));
+      }
+    });
+  }
+
+  // UPDATED: Handle when driver reaches destination
   void _handleDriverReachedDestination() {
     dev.log('🏁 Driver reached destination - ride completing');
 
@@ -1062,7 +1070,7 @@ class RideCubit extends Cubit<RideState> {
     // The ride completion will be handled by the socket event
   }
 
-  // NEW: Stop real-time tracking
+  // UPDATED: Stop real-time tracking
   void _stopRealTimeTracking() {
     dev.log('🛑 Stopping real-time tracking');
 
@@ -1072,27 +1080,72 @@ class RideCubit extends Cubit<RideState> {
       state.copyWith(
         isRealTimeTrackingActive: false,
         trackingStatusMessage: null,
+        currentSpeed: 0.0,
       ),
     );
   }
 
-  // NEW: Get current route progress information
+  // UPDATED: Get current route progress information
   RouteProgress? getCurrentRouteProgress() {
     if (!_realTimeTrackingService.isTracking ||
         _realTimeTrackingService.lastKnownDriverPosition == null) {
       return null;
     }
 
+    // Get progress from tracking service
+    final driverPosition = _realTimeTrackingService.lastKnownDriverPosition!;
     // This would require adding a getRouteProgress method to the tracking service
-    return null; // Placeholder
+    // For now, calculate basic progress
+    if (_realTimeTrackingService.currentDestination != null) {
+      final distanceToDestination = _calculateDistanceInMeters(
+        driverPosition,
+        _realTimeTrackingService.currentDestination!,
+      );
+
+      // Simple progress calculation - you might want to improve this
+      final totalDistance = 1000.0; // You'd get this from the route
+      final progress = 1.0 - (distanceToDestination / totalDistance);
+
+      return RouteProgress(
+        progress: progress.clamp(0.0, 1.0),
+        distanceCovered: totalDistance * progress,
+        remainingDistance: distanceToDestination,
+        totalDistance: totalDistance,
+        estimatedTimeRemaining: Duration(
+          minutes: (distanceToDestination / 500).round(), // Rough ETA
+        ),
+      );
+    }
+
+    return null;
   }
 
-  // NEW: Get tracking status
+  // Helper method for distance calculation
+  double _calculateDistanceInMeters(LatLng point1, LatLng point2) {
+    const double earthRadius = 6371000; // Earth's radius in meters
+
+    final lat1Rad = point1.latitude * math.pi / 180;
+    final lat2Rad = point2.latitude * math.pi / 180;
+    final dLat = (point2.latitude - point1.latitude) * math.pi / 180;
+    final dLng = (point2.longitude - point1.longitude) * math.pi / 180;
+
+    final a =
+        math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(lat1Rad) *
+            math.cos(lat2Rad) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
+
+    return earthRadius * c;
+  }
+
+  // UPDATED: Get tracking status
   TrackingStatus getTrackingStatus() {
     return _realTimeTrackingService.getTrackingStatus();
   }
 
-  // NEW: Manual route recalculation (for user-triggered updates)
+  // UPDATED: Manual route recalculation (for user-triggered updates)
   Future<void> forceRouteRecalculation() async {
     if (!_realTimeTrackingService.isTracking) {
       dev.log('❌ Cannot recalculate route - tracking not active');
@@ -1106,6 +1159,8 @@ class RideCubit extends Cubit<RideState> {
       dev.log('🔄 Force recalculating route');
 
       try {
+        emit(state.copyWith(trackingStatusMessage: 'Recalculating route...'));
+
         final routeResult = await _routeService.getRoute(
           driverPosition,
           destination,
@@ -1113,7 +1168,7 @@ class RideCubit extends Cubit<RideState> {
 
         if (routeResult.isSuccess && routeResult.polyline != null) {
           _updateRouteOnMap(routeResult.polyline!.points);
-          _updateTrackingStatus('Route recalculated');
+          _updateTrackingStatus('Route recalculated successfully');
         } else {
           _updateTrackingStatus('Route recalculation failed');
         }
@@ -1124,19 +1179,40 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
+  // UPDATED: Better real-time tracking setup
   void _setupRealTimeDriverTracking() {
     dev.log('🔴 Setting up real-time driver tracking');
-    emit(state.copyWith(shouldUpdateCamera: false));
+    emit(
+      state.copyWith(
+        shouldUpdateCamera: false,
+        trackingStatusMessage: 'Preparing real-time tracking...',
+      ),
+    );
     dev.log('📍 Ready to receive real-time driver positions');
   }
 
+  // UPDATED: Enhanced tracking status getters
   bool get isRealTimeTrackingActive =>
-      state.rideInProgress && state.currentDriverPosition != null;
+      state.rideInProgress &&
+      state.isRealTimeTrackingActive &&
+      _realTimeTrackingService.isTracking;
 
   Duration? get timeSinceLastUpdate {
     final lastUpdate = state.lastPositionUpdate;
     if (lastUpdate == null) return null;
     return DateTime.now().difference(lastUpdate);
+  }
+
+  // UPDATED: Get current ETA based on real tracking data
+  Duration? get estimatedTimeToDestination {
+    final progress = getCurrentRouteProgress();
+    return progress?.estimatedTimeRemaining;
+  }
+
+  // UPDATED: Get current distance to destination
+  double? get distanceToDestination {
+    final progress = getCurrentRouteProgress();
+    return progress?.remainingDistance;
   }
 
   Future<void> checkRideStatus(String rideId) async {
@@ -1187,6 +1263,7 @@ class RideCubit extends Cubit<RideState> {
               ),
             );
             _setupRealTimeDriverTracking();
+            await _startRealTimeTracking(); // Start tracking if ride is in progress
           } else if (currentStatus == 'completed') {
             _clearRouteDisplay();
             emit(
@@ -1229,6 +1306,8 @@ class RideCubit extends Cubit<RideState> {
     if (!state.routeDisplayed) return null;
 
     var totalDistance = 0.0;
+    Duration? estimatedDuration;
+
     if (state.routeSegments != null) {
       for (final segment in state.routeSegments!) {
         totalDistance += _routeService.calculateRouteDistance(
@@ -1241,13 +1320,20 @@ class RideCubit extends Cubit<RideState> {
       );
     }
 
+    // Use real-time ETA if available, otherwise calculate estimate
+    if (isRealTimeTrackingActive) {
+      estimatedDuration = estimatedTimeToDestination;
+    }
+
+    estimatedDuration ??= Duration(
+      minutes: (totalDistance / 1000 / 30 * 60).round(),
+    );
+
     return RouteInfo(
       totalDistance: totalDistance,
       isMultiDestination: state.isMultiDestination,
       segmentCount: state.routeSegments?.length ?? 1,
-      estimatedDuration: Duration(
-        minutes: (totalDistance / 1000 / 30 * 60).round(),
-      ),
+      estimatedDuration: estimatedDuration,
     );
   }
 
@@ -1274,6 +1360,10 @@ class RideCubit extends Cubit<RideState> {
         currentDriverPosition: null,
         driverHasArrived: false,
         rideInProgress: false,
+        isRealTimeTrackingActive: false,
+        trackingStatusMessage: null,
+        routeRecalculated: false,
+        currentSpeed: 0.0,
       ),
     );
   }
@@ -1291,6 +1381,7 @@ class RideCubit extends Cubit<RideState> {
 
     _timer?.cancel();
     _animationService.dispose();
+    _stopRealTimeTracking(); // Clean up tracking service
     return super.close();
   }
 }

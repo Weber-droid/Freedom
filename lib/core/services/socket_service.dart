@@ -147,12 +147,13 @@ class SocketService {
 
         if (mapData['status'] == 'rejected') {
           getIt<PushNotificationService>().showRideStatusNotification(
-            status: 'completed',
+            status: 'Rejected',
             message: 'Your ride has been completed.',
           );
           _driverRejectedController.add(DriverRejected.fromJson(mapData));
         }
 
+        log('ride_status_updated: $mapData');
         if (mapData['status'] == 'completed') {
           getIt<PushNotificationService>().showRideStatusNotification(
             status: 'completed',

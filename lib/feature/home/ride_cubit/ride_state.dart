@@ -49,6 +49,7 @@ class RideState extends Equatable {
     this.routeProgress,
     this.driverOffRoute = false,
     this.lastRouteRecalculation,
+    this.rideRequestModel,
   });
   final RideRequestStatus status;
   final RequestRideResponse? rideResponse;
@@ -97,6 +98,7 @@ class RideState extends Equatable {
   final double? routeProgress;
   final bool driverOffRoute;
   final DateTime? lastRouteRecalculation;
+  final RideRequestModel? rideRequestModel;
   RideState copyWith({
     RideRequestStatus? status,
     String? errorMessage,
@@ -145,6 +147,7 @@ class RideState extends Equatable {
     double? routeProgress,
     bool? driverOffRoute,
     DateTime? lastRouteRecalculation,
+    RideRequestModel? rideRequestModel,
   }) {
     return RideState(
       status: status ?? this.status,
@@ -192,12 +195,16 @@ class RideState extends Equatable {
       currentSpeed: currentSpeed ?? this.currentSpeed,
       estimatedDistance: estimatedDistance ?? this.estimatedDistance,
       estimatedTimeArrival: estimatedTimeArrival ?? this.estimatedTimeArrival,
-      isRealTimeTrackingActive: isRealTimeTrackingActive ?? this.isRealTimeTrackingActive,
-      trackingStatusMessage: trackingStatusMessage ?? this.trackingStatusMessage,
+      isRealTimeTrackingActive:
+          isRealTimeTrackingActive ?? this.isRealTimeTrackingActive,
+      trackingStatusMessage:
+          trackingStatusMessage ?? this.trackingStatusMessage,
       routeRecalculated: routeRecalculated ?? this.routeRecalculated,
       routeProgress: routeProgress ?? this.routeProgress,
       driverOffRoute: driverOffRoute ?? this.driverOffRoute,
-      lastRouteRecalculation: lastRouteRecalculation ?? this.lastRouteRecalculation,
+      lastRouteRecalculation:
+          lastRouteRecalculation ?? this.lastRouteRecalculation,
+      rideRequestModel: rideRequestModel ?? this.rideRequestModel,
     );
   }
 
@@ -250,5 +257,6 @@ class RideState extends Equatable {
     routeProgress,
     driverOffRoute,
     lastRouteRecalculation,
+    rideRequestModel,
   ];
 }
