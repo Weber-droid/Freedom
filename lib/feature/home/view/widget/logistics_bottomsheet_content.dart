@@ -45,8 +45,8 @@ class _LogisticsBottomSheetContentState
   final FocusNode _destinationNode = FocusNode();
   List<FocusNode> _destinationNodes = [];
 
-  // Map to store controller listeners so we can remove them later
   final Map<TextEditingController, VoidCallback> _destinationListeners = {};
+  final _paymentMethods = <String>['cash', 'card'];
 
   @override
   void initState() {
@@ -650,6 +650,7 @@ class _LogisticsBottomSheetContentState
                           ),
                         ),
                         const VSpace(25),
+                        ChoosePayMentMethod(),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 13),
                           child: FreedomButton(
@@ -930,6 +931,8 @@ class _LogisticsBottomSheetContentState
     } else {
       destinations = [widget.itemDestinationController.text];
     }
+
+    
 
     final model = DeliveryModel.withMultipleDestinations(
       pickupLocation: widget.pickUpController.text,

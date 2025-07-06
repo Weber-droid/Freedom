@@ -113,9 +113,13 @@ class SocketService {
       }
     });
 
+    _socket!.on('delivery_status_updated', (data) {
+      log('delivery_status_updated: $data');
+    });
+
     // Listen for the driver_accept_ride event
-    _socket!.on('ride_status_updated', (data) {
-      log('ride_status_updated: $data');
+    _socket!.on('delivery_status_updated', (data) {
+      log('join_delivery: $data');
       try {
         final mapData = data as Map<String, dynamic>;
         AppPreferences.setRideId(mapData['rideId']);

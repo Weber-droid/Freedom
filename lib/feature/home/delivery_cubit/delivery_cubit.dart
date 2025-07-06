@@ -209,7 +209,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     });
   }
 
-  // In your searchLocations method of DeliveryCubit
   Future<void> searchLocations(String query, {required bool isPickup}) async {
     try {
       log(
@@ -219,16 +218,11 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       final predictions = await locationRepository.getPlacePredictions(query);
 
       log('Found ${predictions.length} predictions for $query');
-
-      // Update the state based on whether there are any predictions
       emit(
         state.copyWith(
-          // Only update the appropriate predictions list
           pickupPredictions: isPickup ? predictions : state.pickupPredictions,
           destinationPredictions:
               isPickup ? state.destinationPredictions : predictions,
-
-          // Show predictions panels only if we have results and maintain the current active index
           showPickupPredictions:
               isPickup ? (predictions.isNotEmpty) : state.showPickupPredictions,
           showDestinationPredictions:
@@ -260,15 +254,8 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     FocusNode? nextFocusNode,
   }) {
     log('Selecting location: ${prediction.description} (isPickup: $isPickup)');
-
-    // Prevent search triggering by removing listener temporarily
     onBeforeTextChange();
-
-    // Update text
     controller.text = prediction.description;
-
-    // Clear predictions and prediction panels immediately
-    // Also ensure loading indicator is hidden
     emit(
       state.copyWith(
         showPickupPredictions: false,
@@ -279,12 +266,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         islocationSelected: true,
       ),
     );
-
-    // Re-add listener after updating state
     onAfterTextChange();
-
-    // Only unfocus the current field without auto-focusing the next one
-    // This removes the auto-focus functionality
     if (currentFocusNode != null) {
       currentFocusNode.unfocus();
     }
@@ -327,7 +309,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     VoidCallback onBeforeTextChange,
     VoidCallback onAfterTextChange,
   ) async {
-    // First, immediately clear the loading state and prediction panels
     emit(
       state.copyWith(
         isLoadingPredictions: false,
@@ -360,8 +341,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     log(
       'Handling location selection for destination #${destinationIndex}: ${prediction.mainText}',
     );
-
-    // First, immediately clear the loading state and prediction panels
     emit(
       state.copyWith(
         isLoadingPredictions: false,
@@ -371,8 +350,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         showRecentDestinationLocations: false,
       ),
     );
-
-    // Then select the location
     selectLocationAddress(
       prediction,
       isPickup: false,
@@ -497,25 +474,13 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
   void setActiveDestinationIndex(int index) {
     log('Setting active destination index to $index');
-
-    // Update the active index and ensure the appropriate flag is set
     emit(
       state.copyWith(
         activeDestinationIndex: index,
-        isDestinationLocation: true, // We're now working with a destination
-        isPickUpLocation: false, // Not pickup anymore
+        isDestinationLocation: true,
+        isPickUpLocation: false,
       ),
     );
-  }
-
-  void _addToRecentLocations(Location location) {
-    // Add to recent location via repository
-    try {
-      locationRepository.saveLocation(location);
-      fetchRecentLocations(); // Refresh the list
-    } catch (e) {
-      log('Error saving location: $e');
-    }
   }
 
   @override

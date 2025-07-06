@@ -9,14 +9,14 @@ import 'package:freedom/feature/wallet/remote_source/payment_methods.dart';
 import 'package:freedom/feature/wallet/remote_source/remote_data_source.dart';
 import 'package:freedom/feature/wallet/remote_source/remote_data_source_impl.dart';
 
-class Repository {
-  factory Repository() => _instance;
+class WalletRepository {
+  factory WalletRepository() => _instance;
 
-  Repository._internal() {
+  WalletRepository._internal() {
     _remoteDataSource = RemoteDataSourceImpl();
   }
 
-  static final Repository _instance = Repository._internal();
+  static final WalletRepository _instance = WalletRepository._internal();
   late final RemoteDataSource _remoteDataSource;
 
   Future<List<PaymentMethod>> getPaymentMethods() async {

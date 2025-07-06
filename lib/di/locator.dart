@@ -32,6 +32,8 @@ import 'package:freedom/feature/message_driver/cubit/in_app_message_cubit.dart';
 import 'package:freedom/feature/message_driver/cubit/message_driver_cubit.dart';
 import 'package:freedom/feature/message_driver/remote_data_source/message_remote_data_source.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
+import 'package:freedom/feature/wallet/cubit/wallet_cubit.dart';
+import 'package:freedom/feature/wallet/repository/repository.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

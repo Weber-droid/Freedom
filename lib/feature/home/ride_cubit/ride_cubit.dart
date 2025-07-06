@@ -1066,11 +1066,8 @@ class RideCubit extends Cubit<RideState> {
         trackingStatusMessage: 'Driver has arrived at destination',
       ),
     );
-
-    // The ride completion will be handled by the socket event
   }
 
-  // UPDATED: Stop real-time tracking
   void _stopRealTimeTracking() {
     dev.log('🛑 Stopping real-time tracking');
 
@@ -1122,7 +1119,7 @@ class RideCubit extends Cubit<RideState> {
 
   // Helper method for distance calculation
   double _calculateDistanceInMeters(LatLng point1, LatLng point2) {
-    const double earthRadius = 6371000; // Earth's radius in meters
+    const double earthRadius = 6371000;
 
     final lat1Rad = point1.latitude * math.pi / 180;
     final lat2Rad = point2.latitude * math.pi / 180;
@@ -1140,7 +1137,6 @@ class RideCubit extends Cubit<RideState> {
     return earthRadius * c;
   }
 
-  // UPDATED: Get tracking status
   TrackingStatus getTrackingStatus() {
     return _realTimeTrackingService.getTrackingStatus();
   }
@@ -1191,7 +1187,6 @@ class RideCubit extends Cubit<RideState> {
     dev.log('📍 Ready to receive real-time driver positions');
   }
 
-  // UPDATED: Enhanced tracking status getters
   bool get isRealTimeTrackingActive =>
       state.rideInProgress &&
       state.isRealTimeTrackingActive &&

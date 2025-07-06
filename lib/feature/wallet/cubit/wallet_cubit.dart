@@ -9,7 +9,7 @@ part 'wallet_state.dart';
 
 class WalletCubit extends Cubit<WalletState> {
   WalletCubit(this._repository) : super(WalletInitial());
-  final Repository _repository;
+  final WalletRepository _repository;
 
   Future<void> loadWallet() async {
     emit(WalletLoading());
