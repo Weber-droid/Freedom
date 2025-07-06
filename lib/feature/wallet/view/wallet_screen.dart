@@ -1,5 +1,6 @@
 import 'package:dotted_border/dotted_border.dart';
 import 'package:flutter/material.dart';
+import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_otp_screen.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:freedom/feature/wallet/cubit/wallet_cubit.dart';
@@ -19,7 +20,7 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<WalletCubit>().loadWallet();
+    getIt<WalletCubit>().loadWallet();
   }
 
   @override

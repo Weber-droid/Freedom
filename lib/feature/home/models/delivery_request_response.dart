@@ -42,7 +42,7 @@ class DeliveryData {
   factory DeliveryData.fromJson(Map<String, dynamic> json) {
     return DeliveryData(
       deliveryId: json['deliveryId'] as String,
-      fare: json['fare'] as int,
+      fare: (json['fare'] as num).toDouble(),
       currency: json['currency'] as String,
       estimatedDistance: EstimatedDistanceAndTimer.fromJson(
         json['estimatedDistance'] as Map<String, dynamic>,
@@ -61,7 +61,7 @@ class DeliveryData {
     );
   }
   final String deliveryId;
-  final int fare;
+  final double fare;
   final String currency;
   final EstimatedDistanceAndTimer estimatedDistance;
   final EstimatedDistanceAndTimer estimatedDuration;
@@ -117,14 +117,14 @@ class FareBreakdown {
 
   factory FareBreakdown.fromJson(Map<String, dynamic> json) {
     return FareBreakdown(
-      baseFare: json['baseFare'] as int,
-      distanceFare: json['distanceFare'] as double,
-      timeFare: json['timeFare'] as double,
-      packageSizeMultiplier: json['packageSizeMultiplier'] as double,
-      surgeMultiplier: json['surgeMultiplier'] as double,
+      baseFare: (json['baseFare'] as num).toDouble(),
+      distanceFare: (json['distanceFare'] as num).toDouble(),
+      timeFare: (json['timeFare'] as num).toDouble(),
+      packageSizeMultiplier: (json['packageSizeMultiplier'] as num).toDouble(),
+      surgeMultiplier: (json['surgeMultiplier'] as num).toDouble(),
     );
   }
-  final int baseFare;
+  final double baseFare;
   final double distanceFare;
   final double timeFare;
   final double packageSizeMultiplier;

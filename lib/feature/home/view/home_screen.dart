@@ -18,6 +18,7 @@ import 'package:freedom/feature/home/widgets/custom_drawer.dart';
 import 'package:freedom/feature/home/widgets/stacked_bottom_sheet_component.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
+import 'package:freedom/feature/wallet/cubit/wallet_cubit.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:freedom/feature/home/view/widget/rider_search.dart' as dlv;
 
@@ -61,12 +62,17 @@ class _HomeScreenState extends State<HomeScreen> {
         userName: user.firstName ?? '',
       );
       _checkRideStatus();
+      _getPaymentMethods();
     });
   }
 
   Future<void> _checkRideStatus() async {
     final id = await AppPreferences.getRideId();
     context.read<RideCubit>().checkRideStatus(id);
+  }
+
+  Future<void> _getPaymentMethods() async {
+    await context.read<WalletCubit>().loadWallet();
   }
 
   Future<void> _connectToSocket() async {

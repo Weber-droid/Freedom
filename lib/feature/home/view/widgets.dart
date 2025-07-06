@@ -1,13 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:freedom/core/services/push_notification_service/push_nofication_service.dart';
-import 'package:freedom/core/services/socket_service.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
-import 'package:freedom/feature/home/delivery_cubit/delivery_cubit.dart';
-import 'package:freedom/feature/home/models/delivery_model.dart';
-import 'package:freedom/feature/home/repository/models/location.dart';
-import 'package:freedom/feature/home/repository/models/place_prediction.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
 import 'package:freedom/feature/home/view/widget/cancel_ride_sheet.dart';
 import 'package:freedom/feature/home/view/widget/logistics_bottomsheet_content.dart';
@@ -18,9 +12,10 @@ import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
 import 'package:freedom/feature/message_driver/view/message_driver_screen.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
+import 'package:freedom/feature/wallet/cubit/wallet_cubit.dart';
+import 'package:freedom/feature/wallet/remote_source/payment_methods.dart';
 import 'package:freedom/shared/responsive_helpers.dart';
 import 'package:freedom/shared/widgets/custom_dropdown_button.dart';
-import 'package:freedom/shared/widgets/text_field_factory.dart';
 import 'package:gradient_borders/box_borders/gradient_box_border.dart';
 
 class ChoosePayMentMethod extends StatefulWidget {
@@ -37,9 +32,22 @@ class ChoosePayMentMethodState extends State<ChoosePayMentMethod> {
 
   @override
   Widget build(BuildContext context) {
+    final logWallets = context.select<WalletCubit, List<PaymentMethod>>((
+      WalletCubit c,
+    ) {
+      final state = c.state;
+      if (state is WalletLoaded) {
+        return state.paymentMethods;
+      }
+      return [];
+    });
+
+    log('logWallets: ${logWallets.map((e) => e.toJson()).toList()}');
     return Container(
-      width: 359,
-      height: 70,
+      width: double.infinity,
+      height: MediaQuery.of(context).size.height * 0.08,
+      margin: EdgeInsets.symmetric(horizontal: 2),
+      padding: EdgeInsets.only(left: 5),
       decoration: ShapeDecoration(
         color: const Color(0xA3FFFCF8),
         shape: RoundedRectangleBorder(
@@ -91,6 +99,14 @@ class ChoosePayMentMethodState extends State<ChoosePayMentMethod> {
                   );
                 }).toList(),
             onChanged: (val) {
+              if (val == 'card' && logWallets.isEmpty) {
+                context.showToast(
+                  message: 'Go to profile to add a card first',
+                  type: ToastType.error,
+                  position: ToastPosition.top,
+                );
+                return;
+              }
               if (val != null) {
                 context.read<RideCubit>().setPayMentMethod(val);
               }
@@ -159,7 +175,7 @@ class _LocationSearchTextFieldState extends State<LocationSearchTextField> {
         ),
         hintText: 'Your Destination, Send item',
         hintStyle: GoogleFonts.poppins(
-          color: Colors.black.withOpacity(0.3499999940395355),
+          color: Colors.black.withValues(alpha: 0.34),
           fontSize: 10.89,
           fontWeight: FontWeight.w500,
         ),

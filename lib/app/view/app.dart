@@ -14,12 +14,10 @@ import 'package:freedom/feature/emergency/cubit/emergency_cubit.dart';
 import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/delivery_cubit/delivery_cubit.dart';
-import 'package:freedom/feature/home/repository/ride_request_repository.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
 import 'package:freedom/feature/main_activity/cubit/main_activity_cubit.dart';
 import 'package:freedom/feature/message_driver/cache/in_app_message_cache.dart';
 import 'package:freedom/feature/message_driver/cubit/in_app_message_cubit.dart';
-import 'package:freedom/feature/message_driver/cubit/message_driver_cubit.dart';
 import 'package:freedom/feature/message_driver/models/message_models.dart';
 import 'package:freedom/feature/onboarding/cubit/onboarding_cubit.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
@@ -74,7 +72,7 @@ class App extends StatelessWidget {
           BlocProvider(
             create: (context) => CallCubit(callService: callService),
           ),
-          BlocProvider(create: (context) => WalletCubit(Repository())),
+          BlocProvider(create: (context) => WalletCubit(WalletRepository())),
           BlocProvider(
             create: (context) => GoogleAuthCubit(RegisterRepository()),
           ),
