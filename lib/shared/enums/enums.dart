@@ -21,12 +21,15 @@ enum RideRequestStatus {
   completed,
 }
 
-
 enum RideCancellationStatus { initial, canceling, cancelled, error }
+
+enum DeliveryCancellationStatus { initial, canceling, cancelled, error }
 
 enum RequestRidesStatus { initial, loading, success, error }
 
 enum SocketStatus { initial, connecting, connected, disconnected }
+
+enum DeliveryStatus { initial, loading, success, failure }
 
 enum LocationServiceStatus {
   initial,
@@ -35,7 +38,7 @@ enum LocationServiceStatus {
   permissionDenied,
   permissionGranted,
   serviceDisabled,
-  error
+  error,
 }
 
 enum RideStatus {
@@ -46,7 +49,7 @@ enum RideStatus {
   inProgress,
   completed,
   cancelled,
-  error
+  error,
 }
 
 extension RideStatusExtension on RideStatus {

@@ -20,11 +20,11 @@ class Endpoints {
   static const String verify = 'auth/verify';
   static const String profile = 'getMyProfile';
   static const String preference = 'preference';
-  static const String status = 'ride/request';
+  static const String rideStatus = 'ride/';
+  static const String trackDelivery= 'ride/';
   static const String getRides = 'ride/rideHistory';
   static const String messages = 'ride/';
   static const String cancelRide = 'ride/';
-  static const String rideStatus = 'ride/';
   static const String location = '/location';
   static const String deliveryRequest = 'delivery/request';
   static const String upDateDelivery = 'delivery/';

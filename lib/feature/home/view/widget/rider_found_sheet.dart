@@ -152,10 +152,7 @@ class RiderFoundBottomSheet<T extends StateStreamable<S>, S>
                             ],
                           ),
                         ),
-
                         SizedBox(height: getSpacing(constraints, 30)),
-
-                        // Cancel button
                         Padding(
                           padding: EdgeInsets.symmetric(
                             horizontal: horizontalPadding,
@@ -179,16 +176,12 @@ class RiderFoundBottomSheet<T extends StateStreamable<S>, S>
                             ),
                           ),
                         ),
-
-                        // Bottom padding for safe area
                         SizedBox(height: getSpacing(constraints, 20)),
                       ],
                     ),
                   ),
                 ),
               ),
-
-              // Top timer section
               Positioned(
                 top: getTimerTopOffset(constraints),
                 left: horizontalPadding,

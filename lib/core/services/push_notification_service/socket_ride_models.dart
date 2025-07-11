@@ -138,3 +138,5 @@ class DriverNotificationBody {
     return 'DriverNotificationBody(rideId: $rideId, title: $title, body: $body, from: $from, notificationId: $notificationId, timestamp: $timestamp)';
   }
 }
+
+///Delivery model

@@ -21,6 +21,20 @@ class DeliveryModel {
   final String receipientPhone;
   final String paymentMethod;
 
+  factory DeliveryModel.fromJson(Map<String, dynamic> json) {
+    return DeliveryModel(
+      pickupLocation: json['pickupLocation'],
+      destinationLocation: json['dropoffLocation'],
+      deliveryType: json['packageType'],
+      packageName: json['packageName'],
+      packageSize: json['packageSize'],
+      packageDescription: json['packageDescription'],
+      receipientName: json['recipientName'],
+      receipientPhone: json['recipientPhone'],
+      paymentMethod: json['paymentMethod'],
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'pickupLocation': pickupLocation,
@@ -36,8 +50,6 @@ class DeliveryModel {
     };
   }
 
-  // Factory method for creating a model with multiple destinations
-  // This can be used when you need to handle multiple destinations
   factory DeliveryModel.withMultipleDestinations({
     required String pickupLocation,
     required List<String> destinationLocations,

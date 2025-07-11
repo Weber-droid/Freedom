@@ -1,22 +1,21 @@
-// ignore_for_file: avoid_positional_boolean_parameters
-
+import 'dart:convert';
 import 'dart:developer';
+import 'dart:developer' as dev show log;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppPreferences {
-  // Keys
   static const String tokenKey = 'jwt_token';
   static const String firstTimerKey = 'is_first_timer';
   static const String onboardingCompletedKey = 'onboarding_completed';
+  static const String _deliveryIdKey = 'delivery_id';
 
   static const String rideIdKey = 'rideId';
+  static const String _deliveryStateKey = 'delivery_state_json';
 
-  // Cached values
   static String? _cachedToken;
   static bool? _cachedIsFirstTimer;
   static bool? _cachedOnboardingCompleted;
 
-  // Token operations
   static Future<String> getToken() async {
     if (_cachedToken != null) return _cachedToken!;
 
@@ -42,7 +41,6 @@ class AppPreferences {
     }
   }
 
-  // First timer operations
   static Future<bool> isFirstTimer() async {
     if (_cachedIsFirstTimer != null) return _cachedIsFirstTimer!;
 
@@ -63,7 +61,6 @@ class AppPreferences {
     }
   }
 
-  // Onboarding completion operations
   static Future<bool> isOnboardingCompleted() async {
     if (_cachedOnboardingCompleted != null) return _cachedOnboardingCompleted!;
 
@@ -87,6 +84,37 @@ class AppPreferences {
   static Future<void> setRideId(String rideId) async {
     final pref = await SharedPreferences.getInstance();
     await pref.setString('rideId', rideId);
+  }
+
+  static Future<void> setDeliveryId(String deliveryId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_deliveryIdKey, deliveryId);
+  }
+
+  static Future<String?> getDeliveryId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_deliveryIdKey);
+  }
+
+  static Future<void> saveDeliveryState(
+    Map<String, dynamic> deliveryStateJson,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_deliveryStateKey, jsonEncode(deliveryStateJson));
+  }
+
+  static Future<Map<String, dynamic>?> getDeliveryState() async {
+    final prefs = await SharedPreferences.getInstance();
+    final stateString = prefs.getString(_deliveryStateKey);
+    if (stateString != null) {
+      try {
+        return jsonDecode(stateString) as Map<String, dynamic>;
+      } catch (e) {
+        dev.log('❌ Error parsing delivery state: $e');
+        return null;
+      }
+    }
+    return null;
   }
 
   static Future<void> clearAll() async {

@@ -6,6 +6,7 @@ import 'package:freedom/feature/auth/repository/repository_exceptions.dart';
 import 'package:freedom/feature/home/data_sources/delivery_data_source.dart';
 import 'package:freedom/feature/home/models/delivery_model.dart';
 import 'package:freedom/feature/home/models/delivery_request_response.dart';
+import 'package:freedom/feature/home/repository/models/delivery_status_response.dart';
 
 abstract class IDeliveryRepository {
   Future<Either<Failure, DeliveryRequestResponse>> requestDelivery(
@@ -14,6 +15,9 @@ abstract class IDeliveryRepository {
   Future<void> cancelDelivery(String deliveryId, String reason);
   Future<void> updateDeliveryStatus(String deliveryId, String status);
   Future<void> trackDelivery(String deliveryId);
+  Future<Either<Failure, DeliveryStatusResponse>> checkDeliveryStatus(
+    String deliveryId,
+  );
 }
 
 class DeliveryRepositoryImpl implements IDeliveryRepository {
@@ -64,5 +68,20 @@ class DeliveryRepositoryImpl implements IDeliveryRepository {
   Future<void> updateDeliveryStatus(String deliveryId, String status) {
     // TODO: implement updateDeliveryStatus
     throw UnimplementedError();
+  }
+
+  @override
+  Future<Either<Failure, DeliveryStatusResponse>> checkDeliveryStatus(
+    String deliveryId,
+  ) async {
+    try {
+      final response = await remoteDataSource.checkDeliveryStatus(deliveryId);
+      return Right(response);
+    } on ServerException catch (e) {
+      log('requestDelivery() error: ${e.message}');
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
   }
 }
