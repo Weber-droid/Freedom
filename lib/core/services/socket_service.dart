@@ -1,7 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/services/push_notification_service/push_nofication_service.dart';
-import 'package:freedom/core/services/push_notification_service/socket_models.dart';
+import 'package:freedom/core/services/push_notification_service/socket_delivery_model.dart';
+import 'package:freedom/core/services/push_notification_service/socket_ride_models.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
@@ -48,6 +49,48 @@ class SocketService {
       StreamController<Map<String, dynamic>>.broadcast();
   Stream<Map<String, dynamic>> get onDriverLocation =>
       _driverLocationController.stream;
+
+  ////For delivery
+  final StreamController<DeliveryManAcceptedModel>
+  _deliveryManAcceptedController =
+      StreamController<DeliveryManAcceptedModel>.broadcast();
+  Stream<DeliveryManAcceptedModel> get onDeliveryManAccepted =>
+      _deliveryManAcceptedController.stream;
+
+  final StreamController<DeliveryArrived> _deliveryManArrivedController =
+      StreamController<DeliveryArrived>.broadcast();
+  Stream<DeliveryArrived> get onDeliveryManArrived =>
+      _deliveryManArrivedController.stream;
+
+  final StreamController<DeliveryManCancelled> _deliveryManCancelledController =
+      StreamController<DeliveryManCancelled>.broadcast();
+  Stream<DeliveryManCancelled> get onDeliveryManCancelled =>
+      _deliveryManCancelledController.stream;
+
+  final StreamController<DeliveryManRejected> _deliveryManRejectedController =
+      StreamController<DeliveryManRejected>.broadcast();
+  Stream<DeliveryManRejected> get onDeliveryManRejected =>
+      _deliveryManRejectedController.stream;
+
+  final StreamController<DeliveryManStarted> _deliveryManStartedController =
+      StreamController<DeliveryManStarted>.broadcast();
+  Stream<DeliveryManStarted> get onDeliveryManStarted =>
+      _deliveryManStartedController.stream;
+
+  final StreamController<DeliveryManCompleted> _deliveryManCompletedController =
+      StreamController<DeliveryManCompleted>.broadcast();
+  Stream<DeliveryManCompleted> get onDeliveryManCompleted =>
+      _deliveryManCompletedController.stream;
+
+  final StreamController<DeliveryManMessage> _deliveryMessageController =
+      StreamController<DeliveryManMessage>.broadcast();
+  Stream<DeliveryManMessage> get onDeliveryMessage =>
+      _deliveryMessageController.stream;
+
+  final StreamController<Map<String, dynamic>> _deliveryManLocationController =
+      StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get onDeliveryManLocation =>
+      _deliveryManLocationController.stream;
 
   /// Get the connection status
   bool get isConnected => _isConnected;
@@ -118,7 +161,7 @@ class SocketService {
     });
 
     // Listen for the driver_accept_ride event
-    _socket!.on('delivery_status_updated', (data) {
+    _socket!.on('ride_status_updated', (data) {
       log('join_delivery: $data');
       try {
         final mapData = data as Map<String, dynamic>;
@@ -191,6 +234,76 @@ class SocketService {
         _driverLocationController.add(data as Map<String, dynamic>);
       } catch (e, stackTrace) {
         log('Error parsing driver_location payload: $e\n$stackTrace');
+      }
+    });
+
+    ///Delivery status updated
+    _socket!.on('delivery_status_updated', (data) {
+      log('delivery_status_updated: $data');
+      try {
+        final mapData = data as Map<String, dynamic>;
+        AppPreferences.setRideId(mapData['deliveryId']);
+        if (mapData['status'] == 'accepted') {
+          final modeled = DeliveryManAcceptedModel.fromJson(mapData);
+          getIt<PushNotificationService>().showDriverAcceptNotification(
+            driverName: '',
+            vehicleInfo: '',
+          );
+          log('ride_status_updated: $modeled');
+          _deliveryManAcceptedController.add(modeled);
+        }
+
+        if (mapData['status'] == 'arrived') {
+          final modeled = DeliveryArrived.fromJson(mapData);
+          getIt<PushNotificationService>().showDriverArrivedNotification(
+            driverName: '',
+            vehicleInfo: modeled.status ?? '',
+          );
+          _deliveryManArrivedController.add(modeled);
+        }
+
+        if (mapData['status'] == 'cancelled') {
+          getIt<PushNotificationService>().showRideStatusNotification(
+            status: 'cancelled',
+            message: 'Your ride has been cancelled by the rider.',
+          );
+          _deliveryManCancelledController.add(
+            DeliveryManCancelled.fromJson(mapData),
+          );
+        }
+
+        if (mapData['status'] == 'rejected') {
+          getIt<PushNotificationService>().showRideStatusNotification(
+            status: 'Rejected',
+            message: 'Your ride has been completed.',
+          );
+          _deliveryManRejectedController.add(
+            DeliveryManRejected.fromJson(mapData),
+          );
+        }
+
+        log('ride_status_updated: $mapData');
+        if (mapData['status'] == 'completed') {
+          getIt<PushNotificationService>().showRideStatusNotification(
+            status: 'completed',
+            message: 'Your ride has been completed.',
+          );
+          _deliveryManCompletedController.add(
+            DeliveryManCompleted.fromJson(mapData),
+          );
+        }
+
+        if (mapData['status'] == 'in_progress') {
+          getIt<PushNotificationService>().showRideStatusNotification(
+            status: 'started',
+            message: 'Your ride has started.',
+          );
+          _deliveryManStartedController.add(
+            DeliveryManStarted.fromJson(mapData),
+          );
+        }
+      } catch (e, stackTrace) {
+        log('Error parsing ride_status_updated payload: $e\n$stackTrace');
       }
     });
   }

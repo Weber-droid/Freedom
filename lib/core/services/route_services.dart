@@ -8,7 +8,7 @@ import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class RouteService {
-  static const double _earthRadius = 6371000; // Earth's radius in meters
+  static const double _earthRadius = 6371000; 
   static const double _defaultSpeedMetersPerSecond = 5.0;
   static const int _defaultUpdateIntervalMs = 100;
 

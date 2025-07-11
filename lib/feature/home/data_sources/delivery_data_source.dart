@@ -9,6 +9,7 @@ import 'package:freedom/core/client/endpoints.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/home/models/delivery_model.dart';
 import 'package:freedom/feature/home/models/delivery_request_response.dart';
+import 'package:freedom/feature/home/repository/models/delivery_status_response.dart';
 import 'package:http/http.dart';
 
 abstract class IDeliveryRemoteDataSource {
@@ -19,6 +20,8 @@ abstract class IDeliveryRemoteDataSource {
 
   Future<void> updateDeliveryStatus(String deliveryId, String status);
   Future<void> trackDelivery(String deliveryId);
+
+  Future<DeliveryStatusResponse> checkDeliveryStatus(String deliveryId);
 }
 
 class DeliveryDataSourceImpl implements IDeliveryRemoteDataSource {
@@ -83,5 +86,28 @@ class DeliveryDataSourceImpl implements IDeliveryRemoteDataSource {
   Future<void> updateDeliveryStatus(String deliveryId, String status) {
     // TODO: implement updateDeliveryStatus
     throw UnimplementedError();
+  }
+
+  @override
+  Future<DeliveryStatusResponse> checkDeliveryStatus(String deliveryId) async {
+    try {
+      final client = getIt<BaseApiClients>();
+      final response = await client.get(
+        '${Endpoints.trackDelivery}$deliveryId/track',
+        headers: {'Authorization': 'Bearer ${await AppPreferences.getToken()}'},
+      );
+      final decoded = json.decode(response.body) as Map<String, dynamic>;
+      log('checkDeliveryStatus(): $decoded');
+      if (decoded.containsKey('msg')) {
+        throw ServerException(decoded['msg'].toString());
+      }
+      return DeliveryStatusResponse.fromJson(decoded);
+    } on SocketException catch (e) {
+      throw NetworkException(e.message);
+    } on ServerException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
   }
 }

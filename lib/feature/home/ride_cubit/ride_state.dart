@@ -50,6 +50,7 @@ class RideState extends Equatable {
     this.driverOffRoute = false,
     this.lastRouteRecalculation,
     this.rideRequestModel,
+    this.driverAnimationComplete = false,
   });
   final RideRequestStatus status;
   final RequestRideResponse? rideResponse;
@@ -99,6 +100,7 @@ class RideState extends Equatable {
   final bool driverOffRoute;
   final DateTime? lastRouteRecalculation;
   final RideRequestModel? rideRequestModel;
+  final bool driverAnimationComplete;
   RideState copyWith({
     RideRequestStatus? status,
     String? errorMessage,
@@ -148,6 +150,7 @@ class RideState extends Equatable {
     bool? driverOffRoute,
     DateTime? lastRouteRecalculation,
     RideRequestModel? rideRequestModel,
+    bool? driverAnimationComplete,
   }) {
     return RideState(
       status: status ?? this.status,
@@ -205,6 +208,8 @@ class RideState extends Equatable {
       lastRouteRecalculation:
           lastRouteRecalculation ?? this.lastRouteRecalculation,
       rideRequestModel: rideRequestModel ?? this.rideRequestModel,
+      driverAnimationComplete:
+          driverAnimationComplete ?? this.driverAnimationComplete,
     );
   }
 
@@ -258,5 +263,6 @@ class RideState extends Equatable {
     driverOffRoute,
     lastRouteRecalculation,
     rideRequestModel,
+    driverAnimationComplete,
   ];
 }

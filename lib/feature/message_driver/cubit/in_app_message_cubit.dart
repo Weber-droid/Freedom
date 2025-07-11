@@ -4,7 +4,7 @@ import 'dart:developer';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freedom/app_preference.dart';
-import 'package:freedom/core/services/push_notification_service/socket_models.dart';
+import 'package:freedom/core/services/push_notification_service/socket_ride_models.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/message_driver/cache/in_app_message_cache.dart';
 import 'package:freedom/feature/message_driver/models/message_models.dart';

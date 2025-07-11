@@ -59,7 +59,7 @@ class RideRemoteDataSourceImpl implements RideRemoteDataSource {
   @override
   Future<RideStatusResponse> checkRideStatus(String rideId) async {
     try {
-      final response = await client.get('${Endpoints.status}$rideId', headers: {
+      final response = await client.get('${Endpoints.rideStatus}$rideId', headers: {
         'Authorization': 'Bearer ${await AppPreferences.getToken()}',
       });
       final decoded = json.decode(response.body) as Map<String, dynamic>;

@@ -1,11 +1,9 @@
-import 'dart:async';
 import 'dart:math' as math;
 import 'dart:developer' as dev;
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/services/real_time_driver_tracking.dart';
-import 'package:freedom/core/services/push_notification_service/socket_models.dart';
+import 'package:freedom/core/services/push_notification_service/socket_ride_models.dart';
 import 'package:freedom/core/services/route_animation_services.dart';
 import 'package:freedom/core/services/route_services.dart';
 import 'package:freedom/core/services/socket_service.dart';
@@ -19,6 +17,7 @@ import 'package:freedom/feature/home/repository/models/location.dart' as loc;
 import 'package:freedom/feature/home/repository/ride_request_repository.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 
 part 'ride_state.dart';
 
@@ -40,6 +39,7 @@ class RideCubit extends Cubit<RideState> {
   final RouteService _routeService;
   final RouteAnimationService _animationService;
   final RealTimeDriverTrackingService _realTimeTrackingService;
+  DateTime? _lastStatusUpdate;
 
   // Socket subscriptions
   StreamSubscription<dynamic>? _driverStatusSubscription;
@@ -379,19 +379,20 @@ class RideCubit extends Cubit<RideState> {
   }
 
   Future<void> _displayRideRoute() async {
-    dev.log('_displayRideRoute(): Displaying route for accepted ride');
     dev.log(
-      '_displayRideRoute(): CURRENT RIDE ${_currentRideRequest?.toJson()}',
+      '🎬 _displayRideRoute(): Displaying animated route for accepted ride',
+    );
+    dev.log(
+      '🎬 _displayRideRoute(): CURRENT RIDE ${_currentRideRequest?.toJson()}',
     );
 
     if (_currentRideRequest == null) {
-      dev.log('No current ride request to display route for');
+      dev.log('❌ No current ride request to display route for');
       return;
     }
 
     try {
-      dev.log('Displaying route for accepted ride');
-
+      dev.log('🎬 Displaying animated route for accepted ride');
       await _ensureMarkerIcons();
 
       final request = _currentRideRequest!;
@@ -403,14 +404,12 @@ class RideCubit extends Cubit<RideState> {
       if (request.isMultiDestination &&
           request.additionalDestinations != null &&
           request.additionalDestinations!.isNotEmpty) {
-        await _displayMultiDestinationRoute(request, pickup);
+        await _displayMultiDestinationRouteWithAnimation(request, pickup);
       } else {
-        await _displaySingleDestinationRoute(request, pickup);
+        await _displaySingleDestinationRouteWithAnimation(request, pickup);
       }
-
-      await _ensureUniqueDriverMarker(pickup);
     } catch (e) {
-      dev.log('Error displaying ride route: $e');
+      dev.log('❌ Error displaying animated route: $e');
       emit(state.copyWith(errorMessage: 'Failed to display route: $e'));
     }
   }
@@ -442,9 +441,9 @@ class RideCubit extends Cubit<RideState> {
       if (request.isMultiDestination &&
           request.additionalDestinations != null &&
           request.additionalDestinations!.isNotEmpty) {
-        await _displayMultiDestinationRoute(request, pickup);
+        await _displayMultiDestinationRouteWithAnimation(request, pickup);
       } else {
-        await _displaySingleDestinationRoute(request, pickup);
+        await _displaySingleDestinationRouteWithAnimation(request, pickup);
       }
 
       await _createStaticDriverMarker(pickup);
@@ -584,34 +583,37 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
-  Future<void> _displaySingleDestinationRoute(
+  Future<void> _displaySingleDestinationRouteWithAnimation(
     RideRequestModel request,
     LatLng pickup,
   ) async {
-    dev.log(
-      '_displaySingleDestinationRoute(): Displaying route for accepted ride',
-    );
+    dev.log('🎬 Displaying single destination route with animation');
+
     final destination = LatLng(
       request.dropoffLocation.latitude,
       request.dropoffLocation.longitude,
     );
 
     final routeResult = await _routeService.getRoute(pickup, destination);
-    dev.log('routeResult: ${routeResult.interpolatedPoints?.length}');
 
-    if (routeResult.isSuccess) {
+    if (routeResult.isSuccess && routeResult.polyline != null) {
+      // Create markers (without driver marker initially)
       final routeMarkers = _routeService.createMarkers(
         request.pickupLocation,
         request.dropoffLocation,
         state.driverMarkerIcon,
       );
 
+      // Remove driver marker from route markers (we'll animate it)
       final filteredMarkers = <MarkerId, Marker>{};
       routeMarkers.forEach((markerId, marker) {
         if (!_isDriverMarker(markerId, marker)) {
           filteredMarkers[markerId] = marker;
         }
       });
+
+      // Get route points for animation
+      final routePoints = routeResult.polyline!.points;
 
       emit(
         state.copyWith(
@@ -621,7 +623,23 @@ class RideCubit extends Cubit<RideState> {
         ),
       );
 
-      dev.log('✅ Single destination route displayed successfully');
+      dev.log(
+        '✅ Route displayed, starting driver animation along ${routePoints.length} points',
+      );
+
+      // Start animating driver marker along the route
+      _animationService.animateMarkerAlongRoute(
+        routePoints,
+        onPositionUpdate: (position, rotation) {
+          _updateDriverMarkerPositionRealTime(position, rotation);
+        },
+        speedMetersPerSecond: AnimationConfig.normal.speedMetersPerSecond,
+        onAnimationComplete: () {
+          dev.log('🎬 Initial route animation completed');
+          // Animation is complete, driver is now at destination
+          _onInitialAnimationComplete();
+        },
+      );
     } else {
       dev.log(
         '❌ Failed to get single destination route: ${routeResult.errorMessage}',
@@ -629,10 +647,12 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
-  Future<void> _displayMultiDestinationRoute(
+  Future<void> _displayMultiDestinationRouteWithAnimation(
     RideRequestModel request,
     LatLng pickup,
   ) async {
+    dev.log('🎬 Displaying multi-destination route with animation');
+
     final destinations = <LatLng>[
       LatLng(
         request.dropoffLocation.latitude,
@@ -649,7 +669,7 @@ class RideCubit extends Cubit<RideState> {
       destinations,
     );
 
-    if (routesResult.isSuccess) {
+    if (routesResult.isSuccess && routesResult.polylines != null) {
       final allLocations = <loc.Location>[
         request.pickupLocation,
         request.dropoffLocation,
@@ -661,6 +681,7 @@ class RideCubit extends Cubit<RideState> {
         state.driverMarkerIcon,
       );
 
+      // Remove driver marker from route markers
       final filteredMarkers = <MarkerId, Marker>{};
       routeMarkers.forEach((markerId, marker) {
         if (!_isDriverMarker(markerId, marker)) {
@@ -677,12 +698,38 @@ class RideCubit extends Cubit<RideState> {
         ),
       );
 
-      dev.log('✅ Multi-destination route displayed successfully');
+      // Combine all route points for animation
+      final allRoutePoints = <LatLng>[];
+      for (final polyline in routesResult.polylines!) {
+        allRoutePoints.addAll(polyline.points);
+      }
+
+      dev.log(
+        '✅ Multi-destination route displayed, animating along ${allRoutePoints.length} points',
+      );
+
+      // Animate driver along combined route
+      _animationService.animateMarkerAlongRoute(
+        allRoutePoints,
+        onPositionUpdate: (position, rotation) {
+          _updateDriverMarkerPositionRealTime(position, rotation);
+        },
+        speedMetersPerSecond: AnimationConfig.normal.speedMetersPerSecond,
+        onAnimationComplete: () {
+          dev.log('🎬 Multi-destination animation completed');
+          _onInitialAnimationComplete();
+        },
+      );
     } else {
       dev.log(
         '❌ Failed to get multi-destination routes: ${routesResult.errorMessage}',
       );
     }
+  }
+
+  void _onInitialAnimationComplete() {
+    dev.log('🎬 Initial animation complete - driver ready for real tracking');
+    emit(state.copyWith(driverAnimationComplete: true));
   }
 
   bool _isDriverMarker(MarkerId markerId, Marker marker) {
@@ -707,38 +754,46 @@ class RideCubit extends Cubit<RideState> {
     return false;
   }
 
-  void _updateDriverMarkerPosition(LatLng position, double rotation) {
+  void _updateDriverMarkerPositionRealTime(LatLng position, double rotation) {
     try {
       final updatedMarkers = Map<MarkerId, Marker>.from(state.routeMarkers);
       const driverMarkerId = MarkerId('driver');
 
+      // Ensure driver marker exists
       if (!updatedMarkers.containsKey(driverMarkerId)) {
-        dev.log('❌ ERROR: Driver marker not found during position update');
-        return;
+        dev.log('🚗 Creating driver marker for real-time tracking');
+        final driverMarker = Marker(
+          markerId: driverMarkerId,
+          position: position,
+          icon:
+              state.driverMarkerIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          infoWindow: const InfoWindow(title: 'Driver'),
+          rotation: rotation,
+        );
+        updatedMarkers[driverMarkerId] = driverMarker;
+      } else {
+        // Update existing marker with smooth animation
+        final currentMarker = updatedMarkers[driverMarkerId]!;
+        final updatedMarker = currentMarker.copyWith(
+          positionParam: position,
+          rotationParam: rotation,
+        );
+        updatedMarkers[driverMarkerId] = updatedMarker;
       }
-
-      final currentMarker = updatedMarkers[driverMarkerId]!;
-      final updatedMarker = currentMarker.copyWith(
-        positionParam: position,
-        rotationParam: rotation,
-      );
-
-      updatedMarkers[driverMarkerId] = updatedMarker;
 
       emit(
-        state.copyWith(
-          routeMarkers: updatedMarkers,
-          currentDriverPosition: position,
-          shouldUpdateCamera: false,
-        ),
+        state.copyWith(routeMarkers: updatedMarkers, shouldUpdateCamera: true),
       );
 
-      // Reduced logging for real-time updates
-      if (DateTime.now().millisecondsSinceEpoch % 5000 < 200) {
-        dev.log('📍 Driver position updated: $position');
+      // Throttled logging
+      if (DateTime.now().millisecondsSinceEpoch % 5000 < 100) {
+        dev.log(
+          '🎬 Smooth marker update: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)} (${rotation.toStringAsFixed(1)}°)',
+        );
       }
     } catch (e) {
-      dev.log('❌ Error updating driver marker position: $e');
+      dev.log('❌ Error in smooth marker update: $e');
     }
   }
 
@@ -894,6 +949,7 @@ class RideCubit extends Cubit<RideState> {
   Future<void> _startRealTimeTracking() async {
     try {
       if (_currentRideRequest == null) {
+        dev.log('❌ Cannot start tracking: no current ride request');
         return;
       }
 
@@ -902,90 +958,134 @@ class RideCubit extends Cubit<RideState> {
         _currentRideRequest!.dropoffLocation.longitude,
       );
 
-      final rideId = state.driverAccepted?.rideId ?? '';
+      final rideId = state.driverAccepted?.rideId ?? state.currentRideId ?? '';
       final driverId = state.driverAccepted?.driverId ?? '';
 
-      dev.log(
-        'Starting real-time tracking for driver $driverId and ride $rideId',
+      if (rideId.isEmpty || driverId.isEmpty) {
+        dev.log(
+          '❌ Cannot start tracking: missing rideId($rideId) or driverId($driverId)',
+        );
+        return;
+      }
+
+      dev.log('🔴 Starting enhanced real-time tracking with animation');
+
+      // Convert to gmaps.LatLng for tracking service
+      final gmapsDestination = gmaps.LatLng(
+        destination.latitude,
+        destination.longitude,
       );
 
+      // Transition animation service to real-time mode
+      _animationService.transitionToRealTimeTracking(
+        onPositionUpdate: (position, rotation) {
+          _updateDriverMarkerPositionRealTime(position, rotation);
+        },
+      );
+
+      // Start the tracking service
       _realTimeTrackingService.startTracking(
         rideId: rideId,
-        driverId: state.driverAccepted?.driverId ?? '',
-        destination: destination,
-        onPositionUpdate: _updateDriverMarkerPositionRealTime,
+        driverId: driverId,
+        destination: gmapsDestination,
+        onPositionUpdate: _handleRealTimePositionUpdate,
         onRouteUpdated: _updateRouteOnMap,
         onStatusUpdate: _updateTrackingStatus,
+        onMarkerUpdate: _handlePreciseMarkerUpdate,
       );
 
       emit(
         state.copyWith(
           shouldUpdateCamera: false,
           isRealTimeTrackingActive: true,
-          trackingStatusMessage: 'Real-time tracking started',
+          trackingStatusMessage: 'Real-time tracking with animation started',
         ),
       );
+
+      dev.log('✅ Real-time tracking with animation started successfully');
     } catch (e) {
       dev.log('❌ Error starting real-time tracking: $e');
-      emit(state.copyWith(errorMessage: 'Failed to start tracking: $e'));
+      emit(
+        state.copyWith(
+          errorMessage: 'Failed to start tracking: $e',
+          trackingStatusMessage: 'Tracking startup failed',
+        ),
+      );
     }
   }
 
-  // UPDATED: Process driver location updates from the tracking service
-  Future<void> _updateDriverMarkerPositionRealTime(
-    LatLng position,
+  void _handleRealTimePositionUpdate(
+    gmaps.LatLng position,
     double bearing,
     DriverLocationData locationData,
-  ) async {
-    try {
-      final updatedMarkers = Map<MarkerId, Marker>.from(state.routeMarkers);
-      const driverMarkerId = MarkerId('driver');
+  ) {
+    // Convert to UI coordinates
+    final uiPosition = LatLng(position.latitude, position.longitude);
 
-      if (!updatedMarkers.containsKey(driverMarkerId)) {
-        dev.log('❌ Driver marker not found during real-time update');
-        // Create driver marker if it doesn't exist
-        await _ensureUniqueDriverMarker(position);
-        return;
-      }
+    dev.log(
+      '📍 Real-time update: ${uiPosition.latitude.toStringAsFixed(6)}, ${uiPosition.longitude.toStringAsFixed(6)} (${bearing.toStringAsFixed(1)}°)',
+    );
 
-      final currentMarker = updatedMarkers[driverMarkerId]!;
-      final updatedMarker = currentMarker.copyWith(
-        positionParam: position,
-        rotationParam: bearing,
+    // Update animation service with new real-time position
+    _animationService.updateRealTimePosition(
+      uiPosition,
+      bearing,
+      locationData: {
+        'speed': locationData.speed,
+        'accuracy': locationData.accuracy,
+        'timestamp': locationData.lastUpdate.toIso8601String(),
+      },
+    );
+
+    // Update state for UI
+    emit(
+      state.copyWith(
+        currentDriverPosition: uiPosition,
+        lastPositionUpdate: locationData.lastUpdate,
+        currentSpeed: locationData.speed,
+        trackingStatusMessage: _getEnhancedTrackingMessage(locationData),
+      ),
+    );
+
+    // Check destination arrival
+    if (_realTimeTrackingService.hasReachedDestination(position)) {
+      dev.log('🏁 Driver has reached destination');
+      _handleDriverReachedDestination();
+    }
+  }
+
+  void _handlePreciseMarkerUpdate(gmaps.LatLng position) {
+    final uiPosition = LatLng(position.latitude, position.longitude);
+
+    // Update animation service target position for smoother movement
+    if (_animationService.isRealTimeTracking) {
+      _animationService.updateRealTimePosition(
+        uiPosition,
+        _animationService.currentBearing,
       );
+    }
 
-      updatedMarkers[driverMarkerId] = updatedMarker;
+    // Throttled logging for precision updates
+    if (DateTime.now().millisecondsSinceEpoch % 15000 < 200) {
+      dev.log('🎯 Precise position: ${position.toDisplayFormat()}');
+    }
+  }
 
-      // Update state with new position and tracking data
-      emit(
-        state.copyWith(
-          routeMarkers: updatedMarkers,
-          currentDriverPosition: position,
-          lastPositionUpdate: locationData.lastUpdate,
-          currentSpeed: locationData.speed,
-          shouldUpdateCamera: false, // Keep camera static during tracking
-        ),
-      );
-
-      // Log periodically to avoid spam
-      if (DateTime.now().millisecondsSinceEpoch % 10000 < 200) {
-        dev.log(
-          '📍 Real-time marker update: $position (${bearing.toStringAsFixed(1)}°, ${locationData.speed}km/h)',
-        );
-      }
-
-      // Check if driver has reached destination
-      if (_realTimeTrackingService.hasReachedDestination(position)) {
-        dev.log('🏁 Driver has reached destination');
-        _handleDriverReachedDestination();
-      }
-    } catch (e) {
-      dev.log('❌ Error updating driver marker: $e');
+  // New method to get enhanced tracking message
+  String _getEnhancedTrackingMessage(DriverLocationData locationData) {
+    if (locationData.speed > 15.0) {
+      return 'Driver is moving fast (${locationData.speed.toStringAsFixed(0)} km/h)';
+    } else if (locationData.speed > 5.0) {
+      return 'Driver is moving (${locationData.speed.toStringAsFixed(0)} km/h)';
+    } else if (locationData.speed > 1.0) {
+      return 'Driver is moving slowly';
+    } else {
+      return 'Driver is stationary';
     }
   }
 
   // UPDATED: Update route on map when driver changes path
-  void _updateRouteOnMap(List<LatLng> newRoutePoints) {
+  void _updateRouteOnMap(List<gmaps.LatLng> newRoutePoints) {
     try {
       if (state.routePolylines.isEmpty) {
         dev.log('❌ No existing route to update');
@@ -994,10 +1094,16 @@ class RideCubit extends Cubit<RideState> {
 
       dev.log('🛣️ Updating route with ${newRoutePoints.length} new points');
 
-      // Get the current polyline and update it with new points
+      // Convert to UI coordinates
+      final uiRoutePoints =
+          newRoutePoints
+              .map((point) => LatLng(point.latitude, point.longitude))
+              .toList();
+
+      // Update polyline
       final currentPolyline = state.routePolylines.first;
       final updatedPolyline = currentPolyline.copyWith(
-        pointsParam: newRoutePoints,
+        pointsParam: uiRoutePoints,
       );
 
       emit(
@@ -1010,10 +1116,12 @@ class RideCubit extends Cubit<RideState> {
 
       dev.log('✅ Route updated on map');
 
-      // Show notification to user about route change
-      _showRouteChangeNotification();
+      // Update animation service with new route if needed
+      if (_animationService.isRealTimeTracking) {
+        dev.log('🎬 Animation service will continue with new route points');
+      }
 
-      // Reset the flag after a short delay
+      // Reset flag after delay
       Future.delayed(const Duration(seconds: 3), () {
         if (!isClosed) {
           emit(state.copyWith(routeRecalculated: false));
@@ -1021,14 +1129,16 @@ class RideCubit extends Cubit<RideState> {
       });
     } catch (e) {
       dev.log('❌ Error updating route on map: $e');
+      emit(state.copyWith(trackingStatusMessage: 'Route update failed: $e'));
     }
   }
 
   // NEW: Show notification when route changes
-  void _showRouteChangeNotification() {
+  void _showEnhancedRouteChangeNotification() {
     emit(
       state.copyWith(
-        trackingStatusMessage: 'Driver took a different route. ETA updated.',
+        trackingStatusMessage:
+            'Driver took a different route. ETA updated automatically.',
       ),
     );
 
@@ -1042,23 +1152,53 @@ class RideCubit extends Cubit<RideState> {
 
   // UPDATED: Update tracking status with better user feedback
   void _updateTrackingStatus(String status) {
-    dev.log('📊 Tracking status: $status');
+    dev.log('📊 Enhanced tracking status: $status');
+
+    // Filter out frequent status updates to avoid UI spam
+    final currentTime = DateTime.now();
+    if (_lastStatusUpdate != null &&
+        currentTime.difference(_lastStatusUpdate!).inSeconds < 2 &&
+        status.contains('position updated')) {
+      return; // Skip frequent position updates
+    }
+    _lastStatusUpdate = currentTime;
 
     emit(state.copyWith(trackingStatusMessage: status));
 
-    // Clear status message after a few seconds
-    Future.delayed(const Duration(seconds: 4), () {
+    // Clear status message after appropriate duration
+    final duration =
+        status.contains('error') || status.contains('failed')
+            ? const Duration(seconds: 8)
+            : const Duration(seconds: 4);
+
+    Future.delayed(duration, () {
       if (!isClosed) {
         emit(state.copyWith(trackingStatusMessage: null));
       }
     });
   }
 
+  double _calculateTotalRouteDistance(List<gmaps.LatLng> routePoints) {
+    double totalDistance = 0.0;
+
+    for (int i = 0; i < routePoints.length - 1; i++) {
+      final point1 = LatLng(routePoints[i].latitude, routePoints[i].longitude);
+      final point2 = LatLng(
+        routePoints[i + 1].latitude,
+        routePoints[i + 1].longitude,
+      );
+      totalDistance += _calculateDistanceInMeters(point1, point2);
+    }
+
+    return totalDistance;
+  }
+
   // UPDATED: Handle when driver reaches destination
   void _handleDriverReachedDestination() {
-    dev.log('🏁 Driver reached destination - ride completing');
+    dev.log('🏁 Driver reached destination - stopping all animations');
 
     _stopRealTimeTracking();
+    _animationService.stopAll();
 
     emit(
       state.copyWith(
@@ -1068,10 +1208,12 @@ class RideCubit extends Cubit<RideState> {
     );
   }
 
+  // Stop tracking with animation cleanup
   void _stopRealTimeTracking() {
-    dev.log('🛑 Stopping real-time tracking');
+    dev.log('🛑 Stopping real-time tracking and animation');
 
     _realTimeTrackingService.stopTracking();
+    _animationService.stopRealTimeTracking();
 
     emit(
       state.copyWith(
@@ -1084,37 +1226,185 @@ class RideCubit extends Cubit<RideState> {
 
   // UPDATED: Get current route progress information
   RouteProgress? getCurrentRouteProgress() {
-    if (!_realTimeTrackingService.isTracking ||
-        _realTimeTrackingService.lastKnownDriverPosition == null) {
+    if (!_realTimeTrackingService.isTracking) {
       return null;
     }
 
-    // Get progress from tracking service
-    final driverPosition = _realTimeTrackingService.lastKnownDriverPosition!;
-    // This would require adding a getRouteProgress method to the tracking service
-    // For now, calculate basic progress
-    if (_realTimeTrackingService.currentDestination != null) {
-      final distanceToDestination = _calculateDistanceInMeters(
-        driverPosition,
-        _realTimeTrackingService.currentDestination!,
-      );
+    // Get enhanced tracking status
+    final trackingStatus = _realTimeTrackingService.getTrackingStatus();
 
-      // Simple progress calculation - you might want to improve this
-      final totalDistance = 1000.0; // You'd get this from the route
-      final progress = 1.0 - (distanceToDestination / totalDistance);
+    if (!trackingStatus.isReceivingRegularUpdates ||
+        trackingStatus.lastKnownPosition == null) {
+      return null;
+    }
 
-      return RouteProgress(
-        progress: progress.clamp(0.0, 1.0),
-        distanceCovered: totalDistance * progress,
-        remainingDistance: distanceToDestination,
-        totalDistance: totalDistance,
-        estimatedTimeRemaining: Duration(
-          minutes: (distanceToDestination / 500).round(), // Rough ETA
-        ),
-      );
+    // Try to get route progress from tracking service
+    // You might need to add this method to your tracking service
+    try {
+      // This is a placeholder - you'd implement actual route progress calculation
+      // in the tracking service based on the current route points
+      final driverPosition = trackingStatus.lastKnownPosition!;
+      final destination = trackingStatus.destination;
+
+      if (destination != null) {
+        final distanceToDestination = _calculateDistanceInMeters(
+          LatLng(driverPosition.latitude, driverPosition.longitude),
+          LatLng(destination.latitude, destination.longitude),
+        );
+
+        // Use tracking service route points for more accurate progress
+        final routePoints = _realTimeTrackingService.currentRoutePoints;
+        final totalDistance =
+            routePoints.isNotEmpty
+                ? _calculateTotalRouteDistance(routePoints)
+                : distanceToDestination + 1000; // Fallback estimate
+
+        final progress =
+            routePoints.isNotEmpty
+                ? _calculateActualProgress(driverPosition, routePoints)
+                : (1.0 - (distanceToDestination / totalDistance)).clamp(
+                  0.0,
+                  1.0,
+                );
+
+        return RouteProgress(
+          progress: progress,
+          distanceCovered: totalDistance * progress,
+          remainingDistance: distanceToDestination,
+          totalDistance: totalDistance,
+          estimatedTimeRemaining: _calculateEnhancedETA(
+            distanceToDestination,
+            trackingStatus,
+          ),
+        );
+      }
+    } catch (e) {
+      dev.log('❌ Error calculating route progress: $e');
     }
 
     return null;
+  }
+
+  // Helper method to calculate total route distance
+
+  // Helper method to calculate actual progress along route
+  double _calculateActualProgress(
+    gmaps.LatLng driverPosition,
+    List<gmaps.LatLng> routePoints,
+  ) {
+    if (routePoints.length < 2) return 0.0;
+
+    // Find closest point on route and calculate progress
+    double minDistance = double.infinity;
+    int closestSegmentIndex = 0;
+
+    for (int i = 0; i < routePoints.length - 1; i++) {
+      final point1 = LatLng(routePoints[i].latitude, routePoints[i].longitude);
+      final point2 = LatLng(
+        routePoints[i + 1].latitude,
+        routePoints[i + 1].longitude,
+      );
+      final driverLatLng = LatLng(
+        driverPosition.latitude,
+        driverPosition.longitude,
+      );
+
+      // Simple distance calculation - you might want to use the geodesy library for accuracy
+      final distance = _calculateDistanceToLineSegment(
+        driverLatLng,
+        point1,
+        point2,
+      );
+
+      if (distance < minDistance) {
+        minDistance = distance;
+        closestSegmentIndex = i;
+      }
+    }
+
+    // Calculate progress based on closest segment
+    final totalSegments = routePoints.length - 1;
+    return totalSegments > 0 ? closestSegmentIndex / totalSegments : 0.0;
+  }
+
+  // Simple distance to line segment calculation
+  double _calculateDistanceToLineSegment(
+    LatLng point,
+    LatLng lineStart,
+    LatLng lineEnd,
+  ) {
+    // Simplified calculation - in production you'd use proper geodesy
+    final startDistance = _calculateDistanceInMeters(point, lineStart);
+    final endDistance = _calculateDistanceInMeters(point, lineEnd);
+    return math.min(startDistance, endDistance);
+  }
+
+  // Enhanced ETA calculation using tracking data
+  Duration _calculateEnhancedETA(
+    double distanceMeters,
+    TrackingStatus trackingStatus,
+  ) {
+    // Use recent speed data if available
+    final recentHistory = _realTimeTrackingService.locationHistory;
+
+    double averageSpeedMps = 8.33; // Default 30 km/h in m/s
+
+    if (recentHistory.isNotEmpty) {
+      final recentSpeeds =
+          recentHistory
+              .where(
+                (h) => DateTime.now().difference(h.timestamp).inMinutes < 5,
+              )
+              .map((h) => h.speed * 1000 / 3600) // Convert km/h to m/s
+              .where((speed) => speed > 1.0) // Filter out stationary periods
+              .toList();
+
+      if (recentSpeeds.isNotEmpty) {
+        averageSpeedMps =
+            recentSpeeds.reduce((a, b) => a + b) / recentSpeeds.length;
+      }
+    }
+
+    final etaSeconds = distanceMeters / averageSpeedMps;
+    return Duration(seconds: etaSeconds.round());
+  }
+
+  // Updated getTrackingStatus method with enhanced information
+  TrackingStatus getTrackingStatus() {
+    return _realTimeTrackingService.getTrackingStatus();
+  }
+
+  // Enhanced real-time tracking active check
+  bool get isRealTimeTrackingActive {
+    final serviceActive = _realTimeTrackingService.isTracking;
+    final stateActive = state.rideInProgress && state.isRealTimeTrackingActive;
+
+    // Log mismatch for debugging
+    if (serviceActive != stateActive) {
+      dev.log(
+        '🚨 Tracking state mismatch - Service: $serviceActive, State: $stateActive',
+      );
+    }
+
+    return serviceActive && stateActive;
+  }
+
+  // Enhanced tracking metrics for debugging
+  Map<String, dynamic> getEnhancedTrackingMetrics() {
+    final baseMetrics = _realTimeTrackingService.getTrackingMetrics();
+    final performanceMetrics = _realTimeTrackingService.getPerformanceMetrics();
+    final issues = _realTimeTrackingService.validateTrackingState();
+
+    return {
+      ...baseMetrics,
+      'performance': performanceMetrics,
+      'issues': issues,
+      'uiTrackingActive': state.isRealTimeTrackingActive,
+      'rideInProgress': state.rideInProgress,
+      'socketConnected': getIt<SocketService>().isConnected,
+      'currentRideId': state.currentRideId,
+      'driverAcceptedId': state.driverAccepted?.driverId,
+    };
   }
 
   // Helper method for distance calculation
@@ -1135,10 +1425,6 @@ class RideCubit extends Cubit<RideState> {
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
 
     return earthRadius * c;
-  }
-
-  TrackingStatus getTrackingStatus() {
-    return _realTimeTrackingService.getTrackingStatus();
   }
 
   // UPDATED: Manual route recalculation (for user-triggered updates)
@@ -1187,11 +1473,6 @@ class RideCubit extends Cubit<RideState> {
     dev.log('📍 Ready to receive real-time driver positions');
   }
 
-  bool get isRealTimeTrackingActive =>
-      state.rideInProgress &&
-      state.isRealTimeTrackingActive &&
-      _realTimeTrackingService.isTracking;
-
   Duration? get timeSinceLastUpdate {
     final lastUpdate = state.lastPositionUpdate;
     if (lastUpdate == null) return null;
@@ -1227,6 +1508,8 @@ class RideCubit extends Cubit<RideState> {
         },
         (statusResponse) async {
           final currentStatus = statusResponse.data?.status;
+
+          log('Current status: $currentStatus');
 
           if (currentStatus == 'accepted') {
             emit(
