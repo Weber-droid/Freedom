@@ -154,6 +154,64 @@ class InAppMessageCubit extends Cubit<InAppMessageState> {
     }
   }
 
+  Future<void> sendDeliveryMessage(
+    String messageText,
+    String deliveryId,
+  ) async {
+    log('sendDeliveryMessage called');
+    try {
+      await _initializeCurrentUserId();
+
+      final currentUserId = _currentUserId ?? '';
+
+      final optimisticTimestamp = DateTime.now();
+      final optimisticMessage = MessageModels(
+        messageText,
+        currentUserId,
+        optimisticTimestamp,
+        deliveryId,
+        null,
+        null,
+        null,
+        status: MessageStatus.sending,
+      );
+
+      final cache = InAppMessageCache();
+      await cache.addMessage(deliveryId, optimisticMessage);
+
+      final currentMessages = await InAppMessageCache.getMessages(deliveryId);
+      emit(InAppMessageLoaded(inAppMessages: currentMessages));
+
+      log('Sending message to server...');
+      final response = await messageRemoteDataSource.sendDeliveryMessage(
+        messageText,
+        deliveryId,
+      );
+
+      if (response) {
+        log('Message sent successfully, updating status to sent');
+        await _updateMessageStatus(
+          deliveryId,
+          optimisticMessage,
+          MessageStatus.sent,
+          cache,
+        );
+      } else {
+        log('Failed to send message, updating status to failed');
+        await _updateMessageStatus(
+          deliveryId,
+          optimisticMessage,
+          MessageStatus.failed,
+          cache,
+        );
+        emit(const InAppMessageError(error: 'Failed to send message'));
+      }
+    } catch (e) {
+      log('Exception in sendMessage: $e');
+      emit(InAppMessageError(error: 'Failed to send message: $e'));
+    }
+  }
+
   Future<void> _updateMessageStatus(
     String rideId,
     MessageModels originalMessage,

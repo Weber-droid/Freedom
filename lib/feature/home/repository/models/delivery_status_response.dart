@@ -1,122 +1,127 @@
-// UPDATED: DeliveryStatusResponse models to match your actual API
-
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class DeliveryStatusResponse {
   final bool success;
-  final String? message;
-  final DeliveryStatusData? data;
+  final String message;
+  final String? status;
+  final String? deliveryId;
+  final String? driverId;
+  final String? driverName;
+  final String? driverPhone;
+  final Map<String, dynamic>? driverLocation;
+  final String? pickupLocation;
+  final String? destinationLocation;
+  final double? estimatedArrivalTime;
+  final double? totalFare;
+  final String? paymentMethod;
+  final bool? isMultiStop;
+  final int? numberOfStops;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   const DeliveryStatusResponse({
     required this.success,
-    this.message,
-    this.data,
+    required this.message,
+    this.status,
+    this.deliveryId,
+    this.driverId,
+    this.driverName,
+    this.driverPhone,
+    this.driverLocation,
+    this.pickupLocation,
+    this.destinationLocation,
+    this.estimatedArrivalTime,
+    this.totalFare,
+    this.paymentMethod,
+    this.isMultiStop,
+    this.numberOfStops,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory DeliveryStatusResponse.fromJson(Map<String, dynamic> json) {
     return DeliveryStatusResponse(
-      success: json['success'] ?? false,
-      message: json['message'],
-      data:
-          json['data'] != null
-              ? DeliveryStatusData.fromJson(json['data'])
+      success: json['success'] as bool? ?? false,
+      message: json['message'] as String? ?? '',
+      status: json['status'] as String?,
+      deliveryId: json['deliveryId'] as String?,
+      driverId: json['driverId'] as String?,
+      driverName: json['driverName'] as String?,
+      driverPhone: json['driverPhone'] as String?,
+      driverLocation: json['driverLocation'] as Map<String, dynamic>?,
+      pickupLocation: json['pickupLocation'] as String?,
+      destinationLocation: json['destinationLocation'] as String?,
+      estimatedArrivalTime: (json['estimatedArrivalTime'] as num?)?.toDouble(),
+      totalFare: (json['totalFare'] as num?)?.toDouble(),
+      paymentMethod: json['paymentMethod'] as String?,
+      isMultiStop: json['isMultiStop'] as bool?,
+      numberOfStops: json['numberOfStops'] as int?,
+      createdAt:
+          json['createdAt'] != null
+              ? DateTime.parse(json['createdAt'] as String)
+              : null,
+      updatedAt:
+          json['updatedAt'] != null
+              ? DateTime.parse(json['updatedAt'] as String)
               : null,
     );
   }
-}
 
-class DeliveryStatusData {
-  final String deliveryId;
-  final String
-  status; // 'pending', 'accepted', 'started', 'in_progress', 'completed', 'cancelled'
-  final DriverLocation? driverLocation;
-  final EtaInfo? eta;
-  final bool isDeliveryVerified;
+  Map<String, dynamic> toJson() {
+    return {
+      'success': success,
+      'message': message,
+      'status': status,
+      'deliveryId': deliveryId,
+      'driverId': driverId,
+      'driverName': driverName,
+      'driverPhone': driverPhone,
+      'driverLocation': driverLocation,
+      'pickupLocation': pickupLocation,
+      'destinationLocation': destinationLocation,
+      'estimatedArrivalTime': estimatedArrivalTime,
+      'totalFare': totalFare,
+      'paymentMethod': paymentMethod,
+      'isMultiStop': isMultiStop,
+      'numberOfStops': numberOfStops,
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+    };
+  }
 
-  const DeliveryStatusData({
-    required this.deliveryId,
-    required this.status,
-    this.driverLocation,
-    this.eta,
-    required this.isDeliveryVerified,
-  });
+  bool get hasDriverInfo => driverId != null && driverName != null;
 
-  factory DeliveryStatusData.fromJson(Map<String, dynamic> json) {
-    return DeliveryStatusData(
-      deliveryId: json['deliveryId'] ?? '',
-      status: json['status'] ?? '',
-      driverLocation:
-          json['driverLocation'] != null
-              ? DriverLocation.fromJson(json['driverLocation'])
-              : null,
-      eta: json['eta'] != null ? EtaInfo.fromJson(json['eta']) : null,
-      isDeliveryVerified: json['isDeliveryVerified'] ?? false,
+  bool get hasLocationInfo =>
+      driverLocation != null &&
+      driverLocation!.containsKey('latitude') &&
+      driverLocation!.containsKey('longitude');
+
+  LatLng? get driverPosition {
+    if (!hasLocationInfo) return null;
+    return LatLng(
+      (driverLocation!['latitude'] as num).toDouble(),
+      (driverLocation!['longitude'] as num).toDouble(),
     );
   }
 
-  // Helper getters
-  bool get isActive =>
-      ['pending', 'accepted', 'started', 'in_progress'].contains(status);
-  bool get hasDriver => status != 'pending';
-  bool get isInProgress => ['started', 'in_progress'].contains(status);
-  LatLng? get driverPosition => driverLocation?.position;
-}
-
-class DriverLocation {
-  final String type;
-  final List<double> coordinates;
-  final int updatedAt;
-
-  const DriverLocation({
-    required this.type,
-    required this.coordinates,
-    required this.updatedAt,
-  });
-
-  factory DriverLocation.fromJson(Map<String, dynamic> json) {
-    return DriverLocation(
-      type: json['type'] ?? 'Point',
-      coordinates: List<double>.from(json['coordinates'] ?? []),
-      updatedAt: json['updatedAt'] ?? 0,
-    );
-  }
-
-  // Helper getters
-  double get longitude => coordinates.isNotEmpty ? coordinates[0] : 0.0;
-  double get latitude => coordinates.length > 1 ? coordinates[1] : 0.0;
-
-  LatLng get position => LatLng(latitude, longitude);
-
-  DateTime get lastUpdate => DateTime.fromMillisecondsSinceEpoch(updatedAt);
-
-  bool get isRecent {
-    final now = DateTime.now();
-    final updateTime = lastUpdate;
-    return now.difference(updateTime).inMinutes < 5;
-  }
-}
-
-class EtaInfo {
-  final int value;
-  final String text;
-
-  const EtaInfo({required this.value, required this.text});
-
-  factory EtaInfo.fromJson(Map<String, dynamic> json) {
-    return EtaInfo(value: json['value'] ?? 0, text: json['text'] ?? '');
-  }
-
-  // Helper getters
-  Duration get duration => Duration(seconds: value);
-
-  String get formattedTime {
-    final hours = duration.inHours;
-    final minutes = duration.inMinutes % 60;
-
-    if (hours > 0) {
-      return '${hours}h ${minutes}m';
-    } else {
-      return '${minutes}m';
+  String get statusDisplay {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+        return 'Searching for driver';
+      case 'accepted':
+        return 'Driver found';
+      case 'picked_up':
+        return 'Package picked up';
+      case 'in_progress':
+        return 'Delivery in progress';
+      case 'arrived':
+        return 'Driver has arrived';
+      case 'completed':
+        return 'Delivery completed';
+      case 'cancelled':
+        return 'Delivery cancelled';
+      default:
+        return status ?? 'Unknown status';
     }
   }
 }

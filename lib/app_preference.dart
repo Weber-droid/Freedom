@@ -7,10 +7,10 @@ class AppPreferences {
   static const String tokenKey = 'jwt_token';
   static const String firstTimerKey = 'is_first_timer';
   static const String onboardingCompletedKey = 'onboarding_completed';
-  static const String _deliveryIdKey = 'delivery_id';
 
   static const String rideIdKey = 'rideId';
   static const String _deliveryStateKey = 'delivery_state_json';
+  static const String _deliveryIdKey = 'current_delivery_id';
 
   static String? _cachedToken;
   static bool? _cachedIsFirstTimer;
@@ -125,5 +125,72 @@ class AppPreferences {
       log('Error clearing preferences: $e');
       rethrow;
     }
+  }
+
+  ///new methods
+
+  static Future<void> removeDeliveryId() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_deliveryIdKey);
+  }
+
+  static Future<void> setString(String key, String value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, value);
+  }
+
+  static Future<String?> getString(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(key);
+  }
+
+  static Future<void> remove(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(key);
+  }
+
+  static Future<void> setBool(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, value);
+  }
+
+  static Future<bool?> getBool(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(key);
+  }
+
+  static Future<void> setInt(String key, int value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(key, value);
+  }
+
+  static Future<int?> getInt(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(key);
+  }
+
+  static Future<void> setDouble(String key, double value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(key, value);
+  }
+
+  static Future<double?> getDouble(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getDouble(key);
+  }
+
+  static Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+
+  static Future<bool> containsKey(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.containsKey(key);
+  }
+
+  static Future<Set<String>> getKeys() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getKeys();
   }
 }

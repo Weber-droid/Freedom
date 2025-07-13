@@ -242,7 +242,7 @@ class SocketService {
       log('delivery_status_updated: $data');
       try {
         final mapData = data as Map<String, dynamic>;
-        AppPreferences.setRideId(mapData['deliveryId']);
+        AppPreferences.setDeliveryId(mapData['deliveryId']);
         if (mapData['status'] == 'accepted') {
           final modeled = DeliveryManAcceptedModel.fromJson(mapData);
           getIt<PushNotificationService>().showDriverAcceptNotification(
@@ -305,6 +305,14 @@ class SocketService {
       } catch (e, stackTrace) {
         log('Error parsing ride_status_updated payload: $e\n$stackTrace');
       }
+    });
+
+    _socket!.on('delivery_message', (data) {
+      getIt<PushNotificationService>().showRideStatusNotification(
+        status: 'delivery_message',
+        message: data['notification']['body'] as String,
+      );
+      _driverMessageController.add(DriverMessage.fromJson(data));
     });
   }
 

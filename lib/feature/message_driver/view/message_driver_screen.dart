@@ -5,6 +5,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:freedom/app_preference.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
+import 'package:freedom/feature/home/delivery_cubit/delivery_cubit.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
 import 'package:freedom/feature/message_driver/cubit/in_app_message_cubit.dart';
 import 'package:freedom/feature/message_driver/models/message_models.dart';
@@ -27,12 +28,14 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
   final ScrollController _scrollController = ScrollController();
   String message = '';
   late RideCubit rideCubit;
+  late DeliveryCubit deliveryCubit;
   String? _currentUserId;
 
   @override
   void initState() {
     super.initState();
     rideCubit = context.read<RideCubit>();
+    deliveryCubit = context.read<DeliveryCubit>();
     _initializeCurrentUserId();
     _initializeChat();
   }
@@ -43,15 +46,21 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
         final rideId =
             rideCubit.state.driverAccepted?.driverId ??
             await AppPreferences.getRideId();
+        final deliveryId =
+            deliveryCubit.state.deliveryData?.deliveryId ??
+            await AppPreferences.getDeliveryId() ??
+            '';
 
         if (rideId.isNotEmpty) {
           final messageCubit = context.read<InAppMessageCubit>();
           await messageCubit.retrieveMessagFromCache();
           messageCubit.startListeningToDriverMessages(rideId);
-
-          // Scroll to bottom after loading messages
           _scrollToBottom();
           log('Chat initialized for ride: $rideId');
+        } else if (deliveryId.isNotEmpty) {
+          final messageCubit = context.read<InAppMessageCubit>();
+          await messageCubit.retrieveMessagFromCache();
+          messageCubit.startListeningToDriverMessages(deliveryId);
         }
       } catch (e) {
         log('Error initializing chat: $e');
@@ -70,7 +79,7 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
     if (_scrollController.hasClients) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _scrollController.animateTo(
-          0.0, // Since reverse: true, 0.0 is the bottom
+          0.0,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -215,12 +224,22 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
                 ),
                 const SizedBox(height: 16),
                 FreedomButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (message.isNotEmpty) {
-                      context.read<InAppMessageCubit>().sendMessage(
-                        message,
-                        rideCubit.state.driverAccepted?.driverId ?? '',
-                      );
+                      final deliveryId = await AppPreferences.getDeliveryId();
+                      log('deliveryId: $deliveryId');
+                      if (deliveryId != null) {
+                        context.read<InAppMessageCubit>().sendDeliveryMessage(
+                          message,
+                          deliveryId,
+                        );
+                      } else {
+                        context.read<InAppMessageCubit>().sendMessage(
+                          message,
+                          rideCubit.state.driverAccepted?.driverId ?? '',
+                        );
+                      }
+
                       setState(() {
                         message = '';
                         messageController.clear();

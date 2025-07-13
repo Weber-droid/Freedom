@@ -168,7 +168,7 @@ class DeliveryAnimationService {
 
   /// Calculate distance between two points using Haversine formula
   double _calculateDistance(LatLng point1, LatLng point2) {
-    const double earthRadius = 6371000; // Earth's radius in meters
+    const double earthRadius = 6371000;
 
     final lat1Rad = point1.latitude * math.pi / 180;
     final lat2Rad = point2.latitude * math.pi / 180;
