@@ -64,6 +64,7 @@ class DeliveryState extends Equatable {
     // Marker icons
     this.deliveryDriverMarkerIcon,
     this.streetLevelZoom,
+    this.statusData,
   });
 
   // Basic delivery state
@@ -99,11 +100,11 @@ class DeliveryState extends Equatable {
   final DeliveryCancellationStatus deliveryCancellationStatus;
 
   // Driver status tracking
-  final dynamic deliveryDriverAccepted;
-  final dynamic deliveryDriverStarted;
-  final dynamic deliveryDriverArrived;
-  final dynamic deliveryDriverCompleted;
-  final dynamic deliveryDriverCancelled;
+  final DeliveryManAcceptedModel? deliveryDriverAccepted;
+  final DeliveryManStarted? deliveryDriverStarted;
+  final DeliveryArrived? deliveryDriverArrived;
+  final DeliveryManCompleted? deliveryDriverCompleted;
+  final DeliveryManCancelled? deliveryDriverCancelled;
   final bool deliveryDriverHasArrived;
   final bool deliveryInProgress;
 
@@ -129,6 +130,8 @@ class DeliveryState extends Equatable {
   // Marker icons
   final BitmapDescriptor? deliveryDriverMarkerIcon;
   final double? streetLevelZoom;
+  final DeliveryStatusResponse? statusData;
+
   @override
   List<Object?> get props => [
     status,
@@ -177,6 +180,7 @@ class DeliveryState extends Equatable {
     deliveryDriverAnimationComplete,
     deliveryDriverMarkerIcon,
     streetLevelZoom,
+    statusData,
   ];
 
   DeliveryState copyWith({
@@ -204,11 +208,11 @@ class DeliveryState extends Equatable {
     List<Location>? recentLocations,
     String? currentDeliveryId,
     DeliveryCancellationStatus? deliveryCancellationStatus,
-    dynamic deliveryDriverAccepted,
-    dynamic deliveryDriverStarted,
-    dynamic deliveryDriverArrived,
-    dynamic deliveryDriverCompleted,
-    dynamic deliveryDriverCancelled,
+    DeliveryManAcceptedModel? deliveryDriverAccepted,
+    DeliveryManStarted? deliveryDriverStarted,
+    DeliveryArrived? deliveryDriverArrived,
+    DeliveryManCompleted? deliveryDriverCompleted,
+    DeliveryManCancelled? deliveryDriverCancelled,
     bool? deliveryDriverHasArrived,
     bool? deliveryInProgress,
     bool? isRealTimeDeliveryTrackingActive,
@@ -226,6 +230,7 @@ class DeliveryState extends Equatable {
     bool? deliveryDriverAnimationComplete,
     BitmapDescriptor? deliveryDriverMarkerIcon,
     double? streetLevelZoom,
+    DeliveryStatusResponse? statusData,
   }) {
     return DeliveryState(
       status: status ?? this.status,
@@ -302,6 +307,7 @@ class DeliveryState extends Equatable {
       deliveryDriverMarkerIcon:
           deliveryDriverMarkerIcon ?? this.deliveryDriverMarkerIcon,
       streetLevelZoom: streetLevelZoom ?? this.streetLevelZoom,
+      statusData: statusData ?? this.statusData,
     );
   }
 
@@ -330,8 +336,7 @@ class DeliveryState extends Equatable {
 
   bool get isDeliveryStale {
     if (timeSinceLastDeliveryUpdate == null) return false;
-    return timeSinceLastDeliveryUpdate!.inSeconds >
-        10; // Stale after 10 seconds for 3s updates
+    return timeSinceLastDeliveryUpdate!.inSeconds > 10;
   }
 
   @override
@@ -347,8 +352,6 @@ class DeliveryState extends Equatable {
         ')';
   }
 }
-
-// Additional helper classes for delivery tracking
 
 class DeliveryRouteInfo {
   final double totalDistance;
@@ -393,7 +396,6 @@ class DeliveryRouteInfo {
   }
 }
 
-// Delivery tracking metrics for debugging
 class DeliveryTrackingMetrics {
   final bool isTrackingActive;
   final bool isReceivingUpdates;

@@ -10,6 +10,7 @@ abstract class IMessageDriverRemoteDataSource {
   // Define the methods that will be implemented by the concrete class
   Future<bool> sendMessage(String message, String rideId);
   Future<String> receiveMessage();
+  Future<bool> sendDeliveryMessage(String message, String deliveryId);
 }
 
 class MessageRemoteDataSource implements IMessageDriverRemoteDataSource {
@@ -27,9 +28,36 @@ class MessageRemoteDataSource implements IMessageDriverRemoteDataSource {
     try {
       final response = await client.post(
         '${Endpoints.messages}$rideId/message',
-        body: {
-          'message': message,
+        body: {'message': message},
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': 'Bearer ${await AppPreferences.getToken()}',
         },
+      );
+      final decoded = json.decode(response.body) as Map<String, dynamic>;
+      if (decoded.containsKey('msg')) {
+        throw ServerException(decoded['msg'].toString());
+      }
+      if (decoded.containsKey('success')) {
+        return decoded['success'] as bool;
+      } else {
+        throw ServerException('Unknown error occurred');
+      }
+    } on SocketException catch (e) {
+      throw NetworkException(e.message);
+    } on ServerException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  @override
+  Future<bool> sendDeliveryMessage(String message, String deliveryId) async {
+    try {
+      final response = await client.post(
+        '${Endpoints.deliveryMessages}$deliveryId/message',
+        body: {'message': message},
         headers: {
           'Content-Type': 'application/json',
           'authorization': 'Bearer ${await AppPreferences.getToken()}',

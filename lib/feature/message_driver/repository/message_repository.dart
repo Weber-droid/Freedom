@@ -8,9 +8,29 @@ class MessageRepository {
 
   final IMessageDriverRemoteDataSource remoteDataSource;
   Future<Either<Failure, bool>> sendMessage(
-      String message, String rideId) async {
+    String message,
+    String rideId,
+  ) async {
     try {
       final response = await remoteDataSource.sendMessage(message, rideId);
+
+      return Right(response);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
+  Future<Either<Failure, bool>> sendDeliveryMessage(
+    String message,
+    String deliveryId,
+  ) async {
+    try {
+      final response = await remoteDataSource.sendDeliveryMessage(
+        message,
+        deliveryId,
+      );
 
       return Right(response);
     } on ServerException catch (e) {

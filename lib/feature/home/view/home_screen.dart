@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/config/api_constants.dart';
+import 'package:freedom/core/services/delivery_persistence_service.dart';
 import 'package:freedom/core/services/map_services.dart';
 import 'package:freedom/core/services/push_notification_service/push_nofication_service.dart';
 import 'package:freedom/core/services/real_time_driver_tracking.dart';
@@ -50,7 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<HomeCubit>().checkPermissionStatus();
     context.read<ProfileCubit>().getUserProfile();
     PushNotificationService.askPermissions();
     rideCubit = context.read<RideCubit>();
@@ -64,27 +64,39 @@ class _HomeScreenState extends State<HomeScreen> {
         userId: user!.userId ?? '',
         userName: user.firstName ?? '',
       );
-      _checkRideStatus();
-      // _checkDeliveryStatus();
+      _checkPersistedStates();
       _getPaymentMethods();
     });
   }
 
-  Future<void> _checkRideStatus() async {
-    final rideId = await AppPreferences.getRideId();
-    await context.read<RideCubit>().checkRideStatus(rideId);
+  Future<void> _checkPersistedStates() async {
+    final deliveryCubit = context.read<DeliveryCubit>();
+    try {
+      dev.log('🔄 Checking for persisted states...');
+
+      final rideId = await AppPreferences.getRideId();
+      if (rideId.isNotEmpty) {
+        await context.read<RideCubit>().checkRideStatus(rideId);
+      }
+
+      final persistenceService =
+          getIt.isRegistered<DeliveryPersistenceService>()
+              ? getIt<DeliveryPersistenceService>()
+              : DeliveryPersistenceService(deliveryCubit.deliveryRepository);
+
+      final hasPersistedDelivery =
+          await persistenceService.hasPersistedDeliveryState();
+
+      if (hasPersistedDelivery) {
+        dev.log('✅ Found persisted delivery state - will be loaded by cubit');
+      } else {
+        dev.log('📭 No persisted delivery state found');
+        context.read<HomeCubit>().checkPermissionStatus();
+      }
+    } catch (e) {
+      dev.log('❌ Error checking persisted states: $e');
+    }
   }
-
-  // Future<void> _checkDeliveryStatus() async {
-  //   try {
-  //     dev.log('🔍 Checking for persisted delivery...');
-
-  //     // Simple call - all complexity handled in service
-  //     await context.read<DeliveryCubit>().checkDeliveryStatus();
-  //   } catch (e) {
-  //     dev.log('❌ Error checking delivery status: $e');
-  //   }
-  // }
 
   Future<void> _getPaymentMethods() async {
     await context.read<WalletCubit>().loadWallet();

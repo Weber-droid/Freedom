@@ -19,23 +19,18 @@ class RealTimeDriverTrackingService {
   String? _currentRideId;
   String? _currentDriverId;
 
-  // Enhanced tracking for 3-second updates
   Timer? _updateTimer;
   List<LocationHistory> _locationHistory = [];
-  static const int _maxHistoryLength =
-      10; // Keep last 10 positions for smoothing
+  static const int _maxHistoryLength = 10;
   static const Duration _expectedUpdateInterval = Duration(seconds: 3);
   static const Duration _staleUpdateThreshold = Duration(seconds: 10);
 
-  // Route recalculation settings - adjusted for more frequent updates
-  static const double _routeDeviationThresholdMeters = 30.0; // Reduced from 50m
-  static const int _routeRecalculationCooldownSeconds = 8; // Reduced from 10s
+  static const double _routeDeviationThresholdMeters = 30.0;
+  static const int _routeRecalculationCooldownSeconds = 8;
   DateTime? _lastRouteRecalculation;
 
-  // Position smoothing and validation
-  static const double _maxSpeedKmh = 120.0; // Maximum realistic speed
-  static const double _minAccuracyMeters =
-      5.0; // Minimum acceptable GPS accuracy
+  static const double _maxSpeedKmh = 120.0;
+  static const double _minAccuracyMeters = 5.0;
   static const double _maxJumpDistanceMeters =
       200.0; // Max distance between updates
 

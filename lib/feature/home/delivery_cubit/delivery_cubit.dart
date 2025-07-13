@@ -5,9 +5,16 @@ import 'dart:math' as math;
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter/widgets.dart';
+import 'package:freedom/core/services/push_notification_service/socket_delivery_model.dart';
+import 'package:freedom/core/services/real_time_driver_tracking.dart'
+    as tracking;
+
 import 'package:freedom/core/services/delivery_animation_service.dart';
 import 'package:freedom/core/services/real_time_driver_tracking.dart';
 import 'package:freedom/core/services/route_animation_services.dart';
+import 'package:freedom/core/services/delivery_persistence_service.dart';
+import 'package:freedom/feature/home/delivery_cubit/helpers.dart';
+import 'package:freedom/feature/home/repository/models/delivery_status_response.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
@@ -30,15 +37,19 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     RouteService? routeService,
     RouteAnimationService? animationService,
     RealTimeDriverTrackingService? trackingService,
-    DeliveryAnimationService? deliveryAnimationService, // ADD THIS
+    DeliveryAnimationService? deliveryAnimationService,
+    DeliveryPersistenceService? persistenceService,
   }) : _routeService = routeService ?? getIt<RouteService>(),
        _animationService = animationService ?? getIt<RouteAnimationService>(),
        _realTimeTrackingService =
            trackingService ?? getIt<RealTimeDriverTrackingService>(),
-       _deliveryAnimationService = // ADD THIS
+       _deliveryAnimationService =
            deliveryAnimationService ?? DeliveryAnimationService(),
+       _persistenceService =
+           persistenceService ?? DeliveryPersistenceService(deliveryRepository),
        super(const DeliveryState()) {
     _initSocketListener();
+    _loadPersistedStateOnInit();
   }
 
   final DeliveryRepositoryImpl deliveryRepository;
@@ -46,13 +57,13 @@ class DeliveryCubit extends Cubit<DeliveryState> {
   final RouteService _routeService;
   final RouteAnimationService _animationService;
   final RealTimeDriverTrackingService _realTimeTrackingService;
-  final DeliveryAnimationService _deliveryAnimationService; // ADD THIS
+  final DeliveryAnimationService _deliveryAnimationService;
+  final DeliveryPersistenceService _persistenceService;
 
   Timer? _debounceTimer;
   Timer? _timer;
   static const int maxSearchTime = 60;
 
-  // Socket subscriptions for delivery tracking
   StreamSubscription<dynamic>? _deliveryDriverStatusSubscription;
   StreamSubscription<dynamic>? _deliveryManCancelledSubscription;
   StreamSubscription<dynamic>? _deliveryDriverAcceptedSubscription;
@@ -65,6 +76,294 @@ class DeliveryCubit extends Cubit<DeliveryState> {
   DeliveryModel? _currentDeliveryRequest;
 
   DeliveryModel? get currentDeliveryRequest => _currentDeliveryRequest;
+
+  Future<void> checkDeliveryStatus(String id) async {
+    try {
+      final response = await deliveryRepository.checkDeliveryStatus(id);
+      response.fold(
+        (l) => emit(state.copyWith(errorMessage: l.message)),
+        (r) => emit(state.copyWith(statusData: r)),
+      );
+    } catch (e) {}
+  }
+
+  Future<void> _loadPersistedStateOnInit() async {
+    try {
+      dev.log('🔄 Checking for persisted delivery state on init...');
+
+      final persistedData =
+          await _persistenceService.loadPersistedDeliveryState();
+      if (persistedData == null) {
+        dev.log('📭 No valid persisted delivery state found');
+        return;
+      }
+
+      dev.log(
+        '✅ Loading persisted delivery state: ${persistedData.deliveryId}',
+      );
+      dev.log('📊 Persisted state details:');
+      dev.log('  - riderFound: ${persistedData.riderFound}');
+      dev.log('  - deliveryInProgress: ${persistedData.deliveryInProgress}');
+      dev.log(
+        '  - driverAccepted: ${persistedData.deliveryDriverAccepted?.status}',
+      );
+      dev.log(
+        '  - driverStarted: ${persistedData.deliveryDriverStarted?.status}',
+      );
+      dev.log(
+        '  - wasTrackingActive: ${persistedData.isRealTimeDeliveryTrackingActive}',
+      );
+
+      _currentDeliveryRequest = persistedData.deliveryRequest;
+
+      // Ensure custom marker is loaded first
+      await _ensureDeliveryMarkerIcons();
+
+      emit(
+        state.copyWith(
+          status: persistedData.status,
+          currentDeliveryId: persistedData.deliveryId,
+          riderFound: persistedData.riderFound,
+          deliveryInProgress: persistedData.deliveryInProgress,
+          deliveryDriverHasArrived: persistedData.deliveryDriverHasArrived,
+          isRealTimeDeliveryTrackingActive:
+              persistedData.isRealTimeDeliveryTrackingActive,
+          deliveryRouteDisplayed: persistedData.deliveryRouteDisplayed,
+          currentDeliverySpeed: persistedData.currentDeliverySpeed,
+          lastDeliveryPositionUpdate: persistedData.lastDeliveryPositionUpdate,
+          deliveryTrackingStatusMessage:
+              persistedData.deliveryTrackingStatusMessage,
+          currentDeliveryDriverPosition:
+              persistedData.currentDeliveryDriverPosition,
+          deliveryData: persistedData.deliveryData,
+          deliveryDriverAccepted: persistedData.deliveryDriverAccepted,
+          deliveryDriverStarted: persistedData.deliveryDriverStarted,
+          deliveryRoutePolylines: persistedData.polylines ?? const {},
+          deliveryRouteMarkers: persistedData.markers ?? const {},
+        ),
+      );
+
+      // Always set up socket listeners if there's an active delivery
+      if (persistedData.riderFound || persistedData.deliveryInProgress) {
+        dev.log('🔊 Setting up socket listeners for persisted delivery');
+        _listenToDeliveryDriverStatus();
+      }
+
+      final shouldResumeTracking = shouldResumeRealTimeTracking(persistedData);
+
+      if (shouldResumeTracking) {
+        dev.log('🔴 Resuming real-time tracking for persisted delivery');
+
+        // Longer delay to ensure everything is properly initialized
+        await Future.delayed(const Duration(milliseconds: 1000));
+        await _resumeRealTimeDeliveryTracking(persistedData);
+      } else {
+        dev.log('📍 Delivery found but real-time tracking not needed yet');
+      }
+
+      dev.log('✅ Persisted delivery state loaded successfully');
+    } catch (e, stackTrace) {
+      dev.log('❌ Error loading persisted state: $e');
+      dev.log('Stack trace: $stackTrace');
+      await _persistenceService.clearPersistedState();
+    }
+  }
+
+  Future<void> _resumeRealTimeDeliveryTracking(
+    PersistedDeliveryData persistedData,
+  ) async {
+    try {
+      dev.log('🔄 Starting real-time tracking resume process...');
+
+      if (_currentDeliveryRequest == null) {
+        dev.log('❌ Cannot resume tracking: missing delivery request');
+        return;
+      }
+
+      // Get destination coordinates
+      final destinationCoordinates = await _getCoordinatesFromAddress(
+        _currentDeliveryRequest!.destinationLocation,
+      );
+
+      if (destinationCoordinates == null) {
+        dev.log(
+          '❌ Cannot resume tracking: failed to get destination coordinates',
+        );
+        return;
+      }
+
+      final destination = LatLng(
+        destinationCoordinates.latitude,
+        destinationCoordinates.longitude,
+      );
+
+      // Get delivery and driver IDs with multiple fallback options
+      final deliveryId = persistedData.deliveryId;
+      final driverId = getDriverId(persistedData);
+
+      dev.log('📋 Resume tracking details:');
+      dev.log('  - deliveryId: $deliveryId');
+      dev.log('  - driverId: $driverId');
+      dev.log(
+        '  - destination: ${destination.latitude}, ${destination.longitude}',
+      );
+
+      if (driverId.isEmpty) {
+        dev.log('❌ Cannot resume tracking: missing driver ID');
+        // Try to get driver info from server as fallback
+        await _fetchLatestDeliveryStatus(deliveryId);
+        return;
+      }
+
+      final gmapsDestination = gmaps.LatLng(
+        destination.latitude,
+        destination.longitude,
+      );
+
+      // Start the real-time tracking service
+      dev.log('🚀 Starting real-time tracking service...');
+      _realTimeTrackingService.startTracking(
+        rideId: deliveryId,
+        driverId: driverId,
+        destination: gmapsDestination,
+        onPositionUpdate: _handleRealTimeDeliveryPositionUpdate,
+        onRouteUpdated: _updateDeliveryRouteOnMap,
+        onStatusUpdate: _updateDeliveryTrackingStatus,
+        onMarkerUpdate: _handlePreciseDeliveryMarkerUpdate,
+      );
+
+      // Resume animation service if we have a position
+      final lastKnownPosition = persistedData.currentDeliveryDriverPosition;
+      if (lastKnownPosition != null) {
+        dev.log(
+          '🎬 Resuming animation from last known position: $lastKnownPosition',
+        );
+
+        _deliveryAnimationService.startRealTimeTracking(
+          onMarkerUpdate: (position, rotation) {
+            _updateDeliveryDriverMarkerPositionRealTime(position, rotation);
+          },
+          initialPosition: lastKnownPosition,
+        );
+      } else {
+        dev.log(
+          '⚠️ No last known position, using pickup location for animation',
+        );
+
+        final pickupCoordinates = await _getCoordinatesFromAddress(
+          _currentDeliveryRequest!.pickupLocation,
+        );
+
+        if (pickupCoordinates != null) {
+          final pickup = LatLng(
+            pickupCoordinates.latitude,
+            pickupCoordinates.longitude,
+          );
+          _deliveryAnimationService.startRealTimeTracking(
+            onMarkerUpdate: (position, rotation) {
+              _updateDeliveryDriverMarkerPositionRealTime(position, rotation);
+            },
+            initialPosition: pickup,
+          );
+        }
+      }
+
+      emit(
+        state.copyWith(
+          isRealTimeDeliveryTrackingActive: true,
+          deliveryTrackingStatusMessage: 'Real-time tracking resumed',
+        ),
+      );
+
+      dev.log('✅ Real-time delivery tracking resumed successfully');
+
+      // Additional verification
+      Future.delayed(const Duration(seconds: 3), () {
+        final isServiceActive = _realTimeTrackingService.isTracking;
+        final isAnimationActive = _deliveryAnimationService.isRealTimeTracking;
+
+        dev.log('🔍 Post-resume verification:');
+        dev.log('  - Tracking service active: $isServiceActive');
+        dev.log('  - Animation service active: $isAnimationActive');
+        dev.log(
+          '  - State tracking active: ${state.isRealTimeDeliveryTrackingActive}',
+        );
+
+        if (!isServiceActive || !isAnimationActive) {
+          dev.log('⚠️ Some services failed to resume properly');
+        }
+      });
+    } catch (e, stackTrace) {
+      dev.log('❌ Error resuming real-time tracking: $e');
+      dev.log('Stack trace: $stackTrace');
+      emit(
+        state.copyWith(
+          isRealTimeDeliveryTrackingActive: false,
+          deliveryTrackingStatusMessage: 'Failed to resume tracking',
+        ),
+      );
+    }
+  }
+
+  Future<void> _fetchLatestDeliveryStatus(String deliveryId) async {
+    try {
+      dev.log('🔄 Fetching latest delivery status as fallback...');
+
+      final response = await deliveryRepository.checkDeliveryStatus(deliveryId);
+      response.fold(
+        (failure) {
+          dev.log('❌ Failed to fetch delivery status: ${failure.message}');
+        },
+        (statusData) {
+          dev.log('✅ Got latest delivery status, updating state');
+
+          emit(state.copyWith(statusData: statusData));
+
+          // If we now have driver info, try to resume tracking
+          if (statusData.driverId?.isNotEmpty == true) {
+            final persistedData = PersistedDeliveryData(
+              deliveryId: deliveryId,
+              status: state.status,
+              riderFound: state.riderFound,
+              deliveryInProgress: state.deliveryInProgress,
+              deliveryDriverHasArrived: state.deliveryDriverHasArrived,
+              isRealTimeDeliveryTrackingActive:
+                  state.isRealTimeDeliveryTrackingActive,
+              deliveryRouteDisplayed: state.deliveryRouteDisplayed,
+              currentDeliverySpeed: state.currentDeliverySpeed,
+              lastDeliveryPositionUpdate: state.lastDeliveryPositionUpdate,
+              deliveryTrackingStatusMessage:
+                  state.deliveryTrackingStatusMessage,
+              currentDeliveryDriverPosition:
+                  state.currentDeliveryDriverPosition,
+              deliveryData: state.deliveryData,
+              deliveryDriverAccepted: state.deliveryDriverAccepted,
+              deliveryDriverStarted: state.deliveryDriverStarted,
+              polylines: state.deliveryRoutePolylines,
+              markers: state.deliveryRouteMarkers,
+              deliveryRequest: _currentDeliveryRequest,
+              deliveryStatusResponse: statusData,
+            );
+
+            _resumeRealTimeDeliveryTracking(persistedData);
+          }
+        },
+      );
+    } catch (e) {
+      dev.log('❌ Error fetching latest delivery status: $e');
+    }
+  }
+
+  @override
+  void emit(DeliveryState state) {
+    super.emit(state);
+
+    if (state.hasActiveDelivery) {
+      _persistenceService.persistDeliveryState(state).catchError((e) {
+        dev.log('❌ Error persisting state: $e');
+      });
+    }
+  }
 
   void _initSocketListener() {
     _deliveryDriverStatusSubscription?.cancel();
@@ -108,7 +407,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     _resetDeliveryState();
   }
 
-  // Enhanced delivery driver status listening
   void _listenToDeliveryDriverStatus() {
     dev.log('🔊 Setting up delivery driver status listeners');
 
@@ -117,7 +415,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
     _cancelAllSubscriptions();
 
-    // Delivery driver accepted - Display static route
     _deliveryDriverAcceptedSubscription = socketService.onDeliveryManAccepted
         .listen((data) async {
           dev.log('🚚 Delivery driver accepted - showing static route');
@@ -141,10 +438,11 @@ class DeliveryCubit extends Cubit<DeliveryState> {
           }
         });
 
-    // Delivery driver started - Start animation from pickup to destination
     _deliveryDriverStartedSubscription = socketService.onDeliveryManStarted
         .listen((data) async {
-          dev.log('🚚 Delivery driver started - starting marker animation');
+          dev.log(
+            '🚚 Delivery driver started - starting marker animation and tracking',
+          );
 
           emit(
             state.copyWith(
@@ -153,14 +451,11 @@ class DeliveryCubit extends Cubit<DeliveryState> {
             ),
           );
 
-          // Start the marker animation from pickup to destination
+          // Start both animation and real-time tracking
           await _startDeliveryMarkerAnimation();
-
-          // Also start real-time tracking for live updates
           await _startRealTimeDeliveryTracking();
         });
 
-    // Delivery driver arrived at pickup
     _deliveryDriverArrivedSubscription = socketService.onDeliveryManArrived
         .listen((data) {
           dev.log('🚚 Delivery driver arrived at pickup location');
@@ -172,18 +467,14 @@ class DeliveryCubit extends Cubit<DeliveryState> {
           );
         });
 
-    // Real-time delivery driver position updates
     _deliveryDriverPositionSubscription = socketService.onDeliveryManLocation
         .listen((locationData) {
           dev.log(
-            '🚚 Delivery driver location updated: ${locationData.entries}',
+            '🚚 Delivery driver location updated via socket: ${locationData.entries}',
           );
-
-          // Process real-time location updates through the animation service
           _processRealTimeLocationUpdate(locationData);
         });
 
-    // Delivery driver cancelled
     _deliveryManCancelledSubscription = socketService.onDeliveryManCancelled
         .listen((data) {
           _stopDeliveryAnimation();
@@ -193,18 +484,17 @@ class DeliveryCubit extends Cubit<DeliveryState> {
           emit(state.copyWith(deliveryDriverCancelled: data));
         });
 
-    // Delivery completed
     _deliveryDriverCompletedSubscription = socketService.onDeliveryManCompleted
         .listen((data) {
           _stopDeliveryAnimation();
           _stopRealTimeDeliveryTracking();
           _clearDeliveryRouteDisplay();
           _resetDeliveryState();
+          _persistenceService.clearPersistedState();
           emit(state.copyWith(deliveryDriverCompleted: data));
         });
   }
 
-  // NEW: Start delivery marker animation from pickup to destination
   Future<void> _startDeliveryMarkerAnimation() async {
     dev.log('🎬 Starting delivery marker animation from pickup to destination');
 
@@ -214,7 +504,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     }
 
     try {
-      // Get pickup and destination coordinates
       final pickupCoordinates = await _getCoordinatesFromAddress(
         _currentDeliveryRequest!.pickupLocation,
       );
@@ -263,10 +552,8 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     }
   }
 
-  // NEW: Process real-time location updates during delivery
   void _processRealTimeLocationUpdate(Map<String, dynamic> locationData) {
     try {
-      // Extract position and bearing from location data
       final latitude = locationData['latitude']?.toDouble();
       final longitude = locationData['longitude']?.toDouble();
       final bearing = locationData['bearing']?.toDouble() ?? 0.0;
@@ -278,14 +565,12 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
       final newPosition = LatLng(latitude, longitude);
 
-      // Update the animation service with the new real-time position
       _deliveryAnimationService.updateRealTimePosition(
         newPosition,
         bearing,
         locationData: locationData,
       );
 
-      // Update state for tracking information
       emit(
         state.copyWith(
           lastDeliveryPositionUpdate: DateTime.now(),
@@ -296,7 +581,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         ),
       );
 
-      // Check if driver has reached destination
       if (_currentDeliveryRequest != null) {
         _checkIfDriverReachedDestination(newPosition);
       }
@@ -305,7 +589,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     }
   }
 
-  // NEW: Check if driver has reached the destination
   Future<void> _checkIfDriverReachedDestination(LatLng currentPosition) async {
     if (_currentDeliveryRequest == null) return;
 
@@ -323,7 +606,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
       final distance = _calculateDistanceInMeters(currentPosition, destination);
 
-      // If within 50 meters of destination, consider arrived
       if (distance <= 50.0) {
         dev.log('🏁 Delivery driver has reached destination');
         _handleDeliveryDriverReachedDestination();
@@ -359,7 +641,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     }
   }
 
-  // NEW: Stop delivery animation
   void _stopDeliveryAnimation() {
     dev.log('🛑 Stopping delivery marker animation');
     _deliveryAnimationService.stopRealTimeTracking();
@@ -375,7 +656,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       );
       const driverMarkerId = MarkerId('delivery_driver');
 
-      // Driver marker should already exist - just update it
       if (updatedMarkers.containsKey(driverMarkerId)) {
         final currentMarker = updatedMarkers[driverMarkerId]!;
         final updatedMarker = currentMarker.copyWith(
@@ -384,7 +664,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         );
         updatedMarkers[driverMarkerId] = updatedMarker;
 
-        // Update current position in state
         emit(
           state.copyWith(
             deliveryRouteMarkers: updatedMarkers,
@@ -392,9 +671,12 @@ class DeliveryCubit extends Cubit<DeliveryState> {
             shouldUpdateCamera: false,
           ),
         );
+
+        _persistenceService.updateDeliveryDriverPosition(position, rotation);
       } else {
-        // Fallback: Create marker if it doesn't exist (shouldn't happen)
         dev.log('⚠️ Driver marker missing - creating fallback marker');
+
+        // Use consistent custom marker for fallback too
         final driverMarker = Marker(
           markerId: driverMarkerId,
           position: position,
@@ -415,10 +697,10 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         );
       }
 
-      // Throttled logging to avoid spam
-      if (DateTime.now().millisecondsSinceEpoch % 3000 < 100) {
+      // Less frequent logging to reduce noise
+      if (DateTime.now().millisecondsSinceEpoch % 5000 < 100) {
         dev.log(
-          '🎬 Delivery marker animated to: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)} (${rotation.toStringAsFixed(1)}°)',
+          '🎬 Driver marker updated: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)} (${rotation.toStringAsFixed(1)}°)',
         );
       }
     } catch (e) {
@@ -438,7 +720,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       dev.log('Displaying route for accepted delivery');
       await _ensureDeliveryMarkerIcons();
 
-      // Convert string addresses to coordinates
       final pickupCoordinates = await _getCoordinatesFromAddress(
         _currentDeliveryRequest!.pickupLocation,
       );
@@ -463,7 +744,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         destinationCoordinates.longitude,
       );
 
-      // Use the fixed method that creates driver marker with route
       await _displaySingleDestinationDeliveryRoute(pickup, destination);
       _focusCameraOnDeliveryRoute();
     } catch (e) {
@@ -483,7 +763,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     final routeResult = await _routeService.getRoute(pickup, destination);
 
     if (routeResult.isSuccess && routeResult.polyline != null) {
-      // Create delivery markers INCLUDING the driver marker at pickup
       final deliveryMarkers = _createDeliveryMarkersFromCoordinatesWithDriver(
         pickup,
         destination,
@@ -494,7 +773,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
           deliveryRoutePolylines: {routeResult.polyline!},
           deliveryRouteMarkers: deliveryMarkers,
           deliveryRouteDisplayed: true,
-          currentDeliveryDriverPosition: pickup, // Set initial driver position
+          currentDeliveryDriverPosition: pickup,
         ),
       );
 
@@ -510,7 +789,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
   ) {
     final markers = <MarkerId, Marker>{};
 
-    // Pickup marker - Use default green pin (not custom asset)
     markers[const MarkerId('pickup')] = Marker(
       markerId: const MarkerId('pickup'),
       position: pickup,
@@ -521,7 +799,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       ),
     );
 
-    // Delivery destination marker - Use default red pin
     markers[const MarkerId('delivery_destination')] = Marker(
       markerId: const MarkerId('delivery_destination'),
       position: destination,
@@ -532,7 +809,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       ),
     );
 
-    // CRITICAL: Add delivery driver marker at pickup location
+    // Use consistent custom marker
     markers[const MarkerId('delivery_driver')] = Marker(
       markerId: const MarkerId('delivery_driver'),
       position: pickup,
@@ -549,7 +826,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     return markers;
   }
 
-  // Get coordinates from address (existing method - keep as is)
   Future<LatLng?> _getCoordinatesFromAddress(String address) async {
     try {
       dev.log('🔍 Getting coordinates for address: $address');
@@ -585,19 +861,32 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
   Future<void> _createDeliveryDriverMarkerIcon() async {
     try {
-      final driverIcon = await BitmapDescriptor.asset(
-        const ImageConfiguration(size: Size(25, 25)),
-        'assets/images/delivery_marker.png',
-      );
+      final driverIcon = await _getConsistentDriverMarker();
       emit(state.copyWith(deliveryDriverMarkerIcon: driverIcon));
+      dev.log('✅ Custom delivery driver marker icon created');
     } catch (e) {
-      dev.log(
-        '❌ Failed to create delivery driver marker icon, using default: $e',
-      );
+      dev.log('❌ Error creating delivery marker icons: $e');
       final defaultDriverIcon = BitmapDescriptor.defaultMarkerWithHue(
         BitmapDescriptor.hueBlue,
       );
       emit(state.copyWith(deliveryDriverMarkerIcon: defaultDriverIcon));
+    }
+  }
+
+  Future<BitmapDescriptor> _getConsistentDriverMarker() async {
+    if (state.deliveryDriverMarkerIcon != null) {
+      return state.deliveryDriverMarkerIcon!;
+    }
+
+    try {
+      final driverIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(32, 32)), // Consistent size
+        'assets/images/delivery_marker.png',
+      );
+      return driverIcon;
+    } catch (e) {
+      dev.log('❌ Failed to load custom marker, using default: $e');
+      return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
     }
   }
 
@@ -654,7 +943,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         state.copyWith(
           shouldUpdateCamera: true,
           cameraTarget: state.currentDeliveryDriverPosition,
-          streetLevelZoom: 16.5, // Street level zoom
+          streetLevelZoom: 30,
         ),
       );
 
@@ -682,11 +971,11 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     );
   }
 
-  // Request delivery (existing method - keep as is)
   Future<void> requestDelivery(DeliveryModel deliveryRequestModel) async {
     dev.log('🚚 Requesting delivery: ${deliveryRequestModel.toJson()}');
 
     _currentDeliveryRequest = deliveryRequestModel;
+    await _persistenceService.persistDeliveryRequest(deliveryRequestModel);
 
     emit(state.copyWith(status: DeliveryStatus.loading, errorMessage: null));
 
@@ -744,7 +1033,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     }
   }
 
-  // Cancel all subscriptions
   void _cancelAllSubscriptions() {
     _deliveryDriverStatusSubscription?.cancel();
     _deliveryManCancelledSubscription?.cancel();
@@ -757,9 +1045,9 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     _stopRealTimeDeliveryTracking();
   }
 
-  // Reset delivery state
   void _resetDeliveryState() {
     _clearDeliveryRouteDisplay();
+    _persistenceService.clearPersistedState();
     emit(
       state.copyWith(
         status: DeliveryStatus.initial,
@@ -795,7 +1083,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         return;
       }
 
-      // Convert destination address to coordinates
       final destinationCoordinates = await _getCoordinatesFromAddress(
         _currentDeliveryRequest!.destinationLocation,
       );
@@ -834,13 +1121,11 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
       dev.log('🔴 Starting real-time tracking');
 
-      // Convert to gmaps.LatLng for tracking service
       final gmapsDestination = gmaps.LatLng(
         destination.latitude,
         destination.longitude,
       );
 
-      // Start the tracking service
       _realTimeTrackingService.startTracking(
         rideId: deliveryId,
         driverId: driverId,
@@ -894,7 +1179,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
   void _handleRealTimeDeliveryPositionUpdate(
     gmaps.LatLng position,
     double bearing,
-    DriverLocationData locationData,
+    tracking.DriverLocationData locationData,
   ) {
     final uiPosition = LatLng(position.latitude, position.longitude);
 
@@ -902,7 +1187,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       '📍 Real-time delivery update: ${uiPosition.latitude.toStringAsFixed(6)}, ${uiPosition.longitude.toStringAsFixed(6)} (${bearing.toStringAsFixed(1)}°)',
     );
 
-    // Update the delivery animation service with the new real-time position
     _deliveryAnimationService.updateRealTimePosition(
       uiPosition,
       bearing,
@@ -913,7 +1197,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       },
     );
 
-    // Update state for UI
     emit(
       state.copyWith(
         lastDeliveryPositionUpdate: locationData.lastUpdate,
@@ -924,7 +1207,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       ),
     );
 
-    // Check destination arrival
     if (_realTimeTrackingService.hasReachedDestination(position)) {
       dev.log('🏁 Delivery driver has reached destination');
       _handleDeliveryDriverReachedDestination();
@@ -940,10 +1222,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         _deliveryAnimationService.currentBearing,
       );
     }
-
-    if (DateTime.now().millisecondsSinceEpoch % 15000 < 200) {
-      dev.log('🎯 Precise delivery position: ${position.toDisplayFormat()}');
-    }
   }
 
   void _updateDeliveryRouteOnMap(List<gmaps.LatLng> newRoutePoints) {
@@ -957,7 +1235,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         '🛣️ Updating delivery route with ${newRoutePoints.length} new points',
       );
 
-      // Convert to UI coordinates
       final uiRoutePoints =
           newRoutePoints
               .map((point) => LatLng(point.latitude, point.longitude))
@@ -979,7 +1256,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
       dev.log('✅ Delivery route updated on map');
 
-      // Reset flag after delay
       Future.delayed(const Duration(seconds: 3), () {
         if (!isClosed) {
           emit(state.copyWith(deliveryRouteRecalculated: false));
@@ -995,22 +1271,19 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     }
   }
 
-  // Update delivery tracking status
   void _updateDeliveryTrackingStatus(String status) {
     dev.log('📊 Enhanced delivery tracking status: $status');
 
-    // Filter out frequent status updates to avoid UI spam
     final currentTime = DateTime.now();
     if (_lastStatusUpdate != null &&
         currentTime.difference(_lastStatusUpdate!).inSeconds < 2 &&
         status.contains('position updated')) {
-      return; // Skip frequent position updates
+      return;
     }
     _lastStatusUpdate = currentTime;
 
     emit(state.copyWith(deliveryTrackingStatusMessage: status));
 
-    // Clear status message after appropriate duration
     final duration =
         status.contains('error') || status.contains('failed')
             ? const Duration(seconds: 8)
@@ -1023,8 +1296,9 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     });
   }
 
-  // Get enhanced delivery tracking message
-  String _getEnhancedDeliveryTrackingMessage(DriverLocationData locationData) {
+  String _getEnhancedDeliveryTrackingMessage(
+    tracking.DriverLocationData locationData,
+  ) {
     if (locationData.speed > 15.0) {
       return 'Delivery driver moving fast (${locationData.speed.toStringAsFixed(0)} km/h)';
     } else if (locationData.speed > 5.0) {
@@ -1036,7 +1310,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     }
   }
 
-  // Stop real-time delivery tracking
   void _stopRealTimeDeliveryTracking() {
     dev.log('🛑 Stopping real-time delivery tracking');
 
@@ -1051,7 +1324,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     );
   }
 
-  // Cancel delivery
   Future<void> cancelDelivery({required String reason}) async {
     try {
       emit(
@@ -1090,6 +1362,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
               riderFound: false,
             ),
           );
+          _persistenceService.clearPersistedState();
         },
       );
     } catch (e) {
@@ -1102,7 +1375,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     }
   }
 
-  // Get current delivery route progress
   RouteProgress? getCurrentDeliveryRouteProgress() {
     if (!_realTimeTrackingService.isTracking) {
       return null;
@@ -1157,7 +1429,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     return null;
   }
 
-  // Helper method to calculate total route distance
   double _calculateTotalRouteDistance(List<gmaps.LatLng> routePoints) {
     double totalDistance = 0.0;
 
@@ -1173,7 +1444,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     return totalDistance;
   }
 
-  // Helper method to calculate actual progress along route
   double _calculateActualProgress(
     gmaps.LatLng driverPosition,
     List<gmaps.LatLng> routePoints,
@@ -1210,7 +1480,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     return totalSegments > 0 ? closestSegmentIndex / totalSegments : 0.0;
   }
 
-  // Simple distance to line segment calculation
   double _calculateDistanceToLineSegment(
     LatLng point,
     LatLng lineStart,
@@ -1221,14 +1490,13 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     return math.min(startDistance, endDistance);
   }
 
-  // Enhanced ETA calculation using tracking data
   Duration _calculateEnhancedETA(
     double distanceMeters,
     TrackingStatus trackingStatus,
   ) {
     final recentHistory = _realTimeTrackingService.locationHistory;
 
-    double averageSpeedMps = 8.33; // Default 30 km/h in m/s
+    double averageSpeedMps = 8.33;
 
     if (recentHistory.isNotEmpty) {
       final recentSpeeds =
@@ -1236,8 +1504,8 @@ class DeliveryCubit extends Cubit<DeliveryState> {
               .where(
                 (h) => DateTime.now().difference(h.timestamp).inMinutes < 5,
               )
-              .map((h) => h.speed * 1000 / 3600) // Convert km/h to m/s
-              .where((speed) => speed > 1.0) // Filter out stationary periods
+              .map((h) => h.speed * 1000 / 3600)
+              .where((speed) => speed > 1.0)
               .toList();
 
       if (recentSpeeds.isNotEmpty) {
@@ -1250,12 +1518,10 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     return Duration(seconds: etaSeconds.round());
   }
 
-  // Get delivery tracking status
   TrackingStatus getDeliveryTrackingStatus() {
     return _realTimeTrackingService.getTrackingStatus();
   }
 
-  // Get enhanced tracking metrics for debugging
   Map<String, dynamic> getEnhancedDeliveryTrackingMetrics() {
     final baseMetrics = _realTimeTrackingService.getTrackingMetrics();
     final performanceMetrics = _realTimeTrackingService.getPerformanceMetrics();
@@ -1277,7 +1543,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     };
   }
 
-  // Check if real-time delivery tracking is active
   bool get isRealTimeDeliveryTrackingActive {
     final serviceActive = _realTimeTrackingService.isTracking;
     final stateActive =
@@ -1297,26 +1562,23 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     return serviceActive && stateActive;
   }
 
-  // Get current ETA based on real tracking data
   Duration? get estimatedTimeToDeliveryDestination {
     final progress = getCurrentDeliveryRouteProgress();
     return progress?.estimatedTimeRemaining;
   }
 
-  // Get current distance to delivery destination
   double? get distanceToDeliveryDestination {
     final progress = getCurrentDeliveryRouteProgress();
     return progress?.remainingDistance;
   }
 
-  // Time since last delivery position update
   Duration? get timeSinceLastDeliveryUpdate {
     final lastUpdate = state.lastDeliveryPositionUpdate;
     if (lastUpdate == null) return null;
     return DateTime.now().difference(lastUpdate);
   }
 
-  // DELIVERY LOCATION METHODS (existing methods - keep as is)
+  // DELIVERY LOCATION METHODS
   void addDeliveryDestination(TextEditingController controller) {
     final newController = TextEditingController();
 
@@ -1709,11 +1971,9 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     _debounceTimer?.cancel();
     _timer?.cancel();
 
-    // Dispose animation services
     _animationService.dispose();
-    _deliveryAnimationService.dispose(); // ADD THIS
+    _deliveryAnimationService.dispose();
 
-    // Stop tracking and cleanup
     _stopDeliveryAnimation();
     _stopRealTimeDeliveryTracking();
     _cancelAllSubscriptions();

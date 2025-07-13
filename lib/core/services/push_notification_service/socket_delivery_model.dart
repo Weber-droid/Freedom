@@ -87,14 +87,14 @@ class DeliveryManCancelled {
 }
 
 class DeliveryManStarted {
-  DeliveryManStarted(this.driverId, this.status);
+  DeliveryManStarted(this.deliveryId, this.status);
   factory DeliveryManStarted.fromJson(Map<String, dynamic> json) {
     return DeliveryManStarted(
       json['deliveryId'] as String,
       json['status'] as String,
     );
   }
-  final String driverId;
+  final String deliveryId;
   final String? status;
 }
 
