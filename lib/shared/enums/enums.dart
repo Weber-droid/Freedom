@@ -10,6 +10,8 @@ enum VerifyLoginStatus { initial, submitting, success, failure }
 
 enum MapSearchStatus { initial, loading, success, error }
 
+enum WhichRequest { ride, delivery }
+
 enum RideRequestStatus {
   initial,
   loading,

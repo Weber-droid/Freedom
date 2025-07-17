@@ -14,7 +14,7 @@ class RiderTimeLine extends StatelessWidget {
 
   final String destinationDetails;
   final String pickUpDetails;
-  final List<Location> destinationLocation;
+  final List<FreedomLocation> destinationLocation;
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +201,7 @@ class RiderTimeLine extends StatelessWidget {
   }
 
   Widget _buildMultiDestinationMarker(
-      BoxConstraints constraints, Location location, int index) {
+      BoxConstraints constraints, FreedomLocation location, int index) {
     return SizedBox(
       width: _getAddressMaxWidth(constraints, false),
       child: Column(

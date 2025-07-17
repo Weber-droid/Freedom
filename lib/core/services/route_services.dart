@@ -3,12 +3,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_polyline_points/flutter_polyline_points.dart';
-import 'package:freedom/feature/home/repository/models/location.dart' as loc;
+import 'package:freedom/feature/home/repository/models/location.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class RouteService {
-  static const double _earthRadius = 6371000; 
+  static const double _earthRadius = 6371000;
   static const double _defaultSpeedMetersPerSecond = 5.0;
   static const int _defaultUpdateIntervalMs = 100;
 
@@ -127,7 +127,7 @@ class RouteService {
 
   /// Creates markers for multiple locations
   Map<MarkerId, Marker> createMarkersForMultipleLocations(
-    List<loc.Location> locations,
+    List<FreedomLocation> locations,
     BitmapDescriptor? pickupIcon,
   ) {
     final markersMap = <MarkerId, Marker>{};
@@ -168,8 +168,8 @@ class RouteService {
 
   /// Creates markers for pickup and destination
   Map<MarkerId, Marker> createMarkers(
-    loc.Location? pickUpLocation,
-    loc.Location? destinationLocation,
+    FreedomLocation? pickUpLocation,
+    FreedomLocation? destinationLocation,
     BitmapDescriptor? pickupIcon,
   ) {
     final markersMap = <MarkerId, Marker>{};

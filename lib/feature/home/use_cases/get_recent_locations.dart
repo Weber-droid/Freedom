@@ -5,7 +5,7 @@ class GetRecentLocations {
   GetRecentLocations(this.repository);
   final LocationRepository repository;
 
-  Future<List<Location>> call() {
+  Future<List<FreedomLocation>> call() {
     return repository.getRecentLocations();
   }
 }

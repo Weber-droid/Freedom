@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:freedom/core/services/audio_call_service/audio_call_service.dart';
+import 'package:freedom/core/services/ride_persistence_service.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/History/cubit/history_cubit.dart';
 import 'package:freedom/feature/auth/cubit/registration_cubit.dart';
@@ -33,11 +34,16 @@ import 'package:path_provider/path_provider.dart' as path_provider;
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-class App extends StatelessWidget {
+class App extends StatefulWidget {
   const App({required this.callService, super.key});
 
   final CallServiceInterface callService;
 
+  @override
+  State<App> createState() => _AppState();
+}
+
+class _AppState extends State<App> {
   @override
   Widget build(BuildContext context) {
     return ScreenUtilInit(
@@ -70,7 +76,7 @@ class App extends StatelessWidget {
             create: (context) => VerifyLoginCubit(RegisterRepository()),
           ),
           BlocProvider(
-            create: (context) => CallCubit(callService: callService),
+            create: (context) => CallCubit(callService: widget.callService),
           ),
           BlocProvider(create: (context) => WalletCubit(WalletRepository())),
           BlocProvider(

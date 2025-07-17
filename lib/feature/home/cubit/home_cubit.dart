@@ -9,7 +9,7 @@ import 'package:freedom/core/services/route_animation_services.dart';
 import 'package:freedom/core/services/route_services.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/home/repository/location_repository.dart';
-import 'package:freedom/feature/home/repository/models/location.dart' as loc;
+import 'package:freedom/feature/home/repository/models/location.dart';
 import 'package:freedom/feature/home/repository/models/place_prediction.dart';
 import 'package:freedom/feature/home/repository/ride_request_repository.dart';
 import 'package:freedom/feature/home/use_cases/get_recent_locations.dart';
@@ -28,7 +28,6 @@ class HomeCubit extends Cubit<HomeState> {
     RouteService? routeService,
     RouteAnimationService? animationService,
   }) : _repository = repository,
-       _rideRequestRepository = rideRequestRepository,
        _routeService = routeService ?? RouteService(),
        _animationService = animationService ?? RouteAnimationService(),
        super(
@@ -36,7 +35,6 @@ class HomeCubit extends Cubit<HomeState> {
        );
 
   final LocationRepository _repository;
-  final RideRequestRepository _rideRequestRepository;
   final RouteService _routeService;
   final RouteAnimationService _animationService;
   // final double _animationSpeed = 0.5;
@@ -176,12 +174,12 @@ class HomeCubit extends Cubit<HomeState> {
         destinationController.text = placesDetails.address;
         final recentLocation = await getIt<GetRecentLocations>()();
 
-        final updatedDestinations = List<loc.Location>.from(
+        final updatedDestinations = List<FreedomLocation>.from(
           state.destinationLocations,
         );
 
         while (updatedDestinations.length <= destinationIndex) {
-          updatedDestinations.add(loc.Location.empty());
+          updatedDestinations.add(FreedomLocation.empty());
         }
 
         updatedDestinations[destinationIndex] = placesDetails;
@@ -405,7 +403,7 @@ class HomeCubit extends Cubit<HomeState> {
         final recentLocation = await getIt<GetRecentLocations>()();
 
         // Create a copy of the current destination locations
-        final updatedDestinations = List<loc.Location>.from(
+        final updatedDestinations = List<FreedomLocation>.from(
           state.destinationLocations,
         );
 
@@ -438,7 +436,7 @@ class HomeCubit extends Cubit<HomeState> {
   }
 
   Future<void> handleRecentLocation(
-    loc.Location location,
+    FreedomLocation location,
     FocusNode destinationFocusNode,
     TextEditingController destinationController,
   ) async {
@@ -448,7 +446,7 @@ class HomeCubit extends Cubit<HomeState> {
       if (state.isDestinationLocation) {
         destinationController.text = location.address;
         final recentLocation = await getIt<GetRecentLocations>()();
-        final updatedDestinations = List<loc.Location>.from(
+        final updatedDestinations = List<FreedomLocation>.from(
           state.destinationLocations,
         );
         if (updatedDestinations.isEmpty) {
@@ -500,7 +498,7 @@ class HomeCubit extends Cubit<HomeState> {
       }
 
       // Create markers using the route service
-      final location = loc.Location.empty();
+      final location = FreedomLocation.empty();
       final pickupLocation = location.copyWith(
         latitude: startLocation.latitude,
         longitude: startLocation.longitude,
@@ -570,8 +568,8 @@ class HomeCubit extends Cubit<HomeState> {
       }
 
       // Create all locations list for markers
-      final allLocations = <loc.Location>[
-        loc.Location.empty().copyWith(
+      final allLocations = <FreedomLocation>[
+        FreedomLocation.empty().copyWith(
           latitude: startLocation.latitude,
           longitude: startLocation.longitude,
         ),
@@ -580,7 +578,7 @@ class HomeCubit extends Cubit<HomeState> {
       // Add all destination locations
       for (final destination in destinationLocations) {
         allLocations.add(
-          loc.Location.empty().copyWith(
+          FreedomLocation.empty().copyWith(
             latitude: destination.latitude,
             longitude: destination.longitude,
           ),
@@ -655,8 +653,8 @@ class HomeCubit extends Cubit<HomeState> {
   double get animationProgress => _animationService.animationProgress;
 
   void upDateMarkers(
-    loc.Location? pickUpLocation,
-    loc.Location? destinationLocation,
+    FreedomLocation? pickUpLocation,
+    FreedomLocation? destinationLocation,
     BitmapDescriptor? bikeIcon,
   ) {
     final markers = _routeService.createMarkers(
@@ -730,14 +728,14 @@ class HomeCubit extends Cubit<HomeState> {
       );
       if (placesDetails != null && controller.text.isNotEmpty) {
         controller.text = placesDetails.address;
-        final updatedDestinations = List<loc.Location>.from(
+        final updatedDestinations = List<FreedomLocation>.from(
           state.destinationLocations,
         );
         if (index < updatedDestinations.length) {
           updatedDestinations[index] = placesDetails;
         } else {
           while (updatedDestinations.length < index) {
-            updatedDestinations.add(loc.Location.empty());
+            updatedDestinations.add(FreedomLocation.empty());
           }
           updatedDestinations.add(placesDetails);
         }
@@ -766,11 +764,11 @@ class HomeCubit extends Cubit<HomeState> {
   void resetDestinations() {
     emit(
       state.copyWith(
-        destinationLocation: loc.Location.empty(),
+        destinationLocation: FreedomLocation.empty(),
         destinationLocations: const [],
         locations: const [],
         destinationPredictions: const [],
-        pickUpLocation: loc.Location.empty(),
+        pickUpLocation: FreedomLocation.empty(),
         markers: {},
         polylines: {},
         status: MapSearchStatus.initial,

@@ -61,7 +61,7 @@ class RideState extends Equatable {
   final String? currentRideId;
   final String? message;
   final RequestRidesStatus requestRidesStatus;
-  final List<RideData>? rideHistory;
+  final List<hm.RideData>? rideHistory;
   final bool showStackedBottomSheet;
   final bool showRiderFound;
   final bool isSearching;
@@ -111,7 +111,7 @@ class RideState extends Equatable {
     String? currentRideId,
     String? message,
     RequestRidesStatus? requestRidesStatus,
-    List<RideData>? rideHistory,
+    List<hm.RideData>? rideHistory,
     bool? showStackedBottomSheet,
     bool? showRiderFound,
     bool? isSearching,
@@ -171,6 +171,7 @@ class RideState extends Equatable {
       rideStatus: rideStatus ?? this.rideStatus,
       nearestDriverDistance:
           nearestDriverDistance ?? this.nearestDriverDistance,
+      rideRequestModel: rideRequestModel ?? this.rideRequestModel,
       riderAvailable: riderAvailable ?? this.riderAvailable,
       isMultiDestination: isMultiDestination ?? this.isMultiDestination,
       driverAccepted: driverAccepted ?? this.driverAccepted,
@@ -207,7 +208,6 @@ class RideState extends Equatable {
       driverOffRoute: driverOffRoute ?? this.driverOffRoute,
       lastRouteRecalculation:
           lastRouteRecalculation ?? this.lastRouteRecalculation,
-      rideRequestModel: rideRequestModel ?? this.rideRequestModel,
       driverAnimationComplete:
           driverAnimationComplete ?? this.driverAnimationComplete,
     );
@@ -264,5 +264,6 @@ class RideState extends Equatable {
     lastRouteRecalculation,
     rideRequestModel,
     driverAnimationComplete,
+    rideRequestModel,
   ];
 }

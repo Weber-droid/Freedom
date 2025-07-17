@@ -2,14 +2,16 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_google_maps_webservices/places.dart';
 import 'package:freedom/core/client/base_api_client.dart';
 import 'package:freedom/core/config/environment_config.dart';
+import 'package:freedom/core/services/app_restoration_manager.dart';
+import 'package:freedom/core/services/life_cycle_manager.dart';
 import 'package:freedom/core/services/real_time_driver_tracking.dart';
 import 'package:freedom/core/services/map_services.dart';
 import 'package:freedom/core/services/message_service/mesage_service.dart';
 import 'package:freedom/core/services/push_notification_service/push_nofication_service.dart';
+import 'package:freedom/core/services/ride_persistence_service.dart';
 import 'package:freedom/core/services/route_animation_services.dart';
 import 'package:freedom/core/services/route_services.dart';
 import 'package:freedom/core/services/socket_service.dart';
-import 'package:freedom/feature/History/cubit/history_cubit.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/data_sources/delivery_data_source.dart';
@@ -32,8 +34,6 @@ import 'package:freedom/feature/message_driver/cubit/in_app_message_cubit.dart';
 import 'package:freedom/feature/message_driver/cubit/message_driver_cubit.dart';
 import 'package:freedom/feature/message_driver/remote_data_source/message_remote_data_source.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
-import 'package:freedom/feature/wallet/cubit/wallet_cubit.dart';
-import 'package:freedom/feature/wallet/repository/repository.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -99,6 +99,9 @@ Future<void> locator() async {
     ..registerLazySingleton<RealTimeDriverTrackingService>(
       () => RealTimeDriverTrackingService(),
     )
+    ..registerLazySingleton<RidePersistenceService>(
+      () => RidePersistenceService(getIt()),
+    )
     ..registerLazySingleton(() => GetPlacePredictions(getIt()))
     ..registerLazySingleton(() => GetPlaceDetails(getIt()))
     ..registerLazySingleton(() => GetSavedLocations(getIt()))
@@ -111,6 +114,18 @@ Future<void> locator() async {
     ..registerLazySingleton<IMessageService>(MessageService.new)
     ..registerLazySingleton<PushNotificationService>(
       PushNotificationService.new,
+    )
+    ..registerLazySingleton<RideRestorationManager>(
+      () => RideRestorationManager(
+        persistenceService: getIt(),
+        rideRepository: getIt(),
+      ),
+    )
+    ..registerLazySingleton<AppLifecycleManager>(
+      () => AppLifecycleManager(
+        persistenceService: getIt(),
+        restorationManager: getIt(),
+      ),
     )
     ..registerLazySingleton(
       () => GoogleMapsPlaces(apiKey: dotenv.env['GOOGLE_MAPS_API_KEY']),
