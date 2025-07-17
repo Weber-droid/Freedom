@@ -1,23 +1,26 @@
-import 'dart:math' as math;
+import 'dart:async';
 import 'dart:developer' as dev;
+import 'dart:math' as math;
 import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'package:freedom/core/services/real_time_driver_tracking.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:freedom/core/services/life_cycle_manager.dart';
 import 'package:freedom/core/services/push_notification_service/socket_ride_models.dart';
+import 'package:freedom/core/services/ride_persistence_service.dart';
+import 'package:freedom/core/services/socket_service.dart';
+import 'package:freedom/core/services/real_time_driver_tracking.dart';
 import 'package:freedom/core/services/route_animation_services.dart';
 import 'package:freedom/core/services/route_services.dart';
-import 'package:freedom/core/services/socket_service.dart';
-import 'package:freedom/di/locator.dart';
-import 'package:freedom/feature/History/model/history_model.dart';
-import 'package:freedom/feature/home/models/multiple_stop_ride_model.dart';
+import 'package:freedom/feature/History/model/history_model.dart' as hm;
 import 'package:freedom/feature/home/models/request_ride_model.dart';
 import 'package:freedom/feature/home/models/request_ride_response.dart';
 import 'package:freedom/feature/home/models/ride_status_response.dart';
-import 'package:freedom/feature/home/repository/models/location.dart' as loc;
+import 'package:freedom/feature/home/repository/models/location.dart';
 import 'package:freedom/feature/home/repository/ride_request_repository.dart';
-import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
+import 'package:freedom/shared/enums/enums.dart';
+import 'package:freedom/di/locator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
+import 'package:shared_preferences/shared_preferences.dart';
 
 part 'ride_state.dart';
 
@@ -27,21 +30,32 @@ class RideCubit extends Cubit<RideState> {
     RouteService? routeService,
     RouteAnimationService? animationService,
     RealTimeDriverTrackingService? trackingService,
+    RidePersistenceService? persistenceService,
   }) : _routeService = routeService ?? getIt<RouteService>(),
        _animationService = animationService ?? getIt<RouteAnimationService>(),
        _realTimeTrackingService =
            trackingService ?? getIt<RealTimeDriverTrackingService>(),
+       _persistenceService =
+           persistenceService ??
+           RidePersistenceService(getIt<SharedPreferences>()),
        super(const RideState()) {
     _initSocketListener();
+    _initializePersistence();
   }
 
   final RideRequestRepository rideRequestRepository;
   final RouteService _routeService;
   final RouteAnimationService _animationService;
   final RealTimeDriverTrackingService _realTimeTrackingService;
-  DateTime? _lastStatusUpdate;
+  final RidePersistenceService _persistenceService;
 
-  // Socket subscriptions
+  // State tracking
+  DateTime? _lastStatusUpdate;
+  DateTime? _lastPersistenceTime;
+  RideRequestModel? _currentRideRequest;
+  bool _isDisposed = false;
+
+  // Socket subscriptions - keep your original pattern
   StreamSubscription<dynamic>? _driverStatusSubscription;
   StreamSubscription<dynamic>? _driverCancelledSubscription;
   StreamSubscription<dynamic>? _driverAcceptedSubscription;
@@ -51,17 +65,281 @@ class RideCubit extends Cubit<RideState> {
   StreamSubscription<dynamic>? _driverRejecetedSubscription;
   StreamSubscription<dynamic>? _driverPositionSubscription;
 
+  // Timers
   Timer? _timer;
+  Timer? _persistenceTimer;
+  Timer? _statusUpdateThrottle;
+
+  // Throttling variables
+  static const Duration _statusUpdateInterval = Duration(milliseconds: 500);
+  static const Duration _persistenceInterval = Duration(seconds: 10);
+  String? _pendingStatusMessage;
+
   static const int maxSearchTime = 60;
 
-  RideRequestModel? _currentRideRequest;
-
+  // Getters
   RideRequestModel? get currentRideRequest => _currentRideRequest;
+  int get searchTimeElapsed => state.searchTimeElapsed;
 
   set searchTimeElapsed(int searchTimeElapsed) =>
       emit(state.copyWith(searchTimeElapsed: searchTimeElapsed));
 
-  int get searchTimeElapsed => state.searchTimeElapsed;
+  /// Initialize persistence monitoring
+  void _initializePersistence() {
+    _startPeriodicPersistence();
+    dev.log('✅ Persistence monitoring initialized');
+  }
+
+  /// Start periodic persistence timer
+  void _startPeriodicPersistence() {
+    _persistenceTimer?.cancel();
+
+    _persistenceTimer = Timer.periodic(_persistenceInterval, (timer) {
+      if (_isDisposed) {
+        timer.cancel();
+        return;
+      }
+
+      if (state.hasActiveRide) {
+        _persistCurrentStateAsync();
+      }
+    });
+  }
+
+  /// Enhanced emit with automatic persistence
+  @override
+  void emit(RideState state) {
+    super.emit(state);
+
+    // Auto-persist critical states asynchronously
+    if (state.currentRideId != null && state.hasActiveRide) {
+      dev.log('Auto-persisting state.. CurrentId: ${state.currentRideId}');
+      _persistCurrentStateAsync();
+    }
+  }
+
+void _persistCurrentStateAsync() {
+  if (_isDisposed) return;
+
+  Future.microtask(() async {
+    try {
+      await _persistenceService.persistCompleteRideState(state);
+
+      // Persist markers separately for better handling
+      if (state.routeMarkers.isNotEmpty) {
+        await _persistenceService.persistMarkers(state.routeMarkers);
+      }
+
+      // Persist polylines separately
+      if (state.routePolylines.isNotEmpty) {
+        await _persistenceService.persistPolylines(state.routePolylines);
+      }
+
+      // Also persist driver location if available
+      if (state.currentDriverPosition != null) {
+        await _persistenceService.persistDriverLocation(
+          state.currentDriverPosition!,
+          speed: state.currentSpeed,
+          timestamp: state.lastPositionUpdate,
+        );
+      }
+
+      // Persist tracking state if active
+      if (state.isRealTimeTrackingActive && state.driverAccepted != null) {
+        await _persistenceService.persistTrackingState(
+          isActive: true,
+          rideId: state.currentRideId ?? '',
+          driverId: state.driverAccepted!.driverId ?? '',
+          destination: _currentRideRequest != null
+              ? LatLng(
+                  _currentRideRequest!.dropoffLocation.latitude,
+                  _currentRideRequest!.dropoffLocation.longitude,
+                )
+              : null,
+          trackingMetrics: _realTimeTrackingService.getTrackingMetrics(),
+        );
+      }
+
+      _lastPersistenceTime = DateTime.now();
+    } catch (e) {
+      dev.log('❌ Auto-persistence failed: $e');
+    }
+  });
+}
+
+  /// Access to restore from persisted data (called by restoration manager)
+  Future<void> restoreFromPersistedData(PersistedRideData persistedData) async {
+    if (_isDisposed) return;
+
+    try {
+      dev.log('🔄 Restoring ride from persisted data...');
+
+      // Restore current ride request if available
+      if (persistedData.rideRequest != null) {
+        _currentRideRequest = persistedData.rideRequest;
+      }
+      final restoredMarkers = await _persistenceService.loadPersistedMarkers();
+      final restoredPolylines =
+          await _persistenceService.loadPersistedPolylines();
+
+      Map<MarkerId, Marker> finalMarkers = {};
+      Set<Polyline> finalPolylines = {};
+
+      if (restoredMarkers != null && restoredMarkers.isNotEmpty) {
+        finalMarkers = restoredMarkers;
+        dev.log('✅ Using ${finalMarkers.length} restored markers');
+      } else if (_currentRideRequest != null) {
+        // Recreate markers from ride request data
+        dev.log('🔄 Recreating markers from ride request...');
+        finalMarkers = await _recreateMarkersFromRideRequest(
+          _currentRideRequest!,
+          persistedData.currentDriverPosition,
+        );
+      }
+
+      if (restoredPolylines != null && restoredPolylines.isNotEmpty) {
+        finalPolylines = restoredPolylines;
+        dev.log('✅ Using ${finalPolylines.length} restored polylines');
+      }
+
+      // Create restored state with ALL persisted data
+      final restoredState = RideState(
+        status: persistedData.status,
+        currentRideId: persistedData.rideId,
+        rideResponse: persistedData.rideResponse,
+        showRiderFound: persistedData.showRiderFound,
+        riderAvailable: persistedData.riderAvailable,
+        isSearching: persistedData.isSearching,
+        searchTimeElapsed: persistedData.searchTimeElapsed,
+        rideInProgress: persistedData.rideInProgress,
+        driverHasArrived: persistedData.driverHasArrived,
+        isRealTimeTrackingActive: false,
+        isMultiDestination: persistedData.isMultiDestination,
+        paymentMethod: persistedData.paymentMethod ?? 'cash',
+        currentSpeed: persistedData.currentSpeed,
+        lastPositionUpdate: persistedData.lastPositionUpdate,
+        trackingStatusMessage: 'Restoring ride state...',
+        routeRecalculated: persistedData.routeRecalculated,
+        routeProgress: persistedData.routeProgress,
+        driverOffRoute: persistedData.driverOffRoute,
+        driverAnimationComplete: persistedData.driverAnimationComplete,
+        currentSegmentIndex: persistedData.currentSegmentIndex,
+        estimatedDistance: persistedData.estimatedDistance,
+        estimatedTimeArrival: persistedData.estimatedTimeArrival,
+        nearestDriverDistance: persistedData.nearestDriverDistance,
+        lastRouteRecalculation: persistedData.lastRouteRecalculation,
+        currentDriverPosition: persistedData.currentDriverPosition,
+        cameraTarget: persistedData.cameraTarget,
+        rideRequestModel: persistedData.rideRequest,
+        driverAccepted: persistedData.driverAccepted,
+        driverStarted: persistedData.driverStarted,
+        driverArrived: persistedData.driverArrived,
+        driverCompleted: persistedData.driverCompleted,
+        driverCancelled: persistedData.driverCancelled,
+        driverRejected: persistedData.driverRejected,
+        routePolylines: finalPolylines,
+        routeMarkers: finalMarkers,
+        routeDisplayed: finalMarkers.isNotEmpty || finalPolylines.isNotEmpty,
+        routeSegments: persistedData.routeSegments,
+        showStackedBottomSheet: false,
+      );
+
+      emit(restoredState);
+
+      // Re-establish socket listeners
+      _listenToDriverStatus();
+
+      dev.log('   - Driver position: ${persistedData.currentDriverPosition}');
+      dev.log(
+        '   - Ride request: ${persistedData.rideRequest?.pickupLocation.address} → ${persistedData.rideRequest?.dropoffLocation.address}',
+      );
+    } catch (e, stack) {
+      dev.log('❌ Error restoring from persisted data: $e\n$stack');
+      resetRideState();
+    }
+  }
+
+  /// Recreate markers from ride request when persisted markers are missing
+Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
+  RideRequestModel rideRequest,
+  LatLng? driverPosition,
+) async {
+  final markers = <MarkerId, Marker>{};
+
+  try {
+    // Ensure marker icons are available
+    await _ensureMarkerIcons();
+
+    // Recreate pickup marker
+    const pickupMarkerId = MarkerId('pickup');
+    markers[pickupMarkerId] = Marker(
+      markerId: pickupMarkerId,
+      position: LatLng(
+        rideRequest.pickupLocation.latitude,
+        rideRequest.pickupLocation.longitude,
+      ),
+      icon: state.userLocationMarkerIcon ?? 
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      infoWindow: InfoWindow(
+        title: 'Pickup Location',
+        snippet: rideRequest.pickupLocation.address,
+      ),
+    );
+
+    // Recreate destination marker
+    const destinationMarkerId = MarkerId('destination');
+    markers[destinationMarkerId] = Marker(
+      markerId: destinationMarkerId,
+      position: LatLng(
+        rideRequest.dropoffLocation.latitude,
+        rideRequest.dropoffLocation.longitude,
+      ),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      infoWindow: InfoWindow(
+        title: 'Destination',
+        snippet: rideRequest.dropoffLocation.address,
+      ),
+    );
+
+    // Recreate additional stop markers if any
+    if (rideRequest.isMultiDestination && 
+        rideRequest.additionalDestinations != null) {
+      for (int i = 0; i < rideRequest.additionalDestinations!.length; i++) {
+        final stop = rideRequest.additionalDestinations![i];
+        final stopMarkerId = MarkerId('stop_$i');
+        
+        markers[stopMarkerId] = Marker(
+          markerId: stopMarkerId,
+          position: LatLng(stop.latitude, stop.longitude),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+          infoWindow: InfoWindow(
+            title: 'Stop ${i + 1}',
+            snippet: stop.address,
+          ),
+        );
+      }
+    }
+
+    // Recreate driver marker if position is available
+    if (driverPosition != null) {
+      const driverMarkerId = MarkerId('driver');
+      markers[driverMarkerId] = Marker(
+        markerId: driverMarkerId,
+        position: driverPosition,
+        icon: state.driverMarkerIcon ?? 
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        infoWindow: const InfoWindow(title: 'Driver Location'),
+        rotation: 0.0,
+      );
+    }
+
+    dev.log('✅ Recreated ${markers.length} markers from ride request');
+  } catch (e) {
+    dev.log('❌ Error recreating markers from ride request: $e');
+  }
+
+  return markers;
+}
 
   void _initSocketListener() {
     _driverStatusSubscription?.cancel();
@@ -74,12 +352,15 @@ class RideCubit extends Cubit<RideState> {
     emit(state.copyWith(paymentMethod: paymentMethod));
   }
 
+  /// Request a ride with immediate persistence
   Future<void> requestRide(RideRequestModel request) async {
-    dev.log('requestRide from ride cubit: ${request.toJson()}');
+    if (_isDisposed) return;
 
+    dev.log('🚗 Requesting ride: ${request.toJson()}');
     _currentRideRequest = request;
 
-    dev.log('_currentRideRequest set: ${_currentRideRequest?.toJson()}');
+    // Immediately persist the ride request
+    await forcePersistence(reason: 'ride_request_initiated');
 
     emit(state.copyWith(status: RideRequestStatus.loading, errorMessage: null));
 
@@ -89,20 +370,12 @@ class RideCubit extends Cubit<RideState> {
           request.additionalDestinations != null &&
           request.additionalDestinations!.isNotEmpty;
 
-      dev.log(
-        'Requesting ride with ${hasMultipleDestinations ? "multiple destinations" : "single destination"}',
-      );
-
       if (hasMultipleDestinations) {
-        dev.log(
-          'Number of additional destinations: ${request.additionalDestinations!.length}',
-        );
-        await _processMultiDestinationRide(request);
+        // await _processMultiDestinationRide(request);
       } else {
         await _processSingleDestinationRide(request);
       }
     } catch (e) {
-      dev.log('Exception in requestRide: $e');
       emit(
         state.copyWith(
           status: RideRequestStatus.error,
@@ -112,13 +385,47 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
+  /// Force immediate persistence
+  Future<void> forcePersistence({String reason = 'manual'}) async {
+    if (_isDisposed) return;
+
+    try {
+      dev.log('💾 Force persisting ride state: $reason');
+
+      if (state.hasActiveRide) {
+        await _persistenceService.persistCompleteRideState(state);
+
+        if (state.currentDriverPosition != null) {
+          await _persistenceService.persistDriverLocation(
+            state.currentDriverPosition!,
+            speed: state.currentSpeed,
+            timestamp: state.lastPositionUpdate,
+          );
+        }
+
+        // Persist route data if available
+        if (state.routeDisplayed && state.routePolylines.isNotEmpty) {
+          final routePoints = state.routePolylines.first.points;
+          await _persistenceService.persistRouteData(
+            routePoints,
+            segments: state.routeSegments,
+            totalDistance: _routeService.calculateRouteDistance(routePoints),
+          );
+        }
+
+        dev.log('✅ Force persistence completed: $reason');
+      }
+    } catch (e) {
+      dev.log('❌ Force persistence failed: $e');
+    }
+  }
+
   Future<void> _processSingleDestinationRide(RideRequestModel request) async {
     emit(state.copyWith(rideRequestModel: request));
     final response = await rideRequestRepository.requestRide(request);
 
     response.fold(
       (failure) {
-        dev.log('Ride request failed: ${failure.message}');
         emit(
           state.copyWith(
             status: RideRequestStatus.error,
@@ -127,10 +434,6 @@ class RideCubit extends Cubit<RideState> {
         );
       },
       (rideResponse) {
-        dev.log(
-          'Ride request successful. Ride ID: ${rideResponse.data.rideId}',
-        );
-
         emit(
           state.copyWith(
             status: RideRequestStatus.searching,
@@ -143,106 +446,17 @@ class RideCubit extends Cubit<RideState> {
           ),
         );
 
+        _persistCurrentStateAsync();
         _startTimer();
         _listenToDriverStatus();
       },
     );
   }
 
-  Future<void> _processMultiDestinationRide(RideRequestModel request) async {
-    try {
-      final multiStopModel = _convertToMultiStopModel(request);
-
-      dev.log('converted to multi stop model: ${multiStopModel.toJson()}');
-
-      final response = await rideRequestRepository.requestMultipleStopRide(
-        multiStopModel,
-      );
-
-      response.fold(
-        (failure) {
-          dev.log('Multiple stop ride request failed: ${failure.message}');
-          emit(
-            state.copyWith(
-              status: RideRequestStatus.error,
-              errorMessage: failure.message,
-            ),
-          );
-        },
-        (multiStopResponse) {
-          dev.log('Multiple stop ride request successful');
-
-          final rideId = state.currentRideId;
-
-          final requestData = RequestData(
-            rideId: rideId,
-            fare: '0.0',
-            currency: 'NGN',
-            rideStatus: RideStatus.searching,
-            paymentMethod: request.paymentMethod,
-            notifiedDriverCount: 0,
-          );
-
-          final standardResponse = RequestRideResponse(
-            success: true,
-            message: 'Multiple destination ride requested successfully',
-            data: requestData,
-          );
-
-          emit(
-            state.copyWith(
-              status: RideRequestStatus.searching,
-              rideResponse: standardResponse,
-              currentRideId: rideId,
-              showStackedBottomSheet: false,
-              showRiderFound: false,
-              isSearching: true,
-              riderAvailable: false,
-              isMultiDestination: true,
-            ),
-          );
-
-          _startTimer();
-          _listenToDriverStatus();
-        },
-      );
-    } catch (e) {
-      dev.log('Error processing multi-destination ride: $e');
-      emit(
-        state.copyWith(
-          status: RideRequestStatus.error,
-          errorMessage: 'Failed to process multiple destination ride: $e',
-        ),
-      );
-    }
-  }
-
-  MultipleStopRideModel _convertToMultiStopModel(RideRequestModel request) {
-    final pickupLocation = request.pickupLocation.address;
-
-    dev.log('pickupLocation: $pickupLocation');
-
-    final dropoffLocations = <String>[request.dropoffLocation.address];
-
-    if (request.additionalDestinations != null) {
-      for (final destination in request.additionalDestinations!) {
-        dropoffLocations.add(destination.address);
-      }
-      dev.log('dropoffLocations: $dropoffLocations');
-    }
-
-    return MultipleStopRideModel(
-      pickupLocation: pickupLocation,
-      dropoffLocations: dropoffLocations,
-      paymentMethod: request.paymentMethod,
-      promoCode: request.promoCode,
-    );
-  }
-
   RideRequestModel createRideRequestFromHomeState({
-    required loc.Location pickupLocation,
-    required loc.Location mainDestination,
-    required List<loc.Location> additionalDestinations,
+    required FreedomLocation pickupLocation,
+    required FreedomLocation mainDestination,
+    required List<FreedomLocation> additionalDestinations,
     required String paymentMethod,
     String promoCode = '',
   }) {
@@ -299,7 +513,6 @@ class RideCubit extends Cubit<RideState> {
   void _stopSearchTimer() {
     _timer?.cancel();
     _timer = null;
-    resetRideState();
   }
 
   Future<void> getRides(String status, int page, int limit) async {
@@ -331,13 +544,16 @@ class RideCubit extends Cubit<RideState> {
     );
   }
 
+  /// Cancel ride with persistence cleanup
   Future<void> cancelRide({required String reason}) async {
+    if (_isDisposed) return;
+
     try {
       emit(
         state.copyWith(cancellationStatus: RideCancellationStatus.canceling),
       );
       _stopSearchTimer();
-      _stopRealTimeTracking(); // Stop tracking when canceling
+      _stopAllTrackingAndReset();
 
       if (state.currentRideId == null) {
         throw Exception('No active ride to cancel');
@@ -366,6 +582,9 @@ class RideCubit extends Cubit<RideState> {
               showRiderFound: false,
             ),
           );
+
+          // Clear persistence after cancellation
+          _persistenceService.clearRideData();
         },
       );
     } catch (e) {
@@ -378,21 +597,110 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
-  Future<void> _displayRideRoute() async {
-    dev.log(
-      '🎬 _displayRideRoute(): Displaying animated route for accepted ride',
-    );
-    dev.log(
-      '🎬 _displayRideRoute(): CURRENT RIDE ${_currentRideRequest?.toJson()}',
-    );
+  /// Socket listeners - keeping your original implementation
+  void _listenToDriverStatus() {
+    final socketService = getIt<SocketService>();
+    _cancelAllSubscriptions();
 
+    _driverStatusSubscription = socketService.onDriverAcceptRide.listen((
+      data,
+    ) async {
+      dev.log('🚗 Driver accepted ride - showing STATIC route');
+      _stopSearchTimer();
+
+      emit(
+        state.copyWith(
+          status: RideRequestStatus.success,
+          showRiderFound: true,
+          riderAvailable: true,
+          showStackedBottomSheet: false,
+          driverAccepted: data,
+          isRealTimeTrackingActive: false,
+          rideInProgress: false,
+        ),
+      );
+
+      try {
+        await _displayStaticRouteOnly();
+        await forcePersistence(reason: 'driver_accepted');
+      } catch (e) {
+        dev.log('❌ Static route error: $e');
+        emit(state.copyWith(errorMessage: 'Failed to display route: $e'));
+      }
+    });
+
+    _driverStartedSubscription = socketService.onDriverStarted.listen((
+      data,
+    ) async {
+      dev.log('🚗 Driver STARTED ride - enabling real-time tracking');
+
+      emit(
+        state.copyWith(
+          driverStarted: data,
+          rideInProgress: true,
+          isRealTimeTrackingActive: false,
+        ),
+      );
+
+      await _startRealTimeTrackingOnly();
+      await forcePersistence(reason: 'ride_started');
+    });
+
+    _driverArrivedSubscription = socketService.onDriverArrived.listen((data) {
+      dev.log('🚗 Driver arrived at pickup');
+      emit(state.copyWith(driverArrived: data, driverHasArrived: true));
+      forcePersistence(reason: 'driver_arrived');
+    });
+
+    _driverPositionSubscription = socketService.onDriverLocation.listen((
+      locationData,
+    ) {
+      if (state.isRealTimeTrackingActive && state.rideInProgress) {
+        _realTimeTrackingService.processDriverLocation(locationData);
+      }
+    });
+
+    _driverCancelledSubscription = socketService.onDriverCancelled.listen((
+      data,
+    ) {
+      _stopAllTrackingAndReset();
+      emit(
+        state.copyWith(
+          driverCancelled: data,
+          rideInProgress: false,
+          showRiderFound: false,
+          riderAvailable: false,
+          showStackedBottomSheet: true,
+          isSearching: false,
+        ),
+      );
+      _persistenceService.clearRideData();
+    });
+
+    _driverCompletedSubscription = socketService.onDriverCompleted.listen((
+      data,
+    ) {
+      _stopAllTrackingAndReset();
+      emit(state.copyWith(driverCompleted: data));
+      _persistenceService.clearRideData();
+    });
+
+    _driverRejecetedSubscription = socketService.onDriverRejected.listen((
+      data,
+    ) {
+      resetRideState();
+      emit(state.copyWith(driverRejected: data));
+    });
+  }
+
+  Future<void> _displayStaticRouteOnly() async {
     if (_currentRideRequest == null) {
-      dev.log('❌ No current ride request to display route for');
+      dev.log('❌ No current ride request for static route');
       return;
     }
 
     try {
-      dev.log('🎬 Displaying animated route for accepted ride');
+      dev.log('🗺️ Displaying STATIC route only');
       await _ensureMarkerIcons();
 
       final request = _currentRideRequest!;
@@ -404,191 +712,22 @@ class RideCubit extends Cubit<RideState> {
       if (request.isMultiDestination &&
           request.additionalDestinations != null &&
           request.additionalDestinations!.isNotEmpty) {
-        await _displayMultiDestinationRouteWithAnimation(request, pickup);
+        await _displayMultiDestinationStaticRoute(request, pickup);
       } else {
-        await _displaySingleDestinationRouteWithAnimation(request, pickup);
-      }
-    } catch (e) {
-      dev.log('❌ Error displaying animated route: $e');
-      emit(state.copyWith(errorMessage: 'Failed to display route: $e'));
-    }
-  }
-
-  Future<void> _displayStaticRideRoute() async {
-    dev.log(
-      '_displayStaticRideRoute(): Displaying static route for accepted ride',
-    );
-    dev.log(
-      '_displayStaticRideRoute(): CURRENT RIDE ${_currentRideRequest?.toJson()}',
-    );
-
-    if (_currentRideRequest == null) {
-      dev.log('No current ride request to display route for');
-      return;
-    }
-
-    try {
-      dev.log('Displaying static route for accepted ride');
-
-      await _ensureMarkerIcons();
-
-      final request = _currentRideRequest!;
-      final pickup = LatLng(
-        request.pickupLocation.latitude,
-        request.pickupLocation.longitude,
-      );
-
-      if (request.isMultiDestination &&
-          request.additionalDestinations != null &&
-          request.additionalDestinations!.isNotEmpty) {
-        await _displayMultiDestinationRouteWithAnimation(request, pickup);
-      } else {
-        await _displaySingleDestinationRouteWithAnimation(request, pickup);
+        await _displaySingleDestinationStaticRoute(request, pickup);
       }
 
-      await _createStaticDriverMarker(pickup);
-      focusCameraOnRoute();
+      dev.log('✅ Static route displayed successfully');
     } catch (e) {
-      dev.log('Error displaying static ride route: $e');
-      emit(state.copyWith(errorMessage: 'Failed to display route: $e'));
+      dev.log('❌ Error displaying static route: $e');
+      emit(state.copyWith(errorMessage: 'Route display failed: $e'));
     }
   }
 
-  Future<void> _createStaticDriverMarker(LatLng pickupPosition) async {
-    try {
-      const driverMarkerId = MarkerId('driver');
-
-      final updatedMarkers = Map<MarkerId, Marker>.from(state.routeMarkers);
-
-      updatedMarkers.removeWhere(
-        (markerId, marker) =>
-            markerId.value == 'driver' ||
-            markerId.value.toLowerCase().contains('driver') ||
-            marker.infoWindow.title?.toLowerCase().contains('driver') == true,
-      );
-
-      final driverMarker = Marker(
-        markerId: driverMarkerId,
-        position: pickupPosition,
-        icon:
-            state.driverMarkerIcon ??
-            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        infoWindow: const InfoWindow(title: 'Driver'),
-        rotation: 0.0,
-      );
-
-      updatedMarkers[driverMarkerId] = driverMarker;
-
-      emit(
-        state.copyWith(
-          routeMarkers: updatedMarkers,
-          currentDriverPosition: pickupPosition,
-          routeDisplayed: true,
-        ),
-      );
-
-      dev.log('✅ Static driver marker created at pickup: $pickupPosition');
-    } catch (e) {
-      dev.log('❌ Error creating static driver marker: $e');
-    }
-  }
-
-  Future<void> _ensureUniqueDriverMarker(LatLng initialPosition) async {
-    try {
-      const driverMarkerId = MarkerId('driver');
-
-      final updatedMarkers = Map<MarkerId, Marker>.from(state.routeMarkers);
-
-      updatedMarkers.removeWhere(
-        (markerId, marker) =>
-            markerId.value == 'driver' ||
-            markerId.value.toLowerCase().contains('driver') ||
-            marker.infoWindow.title?.toLowerCase().contains('driver') == true,
-      );
-
-      final driverMarker = Marker(
-        markerId: driverMarkerId,
-        position: initialPosition,
-        icon:
-            state.driverMarkerIcon ??
-            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        infoWindow: const InfoWindow(title: 'Driver'),
-        rotation: 0.0,
-      );
-
-      updatedMarkers[driverMarkerId] = driverMarker;
-
-      emit(
-        state.copyWith(
-          routeMarkers: updatedMarkers,
-          currentDriverPosition: initialPosition,
-        ),
-      );
-
-      dev.log('✅ Unique driver marker created at position: $initialPosition');
-    } catch (e) {
-      dev.log('❌ Error creating unique driver marker: $e');
-    }
-  }
-
-  Future<void> _ensureMarkerIcons() async {
-    try {
-      if (state.driverMarkerIcon == null) {
-        await _createDriverMarkerIcon();
-      }
-
-      if (state.userLocationMarkerIcon == null) {
-        await _createUserLocationMarkerIcon();
-      }
-    } catch (e) {
-      dev.log('Error creating marker icons: $e');
-    }
-  }
-
-  Future<void> _createDriverMarkerIcon() async {
-    try {
-      final driverIcon = await BitmapDescriptor.asset(
-        const ImageConfiguration(size: Size(48, 48)),
-        'assets/images/bike_marker.png',
-      );
-
-      emit(state.copyWith(driverMarkerIcon: driverIcon));
-      dev.log('Driver marker icon created successfully');
-    } catch (e) {
-      dev.log('Failed to create driver marker icon, using default: $e');
-
-      final defaultDriverIcon = BitmapDescriptor.defaultMarkerWithHue(
-        BitmapDescriptor.hueBlue,
-      );
-      emit(state.copyWith(driverMarkerIcon: defaultDriverIcon));
-    }
-  }
-
-  Future<void> _createUserLocationMarkerIcon() async {
-    try {
-      final userIcon = await BitmapDescriptor.asset(
-        const ImageConfiguration(size: Size(40, 40)),
-        'assets/images/user_pin.png',
-      );
-
-      emit(state.copyWith(userLocationMarkerIcon: userIcon));
-      dev.log('User location marker icon created successfully');
-    } catch (e) {
-      dev.log('Failed to create user location marker icon, using default: $e');
-
-      final defaultUserIcon = BitmapDescriptor.defaultMarkerWithHue(
-        BitmapDescriptor.hueGreen,
-      );
-      emit(state.copyWith(userLocationMarkerIcon: defaultUserIcon));
-    }
-  }
-
-  Future<void> _displaySingleDestinationRouteWithAnimation(
+  Future<void> _displaySingleDestinationStaticRoute(
     RideRequestModel request,
     LatLng pickup,
   ) async {
-    dev.log('🎬 Displaying single destination route with animation');
-
     final destination = LatLng(
       request.dropoffLocation.latitude,
       request.dropoffLocation.longitude,
@@ -597,62 +736,62 @@ class RideCubit extends Cubit<RideState> {
     final routeResult = await _routeService.getRoute(pickup, destination);
 
     if (routeResult.isSuccess && routeResult.polyline != null) {
-      // Create markers (without driver marker initially)
+      await _persistenceService.persistRouteData(
+        routeResult.routePoints!,
+        totalDistance: _routeService.calculateRouteDistance(
+          routeResult.routePoints!,
+        ),
+      );
+
       final routeMarkers = _routeService.createMarkers(
         request.pickupLocation,
         request.dropoffLocation,
-        state.driverMarkerIcon,
+        null,
       );
 
-      // Remove driver marker from route markers (we'll animate it)
-      final filteredMarkers = <MarkerId, Marker>{};
+      final cleanedMarkers = <MarkerId, Marker>{};
       routeMarkers.forEach((markerId, marker) {
         if (!_isDriverMarker(markerId, marker)) {
-          filteredMarkers[markerId] = marker;
+          cleanedMarkers[markerId] = marker;
         }
       });
 
-      // Get route points for animation
-      final routePoints = routeResult.polyline!.points;
+      const driverMarkerId = MarkerId('driver');
+      cleanedMarkers[driverMarkerId] = Marker(
+        markerId: driverMarkerId,
+        position: pickup,
+        icon:
+            state.driverMarkerIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        infoWindow: const InfoWindow(title: 'Driver Location'),
+        rotation: 0.0,
+      );
 
       emit(
         state.copyWith(
           routePolylines: {routeResult.polyline!},
-          routeMarkers: filteredMarkers,
+          routeMarkers: cleanedMarkers,
           routeDisplayed: true,
+          currentDriverPosition: pickup,
+          isRealTimeTrackingActive: false,
         ),
       );
 
-      dev.log(
-        '✅ Route displayed, starting driver animation along ${routePoints.length} points',
-      );
+      focusCameraOnRoute();
 
-      // Start animating driver marker along the route
-      _animationService.animateMarkerAlongRoute(
-        routePoints,
-        onPositionUpdate: (position, rotation) {
-          _updateDriverMarkerPositionRealTime(position, rotation);
-        },
-        speedMetersPerSecond: AnimationConfig.normal.speedMetersPerSecond,
-        onAnimationComplete: () {
-          dev.log('🎬 Initial route animation completed');
-          // Animation is complete, driver is now at destination
-          _onInitialAnimationComplete();
-        },
+      dev.log(
+        '✅ Static route displayed - ${cleanedMarkers.length} markers total',
       );
     } else {
-      dev.log(
-        '❌ Failed to get single destination route: ${routeResult.errorMessage}',
-      );
+      dev.log('❌ Failed to get static route');
+      emit(state.copyWith(errorMessage: 'Failed to load route'));
     }
   }
 
-  Future<void> _displayMultiDestinationRouteWithAnimation(
+  Future<void> _displayMultiDestinationStaticRoute(
     RideRequestModel request,
     LatLng pickup,
   ) async {
-    dev.log('🎬 Displaying multi-destination route with animation');
-
     final destinations = <LatLng>[
       LatLng(
         request.dropoffLocation.latitude,
@@ -670,7 +809,7 @@ class RideCubit extends Cubit<RideState> {
     );
 
     if (routesResult.isSuccess && routesResult.polylines != null) {
-      final allLocations = <loc.Location>[
+      final allLocations = <FreedomLocation>[
         request.pickupLocation,
         request.dropoffLocation,
         ...request.additionalDestinations!,
@@ -681,55 +820,195 @@ class RideCubit extends Cubit<RideState> {
         state.driverMarkerIcon,
       );
 
-      // Remove driver marker from route markers
-      final filteredMarkers = <MarkerId, Marker>{};
-      routeMarkers.forEach((markerId, marker) {
-        if (!_isDriverMarker(markerId, marker)) {
-          filteredMarkers[markerId] = marker;
-        }
-      });
+      final updatedMarkers = Map<MarkerId, Marker>.from(routeMarkers);
+      const driverMarkerId = MarkerId('driver');
+
+      updatedMarkers[driverMarkerId] = Marker(
+        markerId: driverMarkerId,
+        position: pickup,
+        icon:
+            state.driverMarkerIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        infoWindow: const InfoWindow(title: 'Driver Location'),
+        rotation: 0.0,
+      );
 
       emit(
         state.copyWith(
           routePolylines: routesResult.polylines!,
-          routeMarkers: filteredMarkers,
+          routeMarkers: updatedMarkers,
           routeDisplayed: true,
           routeSegments: routesResult.routeSegments,
+          currentDriverPosition: pickup,
+          isRealTimeTrackingActive: false,
         ),
       );
 
-      // Combine all route points for animation
-      final allRoutePoints = <LatLng>[];
-      for (final polyline in routesResult.polylines!) {
-        allRoutePoints.addAll(polyline.points);
-      }
-
-      dev.log(
-        '✅ Multi-destination route displayed, animating along ${allRoutePoints.length} points',
-      );
-
-      // Animate driver along combined route
-      _animationService.animateMarkerAlongRoute(
-        allRoutePoints,
-        onPositionUpdate: (position, rotation) {
-          _updateDriverMarkerPositionRealTime(position, rotation);
-        },
-        speedMetersPerSecond: AnimationConfig.normal.speedMetersPerSecond,
-        onAnimationComplete: () {
-          dev.log('🎬 Multi-destination animation completed');
-          _onInitialAnimationComplete();
-        },
-      );
+      focusCameraOnRoute();
     } else {
-      dev.log(
-        '❌ Failed to get multi-destination routes: ${routesResult.errorMessage}',
+      dev.log('❌ Failed to get multi-destination static routes');
+      emit(
+        state.copyWith(errorMessage: 'Failed to load multi-destination route'),
       );
     }
   }
 
-  void _onInitialAnimationComplete() {
-    dev.log('🎬 Initial animation complete - driver ready for real tracking');
-    emit(state.copyWith(driverAnimationComplete: true));
+  Future<void> _startRealTimeTrackingOnly() async {
+    if (_currentRideRequest == null || _isDisposed) return;
+
+    try {
+      dev.log('🔴 Starting REAL-TIME tracking with animation');
+
+      final destination = LatLng(
+        _currentRideRequest!.dropoffLocation.latitude,
+        _currentRideRequest!.dropoffLocation.longitude,
+      );
+
+      final rideId = state.driverAccepted?.rideId ?? state.currentRideId ?? '';
+      final driverId = state.driverAccepted?.driverId ?? '';
+
+      if (rideId.isEmpty || driverId.isEmpty) {
+        dev.log(
+          '❌ Missing IDs for tracking: rideId($rideId) driverId($driverId)',
+        );
+        return;
+      }
+
+      final gmapsDestination = LatLng(
+        destination.latitude,
+        destination.longitude,
+      );
+
+      _animationService.transitionToRealTimeTracking(
+        onPositionUpdate: (position, rotation) {
+          _updateDriverMarkerPositionRealTime(position, rotation);
+        },
+      );
+
+      _realTimeTrackingService.startTracking(
+        rideId: rideId,
+        driverId: driverId,
+        destination: gmapsDestination,
+        onPositionUpdate: _handleRealTimePositionUpdate,
+        onRouteUpdated: _updateRouteOnMap,
+        onStatusUpdate: _updateTrackingStatusThrottled,
+        onMarkerUpdate: _handlePreciseMarkerUpdate,
+      );
+
+      emit(
+        state.copyWith(
+          isRealTimeTrackingActive: true,
+          trackingStatusMessage: 'Live tracking with animation started',
+        ),
+      );
+
+      dev.log('✅ Real-time tracking with animation started successfully');
+    } catch (e) {
+      dev.log('❌ Real-time tracking start error: $e');
+      emit(
+        state.copyWith(
+          errorMessage: 'Failed to start live tracking: $e',
+          trackingStatusMessage: 'Live tracking failed to start',
+        ),
+      );
+    }
+  }
+
+  void _handleRealTimePositionUpdate(
+    LatLng position,
+    double bearing,
+    DriverLocationData locationData,
+  ) {
+    if (!state.isRealTimeTrackingActive ||
+        !state.rideInProgress ||
+        _isDisposed) {
+      dev.log('⚠️ Ignoring position update - tracking not active');
+      return;
+    }
+
+    dev.log(
+      '🎬 Real-time position update: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}',
+    );
+
+    _animationService.updateRealTimePosition(
+      position,
+      bearing,
+      locationData: {
+        'speed': locationData.speed,
+        'accuracy': locationData.accuracy,
+        'timestamp': locationData.lastUpdate.toIso8601String(),
+      },
+    );
+
+    _updateDriverMarkerPositionRealTime(position, bearing);
+
+    emit(
+      state.copyWith(
+        currentDriverPosition: position,
+        lastPositionUpdate: locationData.lastUpdate,
+        currentSpeed: locationData.speed,
+        trackingStatusMessage: _getEnhancedTrackingMessage(locationData),
+      ),
+    );
+
+    // Periodic persistence of driver location
+    if (DateTime.now().millisecondsSinceEpoch % 5000 < 100) {
+      _persistenceService.persistDriverLocation(
+        position,
+        speed: locationData.speed,
+        bearing: bearing,
+        timestamp: locationData.lastUpdate,
+      );
+    }
+
+    if (_realTimeTrackingService.hasReachedDestination(position)) {
+      dev.log('🏁 Driver reached destination');
+      _handleDriverReachedDestination();
+    }
+  }
+
+  void _updateDriverMarkerPositionRealTime(LatLng position, double rotation) {
+    if (_isDisposed) return;
+
+    try {
+      final updatedMarkers = Map<MarkerId, Marker>.from(state.routeMarkers);
+      const driverMarkerId = MarkerId('driver');
+
+      if (updatedMarkers.containsKey(driverMarkerId)) {
+        final currentMarker = updatedMarkers[driverMarkerId]!;
+        final newMarker = currentMarker.copyWith(
+          positionParam: position,
+          rotationParam: rotation,
+        );
+        updatedMarkers[driverMarkerId] = newMarker;
+
+        dev.log(
+          '🚗 Updated driver marker position: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}',
+        );
+      } else {
+        updatedMarkers[driverMarkerId] = Marker(
+          markerId: driverMarkerId,
+          position: position,
+          icon:
+              state.driverMarkerIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          infoWindow: const InfoWindow(title: 'Driver'),
+          rotation: rotation,
+        );
+        dev.log(
+          '🚗 Created new driver marker at: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}',
+        );
+      }
+
+      emit(
+        state.copyWith(
+          routeMarkers: updatedMarkers,
+          currentDriverPosition: position,
+        ),
+      );
+    } catch (e) {
+      dev.log('❌ Driver marker update error: $e');
+    }
   }
 
   bool _isDriverMarker(MarkerId markerId, Marker marker) {
@@ -750,50 +1029,49 @@ class RideCubit extends Cubit<RideState> {
         return true;
       }
     }
-
     return false;
   }
 
-  void _updateDriverMarkerPositionRealTime(LatLng position, double rotation) {
+  Future<void> _ensureMarkerIcons() async {
     try {
-      final updatedMarkers = Map<MarkerId, Marker>.from(state.routeMarkers);
-      const driverMarkerId = MarkerId('driver');
-
-      // Ensure driver marker exists
-      if (!updatedMarkers.containsKey(driverMarkerId)) {
-        dev.log('🚗 Creating driver marker for real-time tracking');
-        final driverMarker = Marker(
-          markerId: driverMarkerId,
-          position: position,
-          icon:
-              state.driverMarkerIcon ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          infoWindow: const InfoWindow(title: 'Driver'),
-          rotation: rotation,
-        );
-        updatedMarkers[driverMarkerId] = driverMarker;
-      } else {
-        // Update existing marker with smooth animation
-        final currentMarker = updatedMarkers[driverMarkerId]!;
-        final updatedMarker = currentMarker.copyWith(
-          positionParam: position,
-          rotationParam: rotation,
-        );
-        updatedMarkers[driverMarkerId] = updatedMarker;
+      if (state.driverMarkerIcon == null) {
+        await _createDriverMarkerIcon();
       }
-
-      emit(
-        state.copyWith(routeMarkers: updatedMarkers, shouldUpdateCamera: true),
-      );
-
-      // Throttled logging
-      if (DateTime.now().millisecondsSinceEpoch % 5000 < 100) {
-        dev.log(
-          '🎬 Smooth marker update: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)} (${rotation.toStringAsFixed(1)}°)',
-        );
+      if (state.userLocationMarkerIcon == null) {
+        await _createUserLocationMarkerIcon();
       }
     } catch (e) {
-      dev.log('❌ Error in smooth marker update: $e');
+      dev.log('❌ Marker icons error: $e');
+    }
+  }
+
+  Future<void> _createDriverMarkerIcon() async {
+    try {
+      final driverIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(48, 48)),
+        'assets/images/bike_marker.png',
+      );
+      emit(state.copyWith(driverMarkerIcon: driverIcon));
+    } catch (e) {
+      final defaultDriverIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueBlue,
+      );
+      emit(state.copyWith(driverMarkerIcon: defaultDriverIcon));
+    }
+  }
+
+  Future<void> _createUserLocationMarkerIcon() async {
+    try {
+      final userIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(40, 40)),
+        'assets/images/user_pin.png',
+      );
+      emit(state.copyWith(userLocationMarkerIcon: userIcon));
+    } catch (e) {
+      final defaultUserIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueGreen,
+      );
+      emit(state.copyWith(userLocationMarkerIcon: defaultUserIcon));
     }
   }
 
@@ -826,13 +1104,124 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
-  bool get isRealTimeTrackingActiveGetter => state.isRealTimeTrackingActive;
-  String? get trackingStatusMessage => state.trackingStatusMessage;
-  bool get isRouteRecalculated => state.routeRecalculated;
+  String _getEnhancedTrackingMessage(DriverLocationData locationData) {
+    if (locationData.speed > 15.0) {
+      return 'Driver moving fast (${locationData.speed.toStringAsFixed(0)} km/h)';
+    } else if (locationData.speed > 5.0) {
+      return 'Driver moving (${locationData.speed.toStringAsFixed(0)} km/h)';
+    } else if (locationData.speed > 1.0) {
+      return 'Driver moving slowly';
+    } else {
+      return 'Driver stationary';
+    }
+  }
 
-  void _clearRouteDisplay() {
-    _animationService.stopAnimation();
-    _stopRealTimeTracking();
+  void _updateRouteOnMap(List<LatLng> newRoutePoints) {
+    if (_isDisposed) return;
+
+    try {
+      if (state.routePolylines.isEmpty) return;
+
+      final currentPolyline = state.routePolylines.first;
+      final updatedPolyline = currentPolyline.copyWith(
+        pointsParam: newRoutePoints,
+      );
+
+      emit(
+        state.copyWith(
+          routePolylines: {updatedPolyline},
+          routeRecalculated: true,
+          trackingStatusMessage: 'Route updated',
+        ),
+      );
+
+      Future.delayed(const Duration(seconds: 3), () {
+        if (!isClosed) {
+          emit(state.copyWith(routeRecalculated: false));
+        }
+      });
+    } catch (e) {
+      dev.log('❌ Route update error: $e');
+    }
+  }
+
+  void _updateTrackingStatusThrottled(String status) {
+    _pendingStatusMessage = status;
+
+    if (_statusUpdateThrottle?.isActive != true) {
+      _statusUpdateThrottle = Timer(_statusUpdateInterval, () {
+        _performThrottledStatusUpdate();
+      });
+    }
+  }
+
+  void _performThrottledStatusUpdate() {
+    if (_pendingStatusMessage == null || _isDisposed) return;
+
+    final status = _pendingStatusMessage!;
+    final currentTime = DateTime.now();
+
+    if (_lastStatusUpdate != null &&
+        currentTime.difference(_lastStatusUpdate!).inSeconds < 2 &&
+        status.contains('position updated')) {
+      _pendingStatusMessage = null;
+      return;
+    }
+
+    _lastStatusUpdate = currentTime;
+
+    emit(state.copyWith(trackingStatusMessage: status));
+
+    final duration =
+        status.contains('error') || status.contains('failed')
+            ? const Duration(seconds: 8)
+            : const Duration(seconds: 4);
+
+    Future.delayed(duration, () {
+      if (!isClosed) {
+        emit(state.copyWith(trackingStatusMessage: null));
+      }
+    });
+
+    _pendingStatusMessage = null;
+  }
+
+  void _handlePreciseMarkerUpdate(LatLng position) {
+    if (_isDisposed) return;
+
+    if (_animationService.isRealTimeTracking) {
+      _animationService.updateRealTimePosition(
+        position,
+        _animationService.currentBearing,
+      );
+    }
+
+    if (DateTime.now().millisecondsSinceEpoch % 5000 < 200) {
+      dev.log(
+        '🎯 Precise marker update: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}',
+      );
+    }
+  }
+
+  void _handleDriverReachedDestination() {
+    if (_isDisposed) return;
+
+    dev.log('🏁 Driver reached destination');
+    _stopAllTrackingAndReset();
+    emit(
+      state.copyWith(
+        isRealTimeTrackingActive: false,
+        trackingStatusMessage: 'Driver arrived at destination',
+      ),
+    );
+  }
+
+  void _stopAllTrackingAndReset() {
+    dev.log('🛑 Stopping all tracking and resetting');
+
+    _realTimeTrackingService.stopTracking();
+    _animationService.stopAll();
+    _animationService.stopRealTimeTracking();
 
     emit(
       state.copyWith(
@@ -841,6 +1230,9 @@ class RideCubit extends Cubit<RideState> {
         routeDisplayed: false,
         routeSegments: null,
         currentDriverPosition: null,
+        isRealTimeTrackingActive: false,
+        rideInProgress: false,
+        trackingStatusMessage: null,
       ),
     );
   }
@@ -854,383 +1246,276 @@ class RideCubit extends Cubit<RideState> {
     _driverStartedSubscription?.cancel();
     _driverRejecetedSubscription?.cancel();
     _driverPositionSubscription?.cancel();
-    _stopRealTimeTracking();
   }
 
-  void _listenToDriverStatus() {
-    dev.log('Setting up driver status listeners');
+  /// Check ride status with server for restoration
+  Future<void> checkRideStatus(String rideId) async {
+    if (_isDisposed) return;
 
-    final socketService = getIt<SocketService>();
-    dev.log('Socket connected: ${socketService.isConnected}');
-
-    _cancelAllSubscriptions();
-
-    _driverStatusSubscription = socketService.onDriverAcceptRide.listen((
-      data,
-    ) async {
-      dev.log('🚗 Driver accepted ride - showing static route');
-      _stopSearchTimer();
-
-      emit(
-        state.copyWith(
-          status: RideRequestStatus.success,
-          showRiderFound: true,
-          riderAvailable: true,
-          showStackedBottomSheet: false,
-          driverAccepted: data,
-        ),
-      );
-
-      try {
-        await _displayStaticRideRoute();
-        dev.log('✅ Static route displayed successfully');
-      } catch (e) {
-        dev.log('❌ Error displaying route: $e');
-        emit(state.copyWith(errorMessage: 'Failed to display route: $e'));
-      }
-    });
-
-    _driverStartedSubscription = socketService.onDriverStarted.listen((
-      data,
-    ) async {
-      dev.log('🚗 Driver started the ride - enabling real-time tracking');
-
-      emit(
-        state.copyWith(
-          driverStarted: data,
-          rideInProgress: data.status == 'in_progress',
-        ),
-      );
-      // Start real-time tracking
-      await _startRealTimeTracking();
-    });
-
-    _driverArrivedSubscription = socketService.onDriverArrived.listen((data) {
-      dev.log('🚗 Driver arrived at pickup location');
-      // Don't stop tracking here - driver will start the ride next
-      emit(state.copyWith(driverArrived: data, driverHasArrived: true));
-    });
-
-    // CRITICAL: Listen for real-time driver position updates from socket
-    _driverPositionSubscription = socketService.onDriverLocation.listen((
-      locationData,
-    ) {
-      log('🚗 Driver location updated: ${locationData.entries}');
-      // Process location updates through the tracking service
-      _realTimeTrackingService.processDriverLocation(locationData);
-    });
-
-    _driverCancelledSubscription = socketService.onDriverCancelled.listen((
-      data,
-    ) {
-      _stopRealTimeTracking();
-      _clearRouteDisplay();
-      resetRideState();
-      emit(state.copyWith(driverCancelled: data));
-    });
-
-    _driverCompletedSubscription = socketService.onDriverCompleted.listen((
-      data,
-    ) {
-      _stopRealTimeTracking();
-      _clearRouteDisplay();
-      resetRideState();
-      emit(state.copyWith(driverCompleted: data));
-    });
-
-    _driverRejecetedSubscription = socketService.onDriverRejected.listen((
-      data,
-    ) {
-      resetRideState();
-      emit(state.copyWith(driverRejected: data));
-    });
-  }
-
-  Future<void> _startRealTimeTracking() async {
     try {
-      if (_currentRideRequest == null) {
-        dev.log('❌ Cannot start tracking: no current ride request');
-        return;
-      }
+      emit(state.copyWith(status: RideRequestStatus.loading));
 
-      final destination = LatLng(
-        _currentRideRequest!.dropoffLocation.latitude,
-        _currentRideRequest!.dropoffLocation.longitude,
-      );
+      final response = await rideRequestRepository.checkRideStatus(rideId);
 
-      final rideId = state.driverAccepted?.rideId ?? state.currentRideId ?? '';
-      final driverId = state.driverAccepted?.driverId ?? '';
+      await response.fold(
+        (failure) {
+          emit(
+            state.copyWith(
+              status: RideRequestStatus.error,
+              errorMessage: failure.message,
+            ),
+          );
+        },
+        (statusResponse) async {
+          final currentStatus = statusResponse.data?.status;
+          dev.log('💾 Current ride status from server: $currentStatus');
 
-      if (rideId.isEmpty || driverId.isEmpty) {
-        dev.log(
-          '❌ Cannot start tracking: missing rideId($rideId) or driverId($driverId)',
-        );
-        return;
-      }
+          switch (currentStatus) {
+            case 'accepted':
+              emit(
+                state.copyWith(
+                  status: RideRequestStatus.success,
+                  showRiderFound: true,
+                  riderAvailable: true,
+                  showStackedBottomSheet: false,
+                  isRealTimeTrackingActive: false,
+                  rideInProgress: false,
+                ),
+              );
+              await restoreStaticRoute();
+              break;
 
-      dev.log('🔴 Starting enhanced real-time tracking with animation');
+            case 'in_progress':
+            case 'started':
+              emit(
+                state.copyWith(
+                  status: RideRequestStatus.success,
+                  showRiderFound: true,
+                  riderAvailable: true,
+                  showStackedBottomSheet: false,
+                  rideInProgress: true,
+                ),
+              );
+              await restoreStaticRoute();
+              await restoreRealTimeTracking();
+              break;
 
-      // Convert to gmaps.LatLng for tracking service
-      final gmapsDestination = gmaps.LatLng(
-        destination.latitude,
-        destination.longitude,
-      );
+            case 'arrived':
+              emit(
+                state.copyWith(
+                  status: RideRequestStatus.success,
+                  showRiderFound: true,
+                  riderAvailable: true,
+                  driverHasArrived: true,
+                  showStackedBottomSheet: false,
+                ),
+              );
+              await restoreStaticRoute();
+              break;
 
-      // Transition animation service to real-time mode
-      _animationService.transitionToRealTimeTracking(
-        onPositionUpdate: (position, rotation) {
-          _updateDriverMarkerPositionRealTime(position, rotation);
+            case 'completed':
+              _stopAllTrackingAndReset();
+              emit(
+                state.copyWith(
+                  status: RideRequestStatus.completed,
+                  showStackedBottomSheet: true,
+                  showRiderFound: false,
+                ),
+              );
+              await _persistenceService.clearRideData();
+              break;
+
+            case 'cancelled':
+              _stopAllTrackingAndReset();
+              emit(
+                state.copyWith(
+                  status: RideRequestStatus.cancelled,
+                  showStackedBottomSheet: true,
+                  showRiderFound: false,
+                ),
+              );
+              await _persistenceService.clearRideData();
+              break;
+
+            default:
+              emit(
+                state.copyWith(
+                  status: RideRequestStatus.searching,
+                  isSearching: true,
+                ),
+              );
+              resumeSearchTimer();
+          }
         },
       );
-
-      // Start the tracking service
-      _realTimeTrackingService.startTracking(
-        rideId: rideId,
-        driverId: driverId,
-        destination: gmapsDestination,
-        onPositionUpdate: _handleRealTimePositionUpdate,
-        onRouteUpdated: _updateRouteOnMap,
-        onStatusUpdate: _updateTrackingStatus,
-        onMarkerUpdate: _handlePreciseMarkerUpdate,
-      );
-
-      emit(
-        state.copyWith(
-          shouldUpdateCamera: false,
-          isRealTimeTrackingActive: true,
-          trackingStatusMessage: 'Real-time tracking with animation started',
-        ),
-      );
-
-      dev.log('✅ Real-time tracking with animation started successfully');
     } catch (e) {
-      dev.log('❌ Error starting real-time tracking: $e');
+      dev.log('❌ Check ride status error: $e');
       emit(
         state.copyWith(
-          errorMessage: 'Failed to start tracking: $e',
-          trackingStatusMessage: 'Tracking startup failed',
+          status: RideRequestStatus.error,
+          errorMessage: e.toString(),
         ),
       );
     }
   }
 
-  void _handleRealTimePositionUpdate(
-    gmaps.LatLng position,
-    double bearing,
-    DriverLocationData locationData,
-  ) {
-    // Convert to UI coordinates
-    final uiPosition = LatLng(position.latitude, position.longitude);
-
-    dev.log(
-      '📍 Real-time update: ${uiPosition.latitude.toStringAsFixed(6)}, ${uiPosition.longitude.toStringAsFixed(6)} (${bearing.toStringAsFixed(1)}°)',
-    );
-
-    // Update animation service with new real-time position
-    _animationService.updateRealTimePosition(
-      uiPosition,
-      bearing,
-      locationData: {
-        'speed': locationData.speed,
-        'accuracy': locationData.accuracy,
-        'timestamp': locationData.lastUpdate.toIso8601String(),
-      },
-    );
-
-    // Update state for UI
-    emit(
-      state.copyWith(
-        currentDriverPosition: uiPosition,
-        lastPositionUpdate: locationData.lastUpdate,
-        currentSpeed: locationData.speed,
-        trackingStatusMessage: _getEnhancedTrackingMessage(locationData),
-      ),
-    );
-
-    // Check destination arrival
-    if (_realTimeTrackingService.hasReachedDestination(position)) {
-      dev.log('🏁 Driver has reached destination');
-      _handleDriverReachedDestination();
-    }
+  void resumeSearchTimer() {
+    _startTimer();
   }
 
-  void _handlePreciseMarkerUpdate(gmaps.LatLng position) {
-    final uiPosition = LatLng(position.latitude, position.longitude);
+  Future<void> restoreRealTimeTracking() async {
+    if (_isDisposed) return;
 
-    // Update animation service target position for smoother movement
-    if (_animationService.isRealTimeTracking) {
-      _animationService.updateRealTimePosition(
-        uiPosition,
-        _animationService.currentBearing,
-      );
-    }
+    dev.log('🔴 Restoring real-time tracking...');
 
-    // Throttled logging for precision updates
-    if (DateTime.now().millisecondsSinceEpoch % 15000 < 200) {
-      dev.log('🎯 Precise position: ${position.toDisplayFormat()}');
-    }
-  }
-
-  // New method to get enhanced tracking message
-  String _getEnhancedTrackingMessage(DriverLocationData locationData) {
-    if (locationData.speed > 15.0) {
-      return 'Driver is moving fast (${locationData.speed.toStringAsFixed(0)} km/h)';
-    } else if (locationData.speed > 5.0) {
-      return 'Driver is moving (${locationData.speed.toStringAsFixed(0)} km/h)';
-    } else if (locationData.speed > 1.0) {
-      return 'Driver is moving slowly';
-    } else {
-      return 'Driver is stationary';
-    }
-  }
-
-  // UPDATED: Update route on map when driver changes path
-  void _updateRouteOnMap(List<gmaps.LatLng> newRoutePoints) {
     try {
-      if (state.routePolylines.isEmpty) {
-        dev.log('❌ No existing route to update');
-        return;
+      await restoreStaticRoute();
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      final trackingState = await _persistenceService.loadTrackingState();
+      final lastLocation = await _persistenceService.loadLastDriverLocation();
+
+      if (trackingState != null && trackingState.isActive) {
+        dev.log('🎯 Restoring tracking state: ${trackingState.rideId}');
+
+        await _startRealTimeTrackingOnly();
+
+        if (lastLocation != null) {
+          dev.log('📍 Updating to last known position: ${lastLocation.latLng}');
+
+          _handleRealTimePositionUpdate(
+            lastLocation.latLng,
+            lastLocation.bearing ?? 0.0,
+            DriverLocationData(
+              position: lastLocation.latLng,
+              isMultiStop: false,
+              isSignificantMovement: false,
+              speed: lastLocation.speed ?? 0.0,
+              accuracy: 10.0,
+              lastUpdate: lastLocation.timestamp,
+            ),
+          );
+        }
+
+        emit(state.copyWith(trackingStatusMessage: 'Live tracking restored'));
+      } else {
+        dev.log('⚠️ No valid tracking state found');
+        emit(
+          state.copyWith(
+            trackingStatusMessage: 'Unable to restore live tracking',
+          ),
+        );
       }
-
-      dev.log('🛣️ Updating route with ${newRoutePoints.length} new points');
-
-      // Convert to UI coordinates
-      final uiRoutePoints =
-          newRoutePoints
-              .map((point) => LatLng(point.latitude, point.longitude))
-              .toList();
-
-      // Update polyline
-      final currentPolyline = state.routePolylines.first;
-      final updatedPolyline = currentPolyline.copyWith(
-        pointsParam: uiRoutePoints,
+    } catch (e) {
+      dev.log('❌ Error restoring real-time tracking: $e');
+      emit(
+        state.copyWith(
+          errorMessage: 'Failed to restore tracking: $e',
+          trackingStatusMessage: 'Tracking restoration failed',
+        ),
       );
+    }
+  }
+
+  Future<void> restoreStaticRoute() async {
+    if (_isDisposed) return;
+
+    dev.log('🗺️ Restoring static route display...');
+
+    try {
+      await _ensureMarkerIcons();
+
+      final routeData = await _persistenceService.loadRouteData();
+
+      if (routeData != null && routeData.routePoints.isNotEmpty) {
+        dev.log('📍 Restoring route from persisted data');
+        await _restoreRouteFromPersistedData(routeData);
+      } else if (_currentRideRequest != null) {
+        dev.log('🔄 Regenerating route from ride request');
+        await _displayStaticRouteOnly();
+      } else {
+        dev.log('❌ No route data available for restoration');
+        emit(state.copyWith(trackingStatusMessage: 'No route data available'));
+      }
+    } catch (e) {
+      dev.log('❌ Error restoring static route: $e');
+      emit(state.copyWith(errorMessage: 'Failed to restore route: $e'));
+    }
+  }
+
+  Future<void> _restoreRouteFromPersistedData(
+    PersistedRouteData routeData,
+  ) async {
+    if (_isDisposed) return;
+
+    try {
+      if (routeData.routePoints.isEmpty) return;
+
+      final polyline = Polyline(
+        polylineId: const PolylineId('restored_route'),
+        color: Colors.orange,
+        points: routeData.routePoints,
+        width: 5,
+        patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+      );
+
+      final markers = <MarkerId, Marker>{};
+
+      const pickupMarkerId = MarkerId('pickup');
+      markers[pickupMarkerId] = Marker(
+        markerId: pickupMarkerId,
+        position: routeData.routePoints.first,
+        icon:
+            state.userLocationMarkerIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+        infoWindow: const InfoWindow(title: 'Pickup'),
+      );
+
+      const destinationMarkerId = MarkerId('destination');
+      markers[destinationMarkerId] = Marker(
+        markerId: destinationMarkerId,
+        position: routeData.routePoints.last,
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: const InfoWindow(title: 'Destination'),
+      );
+
+      if (state.currentDriverPosition != null) {
+        const driverMarkerId = MarkerId('driver');
+        markers[driverMarkerId] = Marker(
+          markerId: driverMarkerId,
+          position: state.currentDriverPosition!,
+          icon:
+              state.driverMarkerIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          infoWindow: const InfoWindow(title: 'Driver'),
+        );
+      }
 
       emit(
         state.copyWith(
-          routePolylines: {updatedPolyline},
-          routeRecalculated: true,
-          trackingStatusMessage: 'Route updated - driver changed path',
+          routePolylines: {polyline},
+          routeMarkers: markers,
+          routeDisplayed: true,
+          trackingStatusMessage: 'Route restored from cache',
         ),
       );
 
-      dev.log('✅ Route updated on map');
-
-      // Update animation service with new route if needed
-      if (_animationService.isRealTimeTracking) {
-        dev.log('🎬 Animation service will continue with new route points');
-      }
-
-      // Reset flag after delay
-      Future.delayed(const Duration(seconds: 3), () {
-        if (!isClosed) {
-          emit(state.copyWith(routeRecalculated: false));
-        }
-      });
+      dev.log('✅ Route restored from persisted data');
     } catch (e) {
-      dev.log('❌ Error updating route on map: $e');
-      emit(state.copyWith(trackingStatusMessage: 'Route update failed: $e'));
+      dev.log('❌ Error restoring route from persisted data: $e');
+      throw e;
     }
   }
 
-  // NEW: Show notification when route changes
-  void _showEnhancedRouteChangeNotification() {
-    emit(
-      state.copyWith(
-        trackingStatusMessage:
-            'Driver took a different route. ETA updated automatically.',
-      ),
-    );
-
-    // Clear notification after 5 seconds
-    Future.delayed(const Duration(seconds: 5), () {
-      if (!isClosed) {
-        emit(state.copyWith(trackingStatusMessage: null));
-      }
-    });
+  /// Get tracking status for UI
+  TrackingStatus getTrackingStatus() {
+    return _realTimeTrackingService.getTrackingStatus();
   }
 
-  // UPDATED: Update tracking status with better user feedback
-  void _updateTrackingStatus(String status) {
-    dev.log('📊 Enhanced tracking status: $status');
-
-    // Filter out frequent status updates to avoid UI spam
-    final currentTime = DateTime.now();
-    if (_lastStatusUpdate != null &&
-        currentTime.difference(_lastStatusUpdate!).inSeconds < 2 &&
-        status.contains('position updated')) {
-      return; // Skip frequent position updates
-    }
-    _lastStatusUpdate = currentTime;
-
-    emit(state.copyWith(trackingStatusMessage: status));
-
-    // Clear status message after appropriate duration
-    final duration =
-        status.contains('error') || status.contains('failed')
-            ? const Duration(seconds: 8)
-            : const Duration(seconds: 4);
-
-    Future.delayed(duration, () {
-      if (!isClosed) {
-        emit(state.copyWith(trackingStatusMessage: null));
-      }
-    });
-  }
-
-  double _calculateTotalRouteDistance(List<gmaps.LatLng> routePoints) {
-    double totalDistance = 0.0;
-
-    for (int i = 0; i < routePoints.length - 1; i++) {
-      final point1 = LatLng(routePoints[i].latitude, routePoints[i].longitude);
-      final point2 = LatLng(
-        routePoints[i + 1].latitude,
-        routePoints[i + 1].longitude,
-      );
-      totalDistance += _calculateDistanceInMeters(point1, point2);
-    }
-
-    return totalDistance;
-  }
-
-  // UPDATED: Handle when driver reaches destination
-  void _handleDriverReachedDestination() {
-    dev.log('🏁 Driver reached destination - stopping all animations');
-
-    _stopRealTimeTracking();
-    _animationService.stopAll();
-
-    emit(
-      state.copyWith(
-        isRealTimeTrackingActive: false,
-        trackingStatusMessage: 'Driver has arrived at destination',
-      ),
-    );
-  }
-
-  // Stop tracking with animation cleanup
-  void _stopRealTimeTracking() {
-    dev.log('🛑 Stopping real-time tracking and animation');
-
-    _realTimeTrackingService.stopTracking();
-    _animationService.stopRealTimeTracking();
-
-    emit(
-      state.copyWith(
-        isRealTimeTrackingActive: false,
-        trackingStatusMessage: null,
-        currentSpeed: 0.0,
-      ),
-    );
-  }
-
-  // UPDATED: Get current route progress information
+  /// Get current route progress
   RouteProgress? getCurrentRouteProgress() {
-    if (!_realTimeTrackingService.isTracking) {
-      return null;
-    }
+    if (!_realTimeTrackingService.isTracking) return null;
 
-    // Get enhanced tracking status
     final trackingStatus = _realTimeTrackingService.getTrackingStatus();
 
     if (!trackingStatus.isReceivingRegularUpdates ||
@@ -1238,11 +1523,7 @@ class RideCubit extends Cubit<RideState> {
       return null;
     }
 
-    // Try to get route progress from tracking service
-    // You might need to add this method to your tracking service
     try {
-      // This is a placeholder - you'd implement actual route progress calculation
-      // in the tracking service based on the current route points
       final driverPosition = trackingStatus.lastKnownPosition!;
       final destination = trackingStatus.destination;
 
@@ -1252,12 +1533,11 @@ class RideCubit extends Cubit<RideState> {
           LatLng(destination.latitude, destination.longitude),
         );
 
-        // Use tracking service route points for more accurate progress
         final routePoints = _realTimeTrackingService.currentRoutePoints;
         final totalDistance =
             routePoints.isNotEmpty
                 ? _calculateTotalRouteDistance(routePoints)
-                : distanceToDestination + 1000; // Fallback estimate
+                : distanceToDestination + 1000;
 
         final progress =
             routePoints.isNotEmpty
@@ -1279,39 +1559,39 @@ class RideCubit extends Cubit<RideState> {
         );
       }
     } catch (e) {
-      dev.log('❌ Error calculating route progress: $e');
+      dev.log('❌ Route progress error: $e');
     }
 
     return null;
   }
 
-  // Helper method to calculate total route distance
+  double _calculateTotalRouteDistance(List<LatLng> routePoints) {
+    double totalDistance = 0.0;
 
-  // Helper method to calculate actual progress along route
+    for (int i = 0; i < routePoints.length - 1; i++) {
+      final point1 = routePoints[i];
+      final point2 = routePoints[i + 1];
+      totalDistance += _calculateDistanceInMeters(point1, point2);
+    }
+
+    return totalDistance;
+  }
+
   double _calculateActualProgress(
-    gmaps.LatLng driverPosition,
-    List<gmaps.LatLng> routePoints,
+    LatLng driverPosition,
+    List<LatLng> routePoints,
   ) {
     if (routePoints.length < 2) return 0.0;
 
-    // Find closest point on route and calculate progress
     double minDistance = double.infinity;
     int closestSegmentIndex = 0;
 
     for (int i = 0; i < routePoints.length - 1; i++) {
-      final point1 = LatLng(routePoints[i].latitude, routePoints[i].longitude);
-      final point2 = LatLng(
-        routePoints[i + 1].latitude,
-        routePoints[i + 1].longitude,
-      );
-      final driverLatLng = LatLng(
-        driverPosition.latitude,
-        driverPosition.longitude,
-      );
+      final point1 = routePoints[i];
+      final point2 = routePoints[i + 1];
 
-      // Simple distance calculation - you might want to use the geodesy library for accuracy
       final distance = _calculateDistanceToLineSegment(
-        driverLatLng,
+        driverPosition,
         point1,
         point2,
       );
@@ -1322,31 +1602,25 @@ class RideCubit extends Cubit<RideState> {
       }
     }
 
-    // Calculate progress based on closest segment
     final totalSegments = routePoints.length - 1;
     return totalSegments > 0 ? closestSegmentIndex / totalSegments : 0.0;
   }
 
-  // Simple distance to line segment calculation
   double _calculateDistanceToLineSegment(
     LatLng point,
     LatLng lineStart,
     LatLng lineEnd,
   ) {
-    // Simplified calculation - in production you'd use proper geodesy
     final startDistance = _calculateDistanceInMeters(point, lineStart);
     final endDistance = _calculateDistanceInMeters(point, lineEnd);
     return math.min(startDistance, endDistance);
   }
 
-  // Enhanced ETA calculation using tracking data
   Duration _calculateEnhancedETA(
     double distanceMeters,
     TrackingStatus trackingStatus,
   ) {
-    // Use recent speed data if available
     final recentHistory = _realTimeTrackingService.locationHistory;
-
     double averageSpeedMps = 8.33; // Default 30 km/h in m/s
 
     if (recentHistory.isNotEmpty) {
@@ -1355,8 +1629,8 @@ class RideCubit extends Cubit<RideState> {
               .where(
                 (h) => DateTime.now().difference(h.timestamp).inMinutes < 5,
               )
-              .map((h) => h.speed * 1000 / 3600) // Convert km/h to m/s
-              .where((speed) => speed > 1.0) // Filter out stationary periods
+              .map((h) => h.speed * 1000 / 3600)
+              .where((speed) => speed > 1.0)
               .toList();
 
       if (recentSpeeds.isNotEmpty) {
@@ -1369,45 +1643,6 @@ class RideCubit extends Cubit<RideState> {
     return Duration(seconds: etaSeconds.round());
   }
 
-  // Updated getTrackingStatus method with enhanced information
-  TrackingStatus getTrackingStatus() {
-    return _realTimeTrackingService.getTrackingStatus();
-  }
-
-  // Enhanced real-time tracking active check
-  bool get isRealTimeTrackingActive {
-    final serviceActive = _realTimeTrackingService.isTracking;
-    final stateActive = state.rideInProgress && state.isRealTimeTrackingActive;
-
-    // Log mismatch for debugging
-    if (serviceActive != stateActive) {
-      dev.log(
-        '🚨 Tracking state mismatch - Service: $serviceActive, State: $stateActive',
-      );
-    }
-
-    return serviceActive && stateActive;
-  }
-
-  // Enhanced tracking metrics for debugging
-  Map<String, dynamic> getEnhancedTrackingMetrics() {
-    final baseMetrics = _realTimeTrackingService.getTrackingMetrics();
-    final performanceMetrics = _realTimeTrackingService.getPerformanceMetrics();
-    final issues = _realTimeTrackingService.validateTrackingState();
-
-    return {
-      ...baseMetrics,
-      'performance': performanceMetrics,
-      'issues': issues,
-      'uiTrackingActive': state.isRealTimeTrackingActive,
-      'rideInProgress': state.rideInProgress,
-      'socketConnected': getIt<SocketService>().isConnected,
-      'currentRideId': state.currentRideId,
-      'driverAcceptedId': state.driverAccepted?.driverId,
-    };
-  }
-
-  // Helper method for distance calculation
   double _calculateDistanceInMeters(LatLng point1, LatLng point2) {
     const double earthRadius = 6371000;
 
@@ -1427,19 +1662,14 @@ class RideCubit extends Cubit<RideState> {
     return earthRadius * c;
   }
 
-  // UPDATED: Manual route recalculation (for user-triggered updates)
+  /// Force route recalculation
   Future<void> forceRouteRecalculation() async {
-    if (!_realTimeTrackingService.isTracking) {
-      dev.log('❌ Cannot recalculate route - tracking not active');
-      return;
-    }
+    if (!_realTimeTrackingService.isTracking || _isDisposed) return;
 
     final driverPosition = _realTimeTrackingService.lastKnownDriverPosition;
     final destination = _realTimeTrackingService.currentDestination;
 
     if (driverPosition != null && destination != null) {
-      dev.log('🔄 Force recalculating route');
-
       try {
         emit(state.copyWith(trackingStatusMessage: 'Recalculating route...'));
 
@@ -1450,173 +1680,51 @@ class RideCubit extends Cubit<RideState> {
 
         if (routeResult.isSuccess && routeResult.polyline != null) {
           _updateRouteOnMap(routeResult.polyline!.points);
-          _updateTrackingStatus('Route recalculated successfully');
+          _updateTrackingStatusThrottled('Route recalculated');
         } else {
-          _updateTrackingStatus('Route recalculation failed');
+          _updateTrackingStatusThrottled('Route recalculation failed');
         }
       } catch (e) {
-        dev.log('❌ Error force recalculating route: $e');
-        _updateTrackingStatus('Route recalculation error');
+        dev.log('❌ Force recalculation error: $e');
+        _updateTrackingStatusThrottled('Route recalculation error');
       }
     }
   }
 
-  // UPDATED: Better real-time tracking setup
-  void _setupRealTimeDriverTracking() {
-    dev.log('🔴 Setting up real-time driver tracking');
-    emit(
-      state.copyWith(
-        shouldUpdateCamera: false,
-        trackingStatusMessage: 'Preparing real-time tracking...',
-      ),
-    );
-    dev.log('📍 Ready to receive real-time driver positions');
-  }
+  /// Handle app lifecycle changes
+  Future<void> handleAppLifecycleChange(
+    AppLifecycleState lifecycleState,
+  ) async {
+    if (_isDisposed) return;
 
-  Duration? get timeSinceLastUpdate {
-    final lastUpdate = state.lastPositionUpdate;
-    if (lastUpdate == null) return null;
-    return DateTime.now().difference(lastUpdate);
-  }
+    switch (lifecycleState) {
+      case AppLifecycleState.paused:
+        dev.log('📱 App paused - persisting critical state');
+        await forcePersistence(reason: 'app_paused');
+        break;
 
-  // UPDATED: Get current ETA based on real tracking data
-  Duration? get estimatedTimeToDestination {
-    final progress = getCurrentRouteProgress();
-    return progress?.estimatedTimeRemaining;
-  }
+      case AppLifecycleState.resumed:
+        dev.log('📱 App resumed - checking connection health');
+        if (state.currentRideId != null) {
+          await checkRideStatus(state.currentRideId!);
+        }
+        break;
 
-  // UPDATED: Get current distance to destination
-  double? get distanceToDestination {
-    final progress = getCurrentRouteProgress();
-    return progress?.remainingDistance;
-  }
+      case AppLifecycleState.detached:
+        dev.log('📱 App detached - emergency persistence');
+        await forcePersistence(reason: 'app_detached');
+        break;
 
-  Future<void> checkRideStatus(String rideId) async {
-    try {
-      emit(state.copyWith(status: RideRequestStatus.loading));
-
-      final response = await rideRequestRepository.checkRideStatus(rideId);
-
-      await response.fold(
-        (failure) {
-          emit(
-            state.copyWith(
-              status: RideRequestStatus.error,
-              errorMessage: failure.message,
-            ),
-          );
-        },
-        (statusResponse) async {
-          final currentStatus = statusResponse.data?.status;
-
-          log('Current status: $currentStatus');
-
-          if (currentStatus == 'accepted') {
-            emit(
-              state.copyWith(
-                status: RideRequestStatus.success,
-                showRiderFound: true,
-                riderAvailable: true,
-                showStackedBottomSheet: true,
-              ),
-            );
-
-            await _displayStaticRideRoute();
-          } else if (currentStatus == 'in_progress') {
-            emit(
-              state.copyWith(
-                status: RideRequestStatus.success,
-                showRiderFound: true,
-                riderAvailable: true,
-                showStackedBottomSheet: true,
-                rideInProgress: true,
-              ),
-            );
-
-            await _displayRideRoute();
-            await _ensureUniqueDriverMarker(
-              LatLng(
-                _currentRideRequest!.pickupLocation.latitude,
-                _currentRideRequest!.pickupLocation.longitude,
-              ),
-            );
-            _setupRealTimeDriverTracking();
-            await _startRealTimeTracking();
-          } else if (currentStatus == 'completed') {
-            _clearRouteDisplay();
-            emit(
-              state.copyWith(
-                status: RideRequestStatus.completed,
-                showStackedBottomSheet: true,
-                showRiderFound: false,
-              ),
-            );
-          } else if (currentStatus == 'cancelled') {
-            _clearRouteDisplay();
-            emit(
-              state.copyWith(
-                status: RideRequestStatus.cancelled,
-                showStackedBottomSheet: true,
-                showRiderFound: false,
-              ),
-            );
-          } else {
-            emit(
-              state.copyWith(
-                status: RideRequestStatus.searching,
-                isSearching: true,
-              ),
-            );
-          }
-        },
-      );
-    } catch (e) {
-      emit(
-        state.copyWith(
-          status: RideRequestStatus.error,
-          errorMessage: e.toString(),
-        ),
-      );
+      default:
+        break;
     }
   }
 
-  RouteInfo? get currentRouteInfo {
-    if (!state.routeDisplayed) return null;
-
-    var totalDistance = 0.0;
-    Duration? estimatedDuration;
-
-    if (state.routeSegments != null) {
-      for (final segment in state.routeSegments!) {
-        totalDistance += _routeService.calculateRouteDistance(
-          segment.routePoints,
-        );
-      }
-    } else if (state.routePolylines.isNotEmpty) {
-      totalDistance = _routeService.calculateRouteDistance(
-        state.routePolylines.first.points,
-      );
-    }
-
-    // Use real-time ETA if available, otherwise calculate estimate
-    if (isRealTimeTrackingActive) {
-      estimatedDuration = estimatedTimeToDestination;
-    }
-
-    estimatedDuration ??= Duration(
-      minutes: (totalDistance / 1000 / 30 * 60).round(),
-    );
-
-    return RouteInfo(
-      totalDistance: totalDistance,
-      isMultiDestination: state.isMultiDestination,
-      segmentCount: state.routeSegments?.length ?? 1,
-      estimatedDuration: estimatedDuration,
-    );
-  }
-
+  /// Reset ride state and clear persistence
   void resetRideState() {
-    _clearRouteDisplay();
+    _stopAllTrackingAndReset();
+    _persistenceService.clearRideData();
+
     emit(
       const RideState(
         status: RideRequestStatus.initial,
@@ -1646,52 +1754,131 @@ class RideCubit extends Cubit<RideState> {
     );
   }
 
-  @override
-  Future<void> close() {
-    _driverStatusSubscription?.cancel();
-    _driverCancelledSubscription?.cancel();
-    _driverAcceptedSubscription?.cancel();
-    _driverArrivedSubscription?.cancel();
-    _driverCompletedSubscription?.cancel();
-    _driverStartedSubscription?.cancel();
-    _driverRejecetedSubscription?.cancel();
-    _driverPositionSubscription?.cancel();
+  /// Public methods for restoration manager access
+  Future<void> displayStaticRouteOnly() async {
+    await _displayStaticRouteOnly();
+  }
 
+  Future<void> startRealTimeTrackingOnly() async {
+    await _startRealTimeTrackingOnly();
+  }
+
+  void listenToDriverStatus() {
+    _listenToDriverStatus();
+  }
+
+  Future<void> ensureMarkerIcons() async {
+    await _ensureMarkerIcons();
+  }
+
+  void handleRealTimePositionUpdate(
+    LatLng position,
+    double bearing,
+    DriverLocationData locationData,
+  ) {
+    _handleRealTimePositionUpdate(position, bearing, locationData);
+  }
+
+  /// Get enhanced tracking metrics for debugging
+  Map<String, dynamic> getEnhancedTrackingMetrics() {
+    final baseMetrics = _realTimeTrackingService.getTrackingMetrics();
+    final performanceMetrics = _realTimeTrackingService.getPerformanceMetrics();
+    final issues = _realTimeTrackingService.validateTrackingState();
+
+    return {
+      ...baseMetrics,
+      'performance': performanceMetrics,
+      'issues': issues,
+      'uiTrackingActive': state.isRealTimeTrackingActive,
+      'rideInProgress': state.rideInProgress,
+      'socketConnected': getIt<SocketService>().isConnected,
+      'currentRideId': state.currentRideId,
+      'driverAcceptedId': state.driverAccepted?.driverId,
+      'lastPersistenceTime': _lastPersistenceTime?.toIso8601String(),
+    };
+  }
+
+  /// Get persistence statistics
+  Future<Map<String, dynamic>> getRidePersistenceStats() async {
+    try {
+      final stats = await _persistenceService.getPersistenceStats();
+      return {
+        ...stats,
+        'cubitInitialized': true,
+        'hasActiveRide': state.hasActiveRide,
+        'lastPersistenceTime': _lastPersistenceTime?.toIso8601String(),
+        'isDisposed': _isDisposed,
+      };
+    } catch (e) {
+      dev.log('❌ Error getting persistence stats: $e');
+      return {'error': e.toString()};
+    }
+  }
+
+  @override
+  Future<void> close() async {
+    _isDisposed = true;
+
+    dev.log('🗑️ Disposing RideCubit...');
+
+    // Cancel all timers and subscriptions
+    _statusUpdateThrottle?.cancel();
+    _cancelAllSubscriptions();
     _timer?.cancel();
+    _persistenceTimer?.cancel();
+
+    // Stop services
     _animationService.dispose();
-    _stopRealTimeTracking(); // Clean up tracking service
+    _realTimeTrackingService.stopTracking();
+
+    // Final persistence before disposal
+    if (state.hasActiveRide) {
+      await forcePersistence(reason: 'cubit_disposed');
+    }
+
+    dev.log('✅ RideCubit disposed');
+
     return super.close();
   }
 }
 
-class RouteInfo {
-  const RouteInfo({
-    required this.totalDistance,
-    required this.isMultiDestination,
-    required this.segmentCount,
-    required this.estimatedDuration,
-  });
+/// Route progress information
+class RouteProgress {
+  final double progress;
+  final double distanceCovered;
+  final double remainingDistance;
   final double totalDistance;
-  final bool isMultiDestination;
-  final int segmentCount;
-  final Duration estimatedDuration;
+  final Duration estimatedTimeRemaining;
 
-  String get formattedDistance {
-    if (totalDistance < 1000) {
-      return '${totalDistance.toStringAsFixed(0)}m';
+  const RouteProgress({
+    required this.progress,
+    required this.distanceCovered,
+    required this.remainingDistance,
+    required this.totalDistance,
+    required this.estimatedTimeRemaining,
+  });
+
+  String get formattedRemainingDistance {
+    if (remainingDistance < 1000) {
+      return '${remainingDistance.round()} m';
     } else {
-      return '${(totalDistance / 1000).toStringAsFixed(1)}km';
+      return '${(remainingDistance / 1000).toStringAsFixed(1)} km';
     }
   }
 
-  String get formattedDuration {
-    final hours = estimatedDuration.inHours;
-    final minutes = estimatedDuration.inMinutes % 60;
+  String get formattedETA {
+    final hours = estimatedTimeRemaining.inHours;
+    final minutes = estimatedTimeRemaining.inMinutes % 60;
 
     if (hours > 0) {
       return '${hours}h ${minutes}m';
     } else {
       return '${minutes}m';
     }
+  }
+
+  @override
+  String toString() {
+    return 'RouteProgress(progress: $progress, remainingDistance: $formattedRemainingDistance, ETA: $formattedETA)';
   }
 }

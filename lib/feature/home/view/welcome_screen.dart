@@ -80,7 +80,7 @@ class SmartPickupLocationWidget extends StatefulWidget {
   final bool isInitialDestinationField;
   final String? initialText;
   final bool showSavedLocations;
-  final void Function(Location) onLocationSelected;
+  final void Function(FreedomLocation) onLocationSelected;
   final GetPlacePredictions getPlacePredictions;
   final GetPlaceDetails getPlaceDetails;
   final GetSavedLocations getSavedLocations;
@@ -98,8 +98,8 @@ class _SmartPickupLocationWidgetState extends State<SmartPickupLocationWidget>
   final FocusNode _focusNode = FocusNode();
 
   List<PlacePrediction> _predictions = [];
-  List<Location> _savedLocations = [];
-  List<Location> _recentLocations = [];
+  List<FreedomLocation> _savedLocations = [];
+  List<FreedomLocation> _recentLocations = [];
 
   bool _isLoading = false;
   bool _showResults = false;
@@ -257,7 +257,7 @@ class _SmartPickupLocationWidgetState extends State<SmartPickupLocationWidget>
   }
 
   // Handle selection of a saved or recent location
-  void _selectSavedLocation(Location location) async {
+  void _selectSavedLocation(FreedomLocation location) async {
     // Clear focus and close suggestions
     _focusNode.unfocus();
 
@@ -323,9 +323,7 @@ class _SmartPickupLocationWidgetState extends State<SmartPickupLocationWidget>
                         borderRadius: const BorderRadius.all(
                           Radius.circular(6),
                         ),
-                        borderSide: BorderSide(
-                          color: textFieldFillColor,
-                        ),
+                        borderSide: BorderSide(color: textFieldFillColor),
                       ),
                       hintText: widget.hintText,
                       hintStyle: const TextStyle(
@@ -340,76 +338,80 @@ class _SmartPickupLocationWidgetState extends State<SmartPickupLocationWidget>
                         ),
                       ),
                       // Suffix icon (delete button for non-pickup locations)
-                      suffixIcon: widget.isPickUpLocation ||
-                              widget.isInitialDestinationField
-                          ? _isLoading
-                              ? Container(
-                                  width: 24,
-                                  height: 24,
-                                  padding: EdgeInsets.all(12),
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                        widget.iconBaseColor),
-                                  ),
-                                )
-                              : _searchController.text.isNotEmpty
+                      suffixIcon:
+                          widget.isPickUpLocation ||
+                                  widget.isInitialDestinationField
+                              ? _isLoading
+                                  ? Container(
+                                    width: 24,
+                                    height: 24,
+                                    padding: EdgeInsets.all(12),
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        widget.iconBaseColor,
+                                      ),
+                                    ),
+                                  )
+                                  : _searchController.text.isNotEmpty
                                   ? Padding(
-                                      padding: const EdgeInsets.only(
-                                          top: 12,
-                                          bottom: 12,
-                                          left: 15.5,
-                                          right: 7),
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          _searchController.clear();
-                                          setState(() {
-                                            _predictions = [];
-                                          });
-                                        },
-                                        child: Container(
-                                          decoration: ShapeDecoration(
-                                            color: const Color(0xFFE61D2A),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(7),
+                                    padding: const EdgeInsets.only(
+                                      top: 12,
+                                      bottom: 12,
+                                      left: 15.5,
+                                      right: 7,
+                                    ),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        _searchController.clear();
+                                        setState(() {
+                                          _predictions = [];
+                                        });
+                                      },
+                                      child: Container(
+                                        decoration: ShapeDecoration(
+                                          color: const Color(0xFFE61D2A),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              7,
                                             ),
                                           ),
-                                          child: Icon(
-                                            Icons.close,
-                                            color: Colors.white,
-                                            size: 16,
-                                          ),
+                                        ),
+                                        child: Icon(
+                                          Icons.close,
+                                          color: Colors.white,
+                                          size: 16,
                                         ),
                                       ),
-                                    )
-                                  : null
-                          : Padding(
-                              padding: const EdgeInsets.only(
-                                top: 12,
-                                bottom: 12,
-                                left: 15.5,
-                                right: 7,
-                              ),
-                              child: GestureDetector(
-                                onTap: () {
-                                  context
-                                      .read<HomeCubit>()
-                                      .removeLastDestination();
-                                },
-                                child: Container(
-                                  decoration: ShapeDecoration(
-                                    color: const Color(0xFFE61D2A),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(7),
                                     ),
-                                  ),
-                                  child: SvgPicture.asset(
-                                    'assets/images/delete_field.svg',
+                                  )
+                                  : null
+                              : Padding(
+                                padding: const EdgeInsets.only(
+                                  top: 12,
+                                  bottom: 12,
+                                  left: 15.5,
+                                  right: 7,
+                                ),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    context
+                                        .read<HomeCubit>()
+                                        .removeLastDestination();
+                                  },
+                                  child: Container(
+                                    decoration: ShapeDecoration(
+                                      color: const Color(0xFFE61D2A),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(7),
+                                      ),
+                                    ),
+                                    child: SvgPicture.asset(
+                                      'assets/images/delete_field.svg',
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
                       // Prefix icon (location icon)
                       prefixIcon: Padding(
                         padding: const EdgeInsets.only(
@@ -605,7 +607,11 @@ class _SmartPickupLocationWidgetState extends State<SmartPickupLocationWidget>
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(
-          top: 12.0, left: 16.0, right: 16.0, bottom: 4.0),
+        top: 12.0,
+        left: 16.0,
+        right: 16.0,
+        bottom: 4.0,
+      ),
       child: Text(
         title,
         style: TextStyle(
@@ -633,32 +639,23 @@ class _SmartPickupLocationWidgetState extends State<SmartPickupLocationWidget>
           color: widget.iconBaseColor.withOpacity(0.1),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Icon(
-          iconData,
-          color: widget.iconBaseColor,
-          size: 16,
-        ),
+        child: Icon(iconData, color: widget.iconBaseColor, size: 16),
       ),
       title: Text(
         title,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
+        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: subtitle.isNotEmpty
-          ? Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 10,
-                color: Colors.grey[600],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            )
-          : null,
+      subtitle:
+          subtitle.isNotEmpty
+              ? Text(
+                subtitle,
+                style: TextStyle(fontSize: 10, color: Colors.grey[600]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              )
+              : null,
       onTap: onTap,
     );
   }
@@ -701,12 +698,8 @@ class DestinationLocationFieldWidget extends StatelessWidget {
                   filled: true,
                   fillColor: textFieldFillColor,
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: const BorderRadius.all(
-                      Radius.circular(6),
-                    ),
-                    borderSide: BorderSide(
-                      color: textFieldFillColor,
-                    ),
+                    borderRadius: const BorderRadius.all(Radius.circular(6)),
+                    borderSide: BorderSide(color: textFieldFillColor),
                   ),
                   hintText: hintText,
                   hintStyle: const TextStyle(
@@ -714,34 +707,35 @@ class DestinationLocationFieldWidget extends StatelessWidget {
                     color: Color(0xFFBEBCBC),
                     fontWeight: FontWeight.w500,
                   ),
-                  suffixIcon: isPickUpLocation || isInitialDestinationField
-                      ? null
-                      : Padding(
-                          padding: const EdgeInsets.only(
-                            top: 12,
-                            bottom: 12,
-                            left: 15.5,
-                            right: 7,
-                          ),
-                          child: GestureDetector(
-                            onTap: () {
-                              context.read<HomeCubit>().removeLastDestination();
-                            },
-                            child: Container(
-                              decoration: ShapeDecoration(
-                                color: const Color(
-                                  0xFFE61D2A,
+                  suffixIcon:
+                      isPickUpLocation || isInitialDestinationField
+                          ? null
+                          : Padding(
+                            padding: const EdgeInsets.only(
+                              top: 12,
+                              bottom: 12,
+                              left: 15.5,
+                              right: 7,
+                            ),
+                            child: GestureDetector(
+                              onTap: () {
+                                context
+                                    .read<HomeCubit>()
+                                    .removeLastDestination();
+                              },
+                              child: Container(
+                                decoration: ShapeDecoration(
+                                  color: const Color(0xFFE61D2A),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(7),
+                                  ),
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(7),
+                                child: SvgPicture.asset(
+                                  'assets/images/delete_field.svg',
                                 ),
-                              ),
-                              child: SvgPicture.asset(
-                                'assets/images/delete_field.svg',
                               ),
                             ),
                           ),
-                        ),
                   prefixIcon: Padding(
                     padding: const EdgeInsets.only(
                       top: 6,
@@ -759,9 +753,7 @@ class DestinationLocationFieldWidget extends StatelessWidget {
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderSide: BorderSide(color: thickFillColor),
-                    borderRadius: const BorderRadius.all(
-                      Radius.circular(6),
-                    ),
+                    borderRadius: const BorderRadius.all(Radius.circular(6)),
                   ),
                 ),
               ),

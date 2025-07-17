@@ -23,7 +23,7 @@ class SmartLocationSearch extends StatefulWidget {
     this.initialText,
   });
   final String hint;
-  final void Function(Location) onLocationSelected;
+  final void Function(FreedomLocation) onLocationSelected;
   final bool showSavedLocations;
   final String? initialText;
   final GetPlacePredictions getPlacePredictions;
@@ -42,8 +42,8 @@ class _SmartLocationSearchState extends State<SmartLocationSearch>
   final FocusNode _focusNode = FocusNode();
 
   List<PlacePrediction> _predictions = [];
-  List<Location> _savedLocations = [];
-  List<Location> _recentLocations = [];
+  List<FreedomLocation> _savedLocations = [];
+  List<FreedomLocation> _recentLocations = [];
 
   bool _isLoading = false;
   bool _showResults = false;
@@ -200,8 +200,7 @@ class _SmartLocationSearchState extends State<SmartLocationSearch>
     }
   }
 
-  // Handle selection of a saved or recent location
-  void _selectSavedLocation(Location location) async {
+  void _selectSavedLocation(FreedomLocation location) async {
     // Clear focus and close suggestions
     _focusNode.unfocus();
 
@@ -267,27 +266,30 @@ class _SmartLocationSearchState extends State<SmartLocationSearch>
             decoration: InputDecoration(
               hintText: widget.hint,
               prefixIcon: const Icon(Icons.search),
-              suffixIcon: _isLoading
-                  ? Container(
-                      width: 24,
-                      height: 24,
-                      padding: const EdgeInsets.all(6),
-                      child: const CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : _searchController.text.isNotEmpty
+              suffixIcon:
+                  _isLoading
+                      ? Container(
+                        width: 24,
+                        height: 24,
+                        padding: const EdgeInsets.all(6),
+                        child: const CircularProgressIndicator(strokeWidth: 2),
+                      )
+                      : _searchController.text.isNotEmpty
                       ? IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _predictions = [];
-                            });
-                          },
-                        )
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() {
+                            _predictions = [];
+                          });
+                        },
+                      )
                       : null,
               border: InputBorder.none,
-              contentPadding:
-                  const EdgeInsets.symmetric(vertical: 15, horizontal: 15),
+              contentPadding: const EdgeInsets.symmetric(
+                vertical: 15,
+                horizontal: 15,
+              ),
             ),
             onTap: () {
               setState(() {
@@ -461,7 +463,11 @@ class _SmartLocationSearchState extends State<SmartLocationSearch>
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(
-          top: 16.0, left: 16.0, right: 16.0, bottom: 8.0),
+        top: 16.0,
+        left: 16.0,
+        right: 16.0,
+        bottom: 8.0,
+      ),
       child: Text(
         title,
         style: TextStyle(
@@ -481,30 +487,22 @@ class _SmartLocationSearchState extends State<SmartLocationSearch>
     required VoidCallback onTap,
   }) {
     return ListTile(
-      leading: Icon(
-        iconData,
-        color: Colors.grey[700],
-      ),
+      leading: Icon(iconData, color: Colors.grey[700]),
       title: Text(
         title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: subtitle.isNotEmpty
-          ? Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            )
-          : null,
+      subtitle:
+          subtitle.isNotEmpty
+              ? Text(
+                subtitle,
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              )
+              : null,
       dense: true,
       onTap: onTap,
     );

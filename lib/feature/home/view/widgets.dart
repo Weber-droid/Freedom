@@ -732,24 +732,23 @@ class RiderFoundBottomSheet extends StatelessWidget {
                                   maxWidth: constraints.maxWidth,
                                 ),
                                 child: SingleChildScrollView(
-                                  child: BlocBuilder<HomeCubit, HomeState>(
+                                  child: BlocBuilder<RideCubit, RideState>(
                                     builder: (context, state) {
-                                      if (state.destinationLocation != null &&
-                                          state.pickUpLocation != null &&
+                                      if (state
+                                                  .rideRequestModel
+                                                  ?.pickupLocation !=
+                                              null &&
+                                          state
+                                                  .rideRequestModel
+                                                  ?.dropoffLocation !=
+                                              null &&
                                           !isMuliStop) {
                                         return RiderTimeLine(
                                           destinationLocation: [],
                                           pickUpDetails:
-                                              '${state.pickUpLocation?.name}, ${state.pickUpLocation?.address}',
+                                              ' ${state.rideRequestModel?.pickupLocation.address}',
                                           destinationDetails:
-                                              '${state.destinationLocation?.name}, ${state.destinationLocation?.address}',
-                                        );
-                                      } else if (isMuliStop) {
-                                        return RiderTimeLine(
-                                          destinationLocation:
-                                              state.destinationLocations,
-                                          pickUpDetails:
-                                              '${state.pickUpLocation?.name}, ${state.pickUpLocation?.address}',
+                                              '${state.rideRequestModel?.dropoffLocation.address}',
                                         );
                                       } else {
                                         return const SizedBox.shrink();

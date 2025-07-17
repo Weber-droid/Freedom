@@ -1,6 +1,5 @@
-class Location {
-  // Constructor that requires all fields
-  Location({
+class FreedomLocation {
+  FreedomLocation({
     required this.id,
     required this.placeId,
     required this.name,
@@ -11,8 +10,8 @@ class Location {
     required this.isFavorite,
   });
 
-  factory Location.fromJson(Map<String, dynamic> json) {
-    return Location(
+  factory FreedomLocation.fromJson(Map<String, dynamic> json) {
+    return FreedomLocation(
       id: json['id'] as String,
       placeId: json['place_id'] as String,
       name: json['name'] as String,
@@ -25,19 +24,18 @@ class Location {
   }
 
   // Empty constructor with default values
-  Location.empty()
-      : id = '',
-        placeId = '',
-        name = '',
-        address = '',
-        latitude = 0.0,
-        longitude = 0.0,
-        iconType = '',
-        isFavorite = false;
+  FreedomLocation.empty()
+    : id = '',
+      placeId = '',
+      name = '',
+      address = '',
+      latitude = 0.0,
+      longitude = 0.0,
+      iconType = '',
+      isFavorite = false;
 
-  // Factory constructor from another location
-  factory Location.from(Location other) {
-    return Location(
+  factory FreedomLocation.from(FreedomLocation other) {
+    return FreedomLocation(
       id: other.id,
       placeId: other.placeId,
       name: other.name,
@@ -79,7 +77,7 @@ class Location {
   }
 
   // Keep the immutable copyWith method for when you need it
-  Location copyWith({
+  FreedomLocation copyWith({
     String? id,
     String? placeId,
     String? name,
@@ -89,7 +87,7 @@ class Location {
     String? iconType,
     bool? isFavorite,
   }) {
-    return Location(
+    return FreedomLocation(
       id: id ?? this.id,
       placeId: placeId ?? this.placeId,
       name: name ?? this.name,

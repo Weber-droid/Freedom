@@ -44,22 +44,20 @@ class HomeState extends Equatable {
   final String? errorMessage;
   final bool isPickUpLocation;
   final bool isDestinationLocation;
-  final List<loc.Location> recentLocations;
+  final List<FreedomLocation> recentLocations;
   final bool showRecentPickUpLocations;
   final bool showDestinationRecentLocations;
   final FocusNode? pickUpFocusNode;
   final FocusNode? destinationFocusNode;
   final BitmapDescriptor? bikeMarkerIcon;
-  final loc.Location? pickUpLocation;
-  final loc.Location? destinationLocation;
-  final List<loc.Location> destinationLocations; // New field for multiple destinations
+  final FreedomLocation? pickUpLocation;
+  final FreedomLocation? destinationLocation;
+  final List<FreedomLocation> destinationLocations;
   final RideRequestStatus rideRequestStatus;
   static const LatLng defaultInitialPosition = LatLng(6.6667, -1.6167);
 
-  static CameraPosition get initialCameraPosition => const CameraPosition(
-    target: defaultInitialPosition,
-    zoom: 15,
-  );
+  static CameraPosition get initialCameraPosition =>
+      const CameraPosition(target: defaultInitialPosition, zoom: 15);
 
   HomeState copyWith({
     List<String>? locations,
@@ -77,13 +75,13 @@ class HomeState extends Equatable {
     String? errorMessage,
     bool? isPickUpLocation,
     bool? isDestinationLocation,
-    List<loc.Location>? recentLocations,
+    List<FreedomLocation>? recentLocations,
     bool? showRecentPickUpLocations,
     bool? showDestinationRecentLocations,
     BitmapDescriptor? bikeMarkerIcon,
-    loc.Location? pickUpLocation,
-    loc.Location? destinationLocation,
-    List<loc.Location>? destinationLocations, // Added parameter
+    FreedomLocation? pickUpLocation,
+    FreedomLocation? destinationLocation,
+    List<FreedomLocation>? destinationLocations,
     RideRequestStatus? rideRequestStatus,
   }) {
     return HomeState(
@@ -92,9 +90,9 @@ class HomeState extends Equatable {
       searchText: searchText ?? this.searchText,
       pickUpPredictions: pickUpPredictions ?? this.pickUpPredictions,
       destinationPredictions:
-      destinationPredictions ?? this.destinationPredictions,
+          destinationPredictions ?? this.destinationPredictions,
       locationSearchErrorMessage:
-      locationSearchErrorMessage ?? this.locationSearchErrorMessage,
+          locationSearchErrorMessage ?? this.locationSearchErrorMessage,
       status: status ?? this.status,
       markers: markers ?? this.markers,
       currentLocation: currentLocation ?? this.currentLocation,
@@ -105,9 +103,9 @@ class HomeState extends Equatable {
       isPickUpLocation: isPickUpLocation ?? this.isPickUpLocation,
       recentLocations: recentLocations ?? this.recentLocations,
       isDestinationLocation:
-      isDestinationLocation ?? this.isDestinationLocation,
+          isDestinationLocation ?? this.isDestinationLocation,
       showRecentPickUpLocations:
-      showRecentPickUpLocations ?? this.showRecentPickUpLocations,
+          showRecentPickUpLocations ?? this.showRecentPickUpLocations,
       bikeMarkerIcon: bikeMarkerIcon ?? this.bikeMarkerIcon,
       pickUpLocation: pickUpLocation ?? this.pickUpLocation,
       destinationLocation: destinationLocation ?? this.destinationLocation,
@@ -142,6 +140,6 @@ class HomeState extends Equatable {
     pickUpLocation,
     destinationLocation,
     destinationLocations,
-    rideRequestStatus
+    rideRequestStatus,
   ];
 }

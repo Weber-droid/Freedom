@@ -5,7 +5,7 @@ class GetSavedLocations {
   GetSavedLocations(this.repository);
   final LocationRepository repository;
 
-  Future<List<Location>> call() {
+  Future<List<FreedomLocation>> call() {
     return repository.getSavedLocations();
   }
 }

@@ -68,6 +68,7 @@ class RideRequestRepositoryImpl implements RideRequestRepository {
   ) async {
     try {
       final response = await remoteDataSource.checkRideStatus(rideId);
+      log('response: ${response.data}');
       return Right(response);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message));

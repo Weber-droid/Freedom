@@ -8,12 +8,19 @@ class RequestRideResponse {
   });
 
   factory RequestRideResponse.fromJson(Map<String, dynamic> json) {
+    log('RequestRideResponse(): decoded: $json');
     return RequestRideResponse(
       message: json['message'] as String,
       success: json['success'] as bool,
       data: RequestData.fromJson(json['data'] as Map<String, dynamic>),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'message': message,
+    'success': success,
+    'data': data.toJson(),
+  };
 
   final String message;
   final bool success;
@@ -46,6 +53,17 @@ class RequestData {
       notifiedDriverCount: json['driversNotified'] as int?,
     );
   }
+  Map<String, dynamic> toJson() => {
+    'rideId': rideId,
+    'fare': fare,
+    'currency': currency,
+    'estimatedDistance': estimatedDistance,
+    'estimatedDuration': estimatedDuration,
+    'fareBreakdown': fareBreakdown,
+    'status': rideStatus?.name,
+    'paymentMethod': paymentMethod,
+    'driversNotified': notifiedDriverCount,
+  };
 
   final String? rideId;
   final String? fare;

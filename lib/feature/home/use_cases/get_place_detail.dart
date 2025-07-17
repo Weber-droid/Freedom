@@ -5,7 +5,7 @@ class GetPlaceDetails {
   GetPlaceDetails(this.repository);
   final LocationRepository repository;
 
-  Future<Location?> call(String placeId) {
+  Future<FreedomLocation?> call(String placeId) {
     return repository.getPlaceDetails(placeId);
   }
 }

@@ -1,27 +1,46 @@
 enum SocketModelStatus { accepted, arrived, started, completed, cancelled }
 
 class DriverAcceptedModel {
-  DriverAcceptedModel(
+  DriverAcceptedModel({
     this.driverId,
     this.status,
     this.rideId,
     this.motorcycleType,
     this.driverName,
-  );
+    this.phone,
+  });
 
   factory DriverAcceptedModel.fromJson(Map<String, dynamic> json) {
+    final driverJson = json['driver'] as Map<String, dynamic>?;
+
+    final driver = driverJson != null ? Driver.fromJson(driverJson) : null;
+
     return DriverAcceptedModel(
-      json['rideId'] as String,
-      json['status'] as String,
-      Driver.fromJson(json['driver'] as Map<String, dynamic>).id,
-      Driver.fromJson(json['driver'] as Map<String, dynamic>).motorcycleType,
-      Driver.fromJson(json['driver'] as Map<String, dynamic>).name,
+      rideId: json['rideId'] as String?,
+      status: json['status'] as String?,
+      driverId: driver?.id,
+      driverName: driver?.name,
+      phone: driver?.phone,
+      motorcycleType: driver?.motorcycleType,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'rideId': rideId,
+    'status': status,
+    'driver': {
+      'id': driverId,
+      'name': driverName,
+      'phone': phone,
+      'motorcycleType': motorcycleType,
+    },
+  };
+
   final String? rideId;
   final String? driverId;
   final String? status;
   final String? driverName;
+  final String? phone;
   final String? motorcycleType;
 }
 
@@ -41,6 +60,16 @@ class Driver {
       motorcycleType: json['motorcycleType'] as String,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'phone': phone,
+      'motorcycleType': motorcycleType,
+    };
+  }
+
   final String id;
   final String name;
   final String phone;
@@ -49,47 +78,87 @@ class Driver {
 
 class DriverArrived {
   DriverArrived(this.rideId, this.status);
-  factory DriverArrived.fromJson(Map<String, dynamic> json) {
-    return DriverArrived(json['rideId'] as String, json['status'] as String);
+
+  factory DriverArrived.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return DriverArrived('', '');
+    return DriverArrived(
+      json['rideId'] as String? ?? '',
+      json['status'] as String? ?? '',
+    );
   }
+
+  Map<String, dynamic> toJson() => {'rideId': rideId, 'status': status};
+
   final String rideId;
-  final String? status;
+  final String status;
 }
 
 class DriverCancelled {
-  DriverCancelled(this.driverId, this.status);
-  factory DriverCancelled.fromJson(Map<String, dynamic> json) {
-    return DriverCancelled(json['rideId'] as String, json['status'] as String);
+  DriverCancelled(this.rideId, this.status);
+
+  factory DriverCancelled.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return DriverCancelled('', '');
+    return DriverCancelled(
+      json['rideId'] as String? ?? '',
+      json['status'] as String? ?? '',
+    );
   }
-  final String driverId;
-  final String? status;
+
+  Map<String, dynamic> toJson() => {'rideId': rideId, 'status': status};
+
+  final String rideId;
+  final String status;
 }
 
 class DriverStarted {
-  DriverStarted(this.driverId, this.status);
-  factory DriverStarted.fromJson(Map<String, dynamic> json) {
-    return DriverStarted(json['rideId'] as String, json['status'] as String);
+  DriverStarted(this.rideId, this.status);
+
+  factory DriverStarted.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return DriverStarted('', '');
+    return DriverStarted(
+      json['rideId'] as String? ?? '',
+      json['status'] as String? ?? '',
+    );
   }
-  final String driverId;
-  final String? status;
+
+  Map<String, dynamic> toJson() => {'rideId': rideId, 'status': status};
+
+  final String rideId;
+  final String status;
 }
 
 class DriverCompleted {
-  DriverCompleted(this.driverId, this.status);
-  factory DriverCompleted.fromJson(Map<String, dynamic> json) {
-    return DriverCompleted(json['rideId'] as String, json['status'] as String);
+  DriverCompleted(this.rideId, this.status);
+
+  factory DriverCompleted.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return DriverCompleted('', '');
+    return DriverCompleted(
+      json['rideId'] as String? ?? '',
+      json['status'] as String? ?? '',
+    );
   }
-  final String driverId;
-  final String? status;
+
+  Map<String, dynamic> toJson() => {'rideId': rideId, 'status': status};
+
+  final String rideId;
+  final String status;
 }
 
 class DriverRejected {
-  DriverRejected(this.driverId, this.status);
-  factory DriverRejected.fromJson(Map<String, dynamic> json) {
-    return DriverRejected(json['rideId'] as String, json['status'] as String);
+  DriverRejected(this.rideId, this.status);
+
+  factory DriverRejected.fromJson(Map<String, dynamic>? json) {
+    if (json == null) return DriverRejected('', '');
+    return DriverRejected(
+      json['rideId'] as String? ?? '',
+      json['status'] as String? ?? '',
+    );
   }
-  final String driverId;
-  final String? status;
+
+  Map<String, dynamic> toJson() => {'rideId': rideId, 'status': status};
+
+  final String rideId;
+  final String status;
 }
 
 class DriverMessage {
@@ -97,12 +166,18 @@ class DriverMessage {
 
   factory DriverMessage.fromJson(Map<String, dynamic> json) {
     return DriverMessage(
-      json['type'] as String,
+      json['type'] as String? ?? '',
       DriverNotificationBody.fromJson(
-        json['notification'] as Map<String, dynamic>,
+        json['notification'] as Map<String, dynamic>? ?? {},
       ),
     );
   }
+
+  Map<String, dynamic> toJson() => {
+    'type': type,
+    'notification': notification.toJson(),
+  };
+
   final String type;
   final DriverNotificationBody notification;
 }
@@ -126,6 +201,14 @@ class DriverNotificationBody {
       timestamp: json['timestamp'] as String,
     );
   }
+  Map<String, dynamic> toJson() => {
+    'rideId': rideId,
+    'title': title,
+    'body': body,
+    'from': from,
+    'notificationId': notificationId,
+    'timestamp': timestamp,
+  };
   final String rideId;
   final String title;
   final String body;

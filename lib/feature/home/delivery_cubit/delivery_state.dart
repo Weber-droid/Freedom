@@ -93,7 +93,7 @@ class DeliveryState extends Equatable {
   final bool islocationSelected;
   final bool isPickUpLocation;
   final bool isDestinationLocation;
-  final List<Location> recentLocations;
+  final List<FreedomLocation> recentLocations;
 
   // Enhanced delivery tracking
   final String? currentDeliveryId;
@@ -205,7 +205,7 @@ class DeliveryState extends Equatable {
     bool? islocationSelected,
     bool? isPickUpLocation,
     bool? isDestinationLocation,
-    List<Location>? recentLocations,
+    List<FreedomLocation>? recentLocations,
     String? currentDeliveryId,
     DeliveryCancellationStatus? deliveryCancellationStatus,
     DeliveryManAcceptedModel? deliveryDriverAccepted,

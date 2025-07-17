@@ -4,10 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/config/api_constants.dart';
+import 'package:freedom/core/services/app_restoration_manager.dart';
 import 'package:freedom/core/services/delivery_persistence_service.dart';
+import 'package:freedom/core/services/life_cycle_manager.dart';
 import 'package:freedom/core/services/map_services.dart';
 import 'package:freedom/core/services/push_notification_service/push_nofication_service.dart';
 import 'package:freedom/core/services/real_time_driver_tracking.dart';
+import 'package:freedom/core/services/ride_persistence_service.dart';
 import 'package:freedom/core/services/socket_service.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
@@ -15,6 +18,7 @@ import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/delivery_cubit/delivery_cubit.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
+import 'package:freedom/feature/home/view/widget/restoration_snack_bar.dart';
 import 'package:freedom/feature/home/view/widget/show_rider_search.dart';
 import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/feature/home/view/widget/rider_found_sheet.dart' as rfd;
@@ -34,7 +38,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   final GlobalKey<StackedBottomSheetComponentState> _bottomSheetKey =
       GlobalKey<StackedBottomSheetComponentState>();
@@ -48,37 +52,81 @@ class _HomeScreenState extends State<HomeScreen> {
   late RideCubit rideCubit;
   GoogleMapController? _mapController;
 
+  late AppLifecycleManager _lifecycleManager;
+  late RidePersistenceService _persistenceService;
+  late RideRestorationManager _restorationManager;
+  bool _isRestorationInProgress = false;
+  bool _hasAttemptedRestoration = false;
+
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     context.read<ProfileCubit>().getUserProfile();
     PushNotificationService.askPermissions();
     rideCubit = context.read<RideCubit>();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await _connectToSocket();
+      await _initializeServices();
+    });
+  }
 
+  Future<void> _initializeServices() async {
+    try {
+      dev.log('🚀 Initializing HomeScreen services...');
+      _persistenceService = getIt<RidePersistenceService>();
+      _restorationManager = getIt<RideRestorationManager>();
+      _lifecycleManager = getIt<AppLifecycleManager>();
+
+      await _connectToSocket();
       final user = await RegisterLocalDataSource().getUser();
-      dev.log('user: ${await AppPreferences.getToken()}');
 
       await context.read<CallCubit>().initialize(
         userId: user!.userId ?? '',
         userName: user.firstName ?? '',
       );
-      _checkPersistedStates();
-      _getPaymentMethods();
-    });
+
+      await _checkPersistedStates();
+      await _getPaymentMethods();
+
+      dev.log('✅ HomeScreen services initialized successfully');
+    } catch (e, stack) {
+      dev.log('❌ Error initializing HomeScreen services: $e\n$stack');
+      context.read<HomeCubit>().checkPermissionStatus();
+    }
   }
 
   Future<void> _checkPersistedStates() async {
-    final deliveryCubit = context.read<DeliveryCubit>();
+    if (_hasAttemptedRestoration) {
+      dev.log('⚠️ Restoration already attempted, skipping...');
+      return;
+    }
+
     try {
       dev.log('🔄 Checking for persisted states...');
+      _hasAttemptedRestoration = true;
 
-      final rideId = await AppPreferences.getRideId();
-      if (rideId.isNotEmpty) {
-        await context.read<RideCubit>().checkRideStatus(rideId);
+      // Check for ride restoration first
+      final hasPersistedRide = await _persistenceService.hasActiveRide();
+
+      if (hasPersistedRide) {
+        dev.log('📱 Found persisted ride data - attempting restoration...');
+        await _attemptRideRestoration();
+      } else {
+        dev.log('📭 No persisted ride found');
+        await _checkPersistedDeliveryStates();
+        context.read<HomeCubit>().checkPermissionStatus();
       }
+    } catch (e) {
+      dev.log('❌ Error checking persisted states: $e');
+      context.read<HomeCubit>().checkPermissionStatus();
+    }
+  }
 
+  Future<void> _checkPersistedDeliveryStates() async {
+    try {
+      dev.log('🔄 Checking for persisted delivery states...');
+
+      final deliveryCubit = context.read<DeliveryCubit>();
       final persistenceService =
           getIt.isRegistered<DeliveryPersistenceService>()
               ? getIt<DeliveryPersistenceService>()
@@ -88,13 +136,69 @@ class _HomeScreenState extends State<HomeScreen> {
           await persistenceService.hasPersistedDeliveryState();
 
       if (hasPersistedDelivery) {
-        dev.log('✅ Found persisted delivery state - will be loaded by cubit');
+        dev.log('✅ Found persisted delivery state - will be restored by cubit');
       } else {
         dev.log('📭 No persisted delivery state found');
-        context.read<HomeCubit>().checkPermissionStatus();
       }
     } catch (e) {
-      dev.log('❌ Error checking persisted states: $e');
+      dev.log('❌ Error checking persisted delivery states: $e');
+    }
+  }
+
+  Future<void> _attemptRideRestoration() async {
+    if (_isRestorationInProgress) return;
+
+    try {
+      setState(() {
+        _isRestorationInProgress = true;
+      });
+
+      dev.log('🔄 Starting ride restoration process...');
+
+      // Show restoration indicator to user
+      showRestorationSnackBar(context, 'Restoring your ride...');
+
+      final restorationResult =
+          await _restorationManager.attemptRideRestoration();
+
+      if (restorationResult.success &&
+          restorationResult.restoredState != null) {
+        dev.log('✅ Ride restoration successful');
+
+        // Execute post-restoration actions
+        await _restorationManager.executePostRestorationActions(
+          rideCubit,
+          restorationResult.restoredState!,
+        );
+
+        showRestorationSnackBar(
+          context,
+          restorationResult.restoredState!.message,
+          isSuccess: true,
+        );
+      } else {
+        dev.log('❌ Ride restoration failed: ${restorationResult.error}');
+        showRestorationSnackBar(
+          context,
+          'Unable to restore previous ride',
+          isError: true,
+        );
+
+        // Fall back to normal flow
+        context.read<HomeCubit>().checkPermissionStatus();
+      }
+    } catch (e, stack) {
+      dev.log('❌ Critical error during ride restoration: $e\n$stack');
+      showRestorationSnackBar(
+        context,
+        'Restoration failed - starting fresh',
+        isError: true,
+      );
+      context.read<HomeCubit>().checkPermissionStatus();
+    } finally {
+      setState(() {
+        _isRestorationInProgress = false;
+      });
     }
   }
 
@@ -151,8 +255,6 @@ class _HomeScreenState extends State<HomeScreen> {
           builder: (context, state) {
             return BlocConsumer<RideCubit, RideState>(
               listenWhen: (previous, current) {
-                final routeDisplayedChanged =
-                    previous.routeDisplayed != current.routeDisplayed;
                 final cameraUpdateNeeded =
                     previous.shouldUpdateCamera != current.shouldUpdateCamera &&
                     current.shouldUpdateCamera;
@@ -174,8 +276,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     current.currentDriverPosition;
                 final rideProgressChanged =
                     previous.rideInProgress != current.rideInProgress;
+
                 final markersChanged =
                     previous.routeMarkers != current.routeMarkers;
+                final routeDisplayedChanged =
+                    previous.routeDisplayed != current.routeDisplayed;
 
                 final shouldListen =
                     routeDisplayedChanged ||
@@ -217,7 +322,6 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               builder: (context, rideState) {
                 return BlocConsumer<DeliveryCubit, DeliveryState>(
-                  // FIXED: Simplified listenWhen to avoid excessive triggering
                   listenWhen: (previous, current) {
                     final markerUpdated =
                         previous.deliveryRouteMarkers.length !=
@@ -1163,24 +1267,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                   ),
                 ),
-                if (rideCubit.estimatedTimeToDestination != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      _formatDuration(rideCubit.estimatedTimeToDestination!),
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
               ],
             ),
           ],
@@ -1211,20 +1297,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!trackingStatus.hasGoodAccuracy) {
       return 'Poor GPS signal (${trackingStatus.averageAccuracy.toStringAsFixed(0)}m)';
-    }
-
-    if (rideState.currentDriverPosition != null) {
-      final distance = rideCubit.distanceToDestination;
-      if (distance != null) {
-        if (distance < 100) {
-          return 'Driver is arriving now';
-        } else if (distance < 500) {
-          return 'Driver is nearby (${(distance / 1000).toStringAsFixed(1)}km away)';
-        } else {
-          return 'Driver is on the way (${(distance / 1000).toStringAsFixed(1)}km away)';
-        }
-      }
-      return 'Driver is on the way';
     }
 
     return 'Waiting for driver location...';
@@ -1500,11 +1572,19 @@ class _HomeScreenState extends State<HomeScreen> {
     } else if (rideState.routeDisplayed && rideState.routeMarkers.isNotEmpty) {
       markers.addAll(rideState.routeMarkers.values);
       dev.log('📍 Using ride markers: ${rideState.routeMarkers.length}');
-    } else {
+
+      // DEBUG: Log each marker being added
+      for (final marker in rideState.routeMarkers.values) {
+        dev.log(
+          '🔍 Adding marker: ${marker.markerId.value} at ${marker.position}',
+        );
+      }
+    } else if (homeState.markers.isNotEmpty) {
       markers.addAll(homeState.markers.values);
       dev.log('📍 Using home markers: ${homeState.markers.length}');
     }
 
+    dev.log('📍 Total markers for map: ${markers.length}');
     return markers;
   }
 
@@ -1667,12 +1747,10 @@ class _HomeScreenState extends State<HomeScreen> {
             )
             .toList();
 
-    final isMultiDestination = additionalDestinations.isNotEmpty;
-
     final rideRequest = rideCubit.createRideRequestFromHomeState(
       pickupLocation: state.pickUpLocation!,
       mainDestination: state.destinationLocation!,
-      additionalDestinations: additionalDestinations,
+      additionalDestinations: [],
       paymentMethod: rideCubit.state.paymentMethod ?? 'cash',
     );
 

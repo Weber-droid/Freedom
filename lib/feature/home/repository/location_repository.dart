@@ -38,14 +38,14 @@ class LocationRepositoryImpl implements LocationRepository {
   }
 
   @override
-  Future<Location?> getPlaceDetails(String placeId) async {
+  Future<FreedomLocation?> getPlaceDetails(String placeId) async {
     try {
       final model = await remoteDataSource.getPlaceDetails(placeId);
       if (model == null) return null;
 
       await localDataSource.addToRecent(model);
 
-      return Location(
+      return FreedomLocation(
         id: model.id,
         placeId: model.placeId,
         name: model.name,
@@ -62,11 +62,11 @@ class LocationRepositoryImpl implements LocationRepository {
   }
 
   @override
-  Future<List<Location>> getSavedLocations() async {
+  Future<List<FreedomLocation>> getSavedLocations() async {
     try {
       final models = await localDataSource.getSavedLocations();
       return models
-          .map((model) => Location(
+          .map((model) => FreedomLocation(
                 id: model.id,
                 placeId: model.placeId,
                 name: model.name,
@@ -84,12 +84,12 @@ class LocationRepositoryImpl implements LocationRepository {
   }
 
   @override
-  Future<List<Location>> getRecentLocations() async {
+  Future<List<FreedomLocation>> getRecentLocations() async {
     try {
       final models = await localDataSource.getRecentLocations();
       return models
           .map(
-            (model) => Location(
+            (model) => FreedomLocation(
               id: model.id,
               placeId: model.placeId,
               name: model.name,
@@ -108,7 +108,7 @@ class LocationRepositoryImpl implements LocationRepository {
   }
 
   @override
-  Future<void> saveLocation(Location location) async {
+  Future<void> saveLocation(FreedomLocation location) async {
     try {
       final model = LocationModel(
         id: location.id,
@@ -150,10 +150,10 @@ class LocationRepositoryImpl implements LocationRepository {
 
 abstract class LocationRepository {
   Future<List<PlacePrediction>> getPlacePredictions(String query);
-  Future<Location?> getPlaceDetails(String placeId);
-  Future<List<Location>> getSavedLocations();
-  Future<List<Location>> getRecentLocations();
-  Future<void> saveLocation(Location location);
+  Future<FreedomLocation?> getPlaceDetails(String placeId);
+  Future<List<FreedomLocation>> getSavedLocations();
+  Future<List<FreedomLocation>> getRecentLocations();
+  Future<void> saveLocation(FreedomLocation location);
   Future<void> removeLocation(String locationId);
   Future<void> clearRecentLocations();
 }

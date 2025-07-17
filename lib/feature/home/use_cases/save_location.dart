@@ -5,7 +5,7 @@ class SaveLocation {
   SaveLocation(this.repository);
   final LocationRepository repository;
 
-  Future<void> call(Location location) {
+  Future<void> call(FreedomLocation location) {
     return repository.saveLocation(location);
   }
 }

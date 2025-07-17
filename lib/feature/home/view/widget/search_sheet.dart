@@ -924,7 +924,7 @@ class _SearchSheetState extends State<SearchSheet>
     );
   }
 
-  Column buildRecentLocation(BuildContext context, Location recent) {
+  Column buildRecentLocation(BuildContext context, FreedomLocation recent) {
     return Column(
       children: [
         Divider(
