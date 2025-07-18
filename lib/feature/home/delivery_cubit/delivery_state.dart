@@ -33,7 +33,6 @@ class DeliveryState extends Equatable {
     this.currentDeliveryId,
     this.deliveryCancellationStatus = DeliveryCancellationStatus.initial,
 
-    // Driver status tracking
     this.deliveryDriverAccepted,
     this.deliveryDriverStarted,
     this.deliveryDriverArrived,
@@ -42,13 +41,11 @@ class DeliveryState extends Equatable {
     this.deliveryDriverHasArrived = false,
     this.deliveryInProgress = false,
 
-    // Real-time tracking
     this.isRealTimeDeliveryTrackingActive = false,
     this.deliveryTrackingStatusMessage,
     this.lastDeliveryPositionUpdate,
     this.currentDeliverySpeed = 0.0,
 
-    // Route and map display
     this.deliveryRouteDisplayed = false,
     this.deliveryRoutePolylines = const {},
     this.deliveryRouteMarkers = const {},
@@ -58,16 +55,13 @@ class DeliveryState extends Equatable {
     this.shouldUpdateCamera = false,
     this.cameraTarget,
 
-    // Animation state
     this.deliveryDriverAnimationComplete = false,
 
-    // Marker icons
     this.deliveryDriverMarkerIcon,
     this.streetLevelZoom,
     this.statusData,
   });
 
-  // Basic delivery state
   final DeliveryStatus status;
   final DeliveryData? deliveryData;
   final String? errorMessage;
@@ -77,12 +71,10 @@ class DeliveryState extends Equatable {
   final bool isSearching;
   final bool riderFound;
 
-  // Delivery destinations management
   final List<TextEditingController> deliveryControllers;
   final bool isMultipleDestination;
   final int activeDestinationIndex;
 
-  // Location search and predictions
   final List<PlacePrediction> pickupPredictions;
   final List<PlacePrediction> destinationPredictions;
   final bool showPickupPredictions;
@@ -95,11 +87,9 @@ class DeliveryState extends Equatable {
   final bool isDestinationLocation;
   final List<FreedomLocation> recentLocations;
 
-  // Enhanced delivery tracking
   final String? currentDeliveryId;
   final DeliveryCancellationStatus deliveryCancellationStatus;
 
-  // Driver status tracking
   final DeliveryManAcceptedModel? deliveryDriverAccepted;
   final DeliveryManStarted? deliveryDriverStarted;
   final DeliveryArrived? deliveryDriverArrived;
@@ -108,13 +98,11 @@ class DeliveryState extends Equatable {
   final bool deliveryDriverHasArrived;
   final bool deliveryInProgress;
 
-  // Real-time tracking state
   final bool isRealTimeDeliveryTrackingActive;
   final String? deliveryTrackingStatusMessage;
   final DateTime? lastDeliveryPositionUpdate;
   final double currentDeliverySpeed;
 
-  // Route and map display
   final bool deliveryRouteDisplayed;
   final Set<Polyline> deliveryRoutePolylines;
   final Map<MarkerId, Marker> deliveryRouteMarkers;
@@ -124,10 +112,8 @@ class DeliveryState extends Equatable {
   final bool shouldUpdateCamera;
   final LatLng? cameraTarget;
 
-  // Animation state
   final bool deliveryDriverAnimationComplete;
 
-  // Marker icons
   final BitmapDescriptor? deliveryDriverMarkerIcon;
   final double? streetLevelZoom;
   final DeliveryStatusResponse? statusData;
@@ -311,7 +297,6 @@ class DeliveryState extends Equatable {
     );
   }
 
-  // Helper getters for delivery tracking status
   bool get hasActiveDelivery => currentDeliveryId != null && riderFound;
 
   bool get isDeliveryTrackingHealthy =>

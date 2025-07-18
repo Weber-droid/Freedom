@@ -132,7 +132,6 @@ class RegisterLocalDataSource {
       await _authBox.put(firebaseIdBoxKey, userId);
       _cachedFirebaseId = userId;
     } catch (e) {
-      log('Error setting user Firebase ID: $e');
       rethrow;
     }
   }
@@ -183,9 +182,7 @@ class RegisterLocalDataSource {
   // User data operations
   Future<void> saveUser(User user) async {
     try {
-      log('verifyLogin() saving user');
      final check = await _userBox.put(userKey, user);
-     log('verifyLogin() user saved successfully');
       _cachedUser = user;
     } catch (e) {
       log('Error saving user data: $e');

@@ -3,7 +3,6 @@ import 'dart:developer' as dev;
 import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/services/real_time_driver_tracking.dart';
 import 'package:freedom/core/services/ride_persistence_service.dart';
-import 'package:freedom/feature/home/models/request_ride_model.dart';
 import 'package:freedom/feature/home/repository/ride_request_repository.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
 import 'package:freedom/core/services/socket_service.dart';
@@ -12,7 +11,6 @@ import 'package:freedom/shared/enums/enums.dart';
 import 'package:freedom/shared/utils/marker_converter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
-/// Manages the complete ride restoration process after app restart
 class RideRestorationManager {
   final RidePersistenceService _persistenceService;
   final RideRequestRepository _rideRepository;
@@ -23,19 +21,16 @@ class RideRestorationManager {
   }) : _persistenceService = persistenceService,
        _rideRepository = rideRepository;
 
-  /// Main restoration entry point - call this on app startup
   Future<RideRestorationResult> attemptRideRestoration() async {
     try {
       dev.log('🔄 Starting ride restoration process...');
 
-      // Step 1: Check if we have any persisted ride data
       final hasActiveRide = await _persistenceService.hasActiveRide();
       if (!hasActiveRide) {
         dev.log('📭 No active ride found to restore');
         return RideRestorationResult.noRideToRestore();
       }
 
-      // Step 2: Load persisted ride data
       final persistedData = await _persistenceService.loadCompleteRideState();
       if (persistedData == null) {
         dev.log('❌ Failed to load persisted ride data');
@@ -47,7 +42,6 @@ class RideRestorationManager {
         '📱 Loaded persisted ride: ${persistedData.rideId} (${persistedData.status})',
       );
 
-      // Step 3: Validate ride status with server
       final serverValidation = await _validateRideWithServer(
         persistedData.rideId!,
       );
@@ -57,13 +51,11 @@ class RideRestorationManager {
         return RideRestorationResult.failed(serverValidation.reason!);
       }
 
-      // Step 4: Determine restoration strategy based on ride status
       final restorationStrategy = _determineRestorationStrategy(
         persistedData,
         serverValidation.currentStatus!,
       );
 
-      // Step 5: Execute restoration based on strategy
       final restorationResult = await _executeRestoration(
         persistedData,
         restorationStrategy,
@@ -71,7 +63,6 @@ class RideRestorationManager {
       );
 
       if (restorationResult.success) {
-        dev.log('✅ Ride restoration completed successfully');
         await _persistenceService.recordAppStateOnKill({
           'restorationSuccessful': true,
           'restoredAt': DateTime.now().toIso8601String(),
@@ -90,11 +81,8 @@ class RideRestorationManager {
     }
   }
 
-  /// Validates the persisted ride with the server
   Future<ServerValidationResult> _validateRideWithServer(String rideId) async {
     try {
-      dev.log('🔍 Validating ride $rideId with server...');
-
       final response = await _rideRepository.checkRideStatus(rideId);
 
       return await response.fold(
@@ -105,7 +93,6 @@ class RideRestorationManager {
           final currentStatus = statusResponse.data?.status;
           dev.log('📊 Server says ride status is: $currentStatus');
 
-          // Check if ride is still valid
           if (currentStatus == null) {
             return ServerValidationResult.invalid(
               'No status returned from server',
@@ -126,7 +113,6 @@ class RideRestorationManager {
     }
   }
 
-  /// Determines the best restoration strategy based on ride state
   RestorationStrategy _determineRestorationStrategy(
     PersistedRideData persistedData,
     String currentServerStatus,
@@ -139,13 +125,10 @@ class RideRestorationManager {
     );
     dev.log('   Ride in progress: ${persistedData.rideInProgress}');
 
-    // If ride is completed or cancelled, just show final state
     if (_isRideFinished(currentServerStatus)) {
       return RestorationStrategy.showFinalState;
     }
 
-    // IMPORTANT: If still searching after app restart, cancel the search
-    // because timer accuracy is lost and it's better to start fresh
     if (currentServerStatus == 'searching' ||
         currentServerStatus == 'pending') {
       dev.log(
@@ -154,27 +137,22 @@ class RideRestorationManager {
       return RestorationStrategy.cancelSearchAndReset;
     }
 
-    // If driver accepted but ride not started, show static route
     if (currentServerStatus == 'accepted' && !persistedData.rideInProgress) {
       return RestorationStrategy.restoreStaticRoute;
     }
 
-    // If ride is in progress, restore with real-time tracking
     if (currentServerStatus == 'in_progress' ||
         currentServerStatus == 'started') {
       return RestorationStrategy.restoreRealTimeTracking;
     }
 
-    // If driver arrived, restore arrival state
     if (currentServerStatus == 'arrived') {
       return RestorationStrategy.restoreDriverArrived;
     }
 
-    // Default to canceling and resetting
     return RestorationStrategy.cancelSearchAndReset;
   }
 
-  /// Executes the ride restoration based on the determined strategy
   Future<RideRestorationResult> _executeRestoration(
     PersistedRideData persistedData,
     RestorationStrategy strategy,
@@ -205,14 +183,12 @@ class RideRestorationManager {
     }
   }
 
-  /// Cancel search and reset to initial state
   Future<RideRestorationResult> _cancelSearchAndReset(
     PersistedRideData persistedData,
   ) async {
     dev.log('🛑 Cancelling search and resetting to initial state...');
 
     try {
-      // Cancel the ride on the server if we have a ride ID
       if (persistedData.rideId != null) {
         dev.log('📞 Cancelling ride ${persistedData.rideId} on server...');
 
@@ -228,7 +204,6 @@ class RideRestorationManager {
         );
       }
 
-      // Clear all persisted data since we're starting fresh
       await _persistenceService.clearAllPersistedData();
 
       return RideRestorationResult.success(
@@ -266,7 +241,6 @@ class RideRestorationManager {
     } catch (e) {
       dev.log('❌ Error cancelling search: $e');
 
-      // Even if server cancel fails, still reset locally
       await _persistenceService.clearAllPersistedData();
 
       return RideRestorationResult.success(
@@ -310,13 +284,12 @@ class RideRestorationManager {
   ) async {
     dev.log('🗺️ Restoring static route state...');
 
-    // Load markers and polylines separately for better control
     final restoredMarkers =
         await _persistenceService.loadPersistedMarkers() ?? {};
     final restoredPolylines =
         await _persistenceService.loadPersistedPolylines() ?? <Polyline>{};
     final routeData = await _persistenceService.loadRouteData();
-        final convertedMarkers = await MarkerConverter.convertRestoredMarkers(
+    final convertedMarkers = await MarkerConverter.convertRestoredMarkers(
       restoredMarkers,
     );
     dev.log(
@@ -387,7 +360,6 @@ class RideRestorationManager {
       restoredPolylines = persistedData.polylines!;
     }
 
-    // Restore markers from persisted data
     Map<MarkerId, Marker> restoredMarkers = {};
     if (persistedData.markers != null) {
       restoredMarkers = persistedData.markers!;
@@ -433,7 +405,7 @@ class RideRestorationManager {
           nearestDriverDistance: persistedData.nearestDriverDistance,
           lastRouteRecalculation: persistedData.lastRouteRecalculation,
           cameraTarget: persistedData.cameraTarget,
-          // Restore route data
+
           routePolylines: restoredPolylines,
           routeMarkers: restoredMarkers,
           routeSegments: persistedData.routeSegments,
@@ -447,19 +419,16 @@ class RideRestorationManager {
     );
   }
 
-  /// Restore driver arrived state
   Future<RideRestorationResult> _restoreDriverArrivedState(
     PersistedRideData persistedData,
   ) async {
     dev.log('🚗 Restoring driver arrived state...');
 
-    // Restore polylines from persisted data
     Set<Polyline> restoredPolylines = {};
     if (persistedData.polylines != null) {
       restoredPolylines = persistedData.polylines!;
     }
 
-    // Restore markers from persisted data
     Map<MarkerId, Marker> restoredMarkers = {};
     if (persistedData.markers != null) {
       restoredMarkers = persistedData.markers!;
@@ -503,7 +472,7 @@ class RideRestorationManager {
           nearestDriverDistance: persistedData.nearestDriverDistance,
           lastRouteRecalculation: persistedData.lastRouteRecalculation,
           cameraTarget: persistedData.cameraTarget,
-          // Restore route data
+
           routePolylines: restoredPolylines,
           routeMarkers: restoredMarkers,
           routeSegments: persistedData.routeSegments,
@@ -514,7 +483,6 @@ class RideRestorationManager {
     );
   }
 
-  /// Restore final state (completed/cancelled)
   Future<RideRestorationResult> _restoreFinalState(
     PersistedRideData persistedData,
     String currentStatus,
@@ -562,7 +530,6 @@ class RideRestorationManager {
     );
   }
 
-  /// Helper method to check if ride status indicates invalid/finished ride
   bool _isRideStatusInvalid(String status) {
     return [
       'cancelled',
@@ -572,12 +539,10 @@ class RideRestorationManager {
     ].contains(status.toLowerCase());
   }
 
-  /// Helper method to check if ride is finished
   bool _isRideFinished(String status) {
     return ['completed', 'cancelled'].contains(status.toLowerCase());
   }
 
-  /// Execute post-restoration actions based on strategy
   Future<void> executePostRestorationActions(
     RideCubit rideCubit,
     RestoredRideState restoredState,
@@ -589,43 +554,36 @@ class RideRestorationManager {
 
       switch (restoredState.nextAction) {
         case RestorationAction.resetToInitialState:
-          // Reset to initial state and clear everything
           rideCubit.emit(restoredState.rideState);
           await _persistenceService.clearAllPersistedData();
           break;
 
         case RestorationAction.displayStaticRoute:
-          // Emit state and display static route
           rideCubit.emit(restoredState.rideState);
           await _restoreStaticRoute(rideCubit, restoredState);
           break;
 
         case RestorationAction.resumeRealTimeTracking:
-          // Emit state and resume real-time tracking
           rideCubit.emit(restoredState.rideState);
           await _restoreRealTimeTracking(rideCubit, restoredState);
           break;
 
         case RestorationAction.showDriverArrived:
-          // Just emit the state with driver arrived
           rideCubit.emit(restoredState.rideState);
           break;
 
         case RestorationAction.clearPersistedData:
-          // Emit final state and clear persistence
           rideCubit.emit(restoredState.rideState);
           await _persistenceService.clearRideData();
           break;
       }
 
-      // Re-establish socket listeners in all cases
       await _reestablishSocketConnection(rideCubit);
     } catch (e, stack) {
       dev.log('❌ Error in post-restoration actions: $e\n$stack');
     }
   }
 
-  /// Restore static route display
   Future<void> _restoreStaticRoute(
     RideCubit rideCubit,
     RestoredRideState restoredState,
@@ -633,7 +591,6 @@ class RideRestorationManager {
     try {
       if (restoredState.routeData != null &&
           restoredState.routeData!.routePoints.isNotEmpty) {
-        // Route data is available, use the cubit's restore method
         dev.log(
           '🗺️ Restoring route with ${restoredState.routeData!.routePoints.length} points',
         );
@@ -641,7 +598,6 @@ class RideRestorationManager {
         await rideCubit.restoreStaticRoute();
         rideCubit.focusCameraOnRoute();
       } else {
-        // No route data, regenerate from ride request
         dev.log('🔄 Regenerating route from ride request');
         if (rideCubit.currentRideRequest != null) {
           await rideCubit.displayStaticRouteOnly();
@@ -652,7 +608,6 @@ class RideRestorationManager {
     }
   }
 
-  /// Restore real-time tracking
   Future<void> _restoreRealTimeTracking(
     RideCubit rideCubit,
     RestoredRideState restoredState,
@@ -660,16 +615,12 @@ class RideRestorationManager {
     try {
       dev.log('🔴 Restoring real-time tracking...');
 
-      // First restore static route
       await _restoreStaticRoute(rideCubit, restoredState);
 
-      // Wait for route to be established
       await Future.delayed(const Duration(milliseconds: 1000));
 
-      // Use the cubit's restore real-time tracking method
       await rideCubit.restoreRealTimeTracking();
 
-      // If we have last known location, update to it
       if (restoredState.lastKnownLocation != null) {
         final location = restoredState.lastKnownLocation!;
         dev.log('📍 Updating to last known position: ${location.latLng}');
@@ -694,7 +645,6 @@ class RideRestorationManager {
     }
   }
 
-  /// Re-establish socket connection and listeners
   Future<void> _reestablishSocketConnection(RideCubit rideCubit) async {
     try {
       final socketService = getIt<SocketService>();
@@ -702,18 +652,12 @@ class RideRestorationManager {
       if (!socketService.isConnected) {
         dev.log('🔌 Reconnecting to socket...');
 
-        // Get the correct socket URL from your app configuration
         final authToken = await AppPreferences.getToken();
-        socketService.connect(
-          'wss://your-socket-server.com', // Replace with your actual socket URL
-          authToken: authToken,
-        );
+        socketService.connect('wss:', authToken: authToken);
 
-        // Wait for connection
         await Future.delayed(const Duration(seconds: 2));
       }
 
-      // Re-establish socket listeners using the cubit's public method
       rideCubit.listenToDriverStatus();
 
       dev.log('✅ Socket connection re-established');
@@ -723,7 +667,6 @@ class RideRestorationManager {
   }
 }
 
-/// Restoration strategy enumeration
 enum RestorationStrategy {
   cancelSearchAndReset,
   restoreStaticRoute,
@@ -732,7 +675,6 @@ enum RestorationStrategy {
   showFinalState,
 }
 
-/// Post-restoration actions
 enum RestorationAction {
   resetToInitialState,
   displayStaticRoute,
@@ -741,7 +683,6 @@ enum RestorationAction {
   clearPersistedData,
 }
 
-/// Server validation result
 class ServerValidationResult {
   final bool isValid;
   final String? reason;
@@ -764,7 +705,6 @@ class ServerValidationResult {
   }
 }
 
-/// Ride restoration result
 class RideRestorationResult {
   final bool success;
   final String? error;
@@ -785,7 +725,6 @@ class RideRestorationResult {
   }
 }
 
-/// Restored ride state container
 class RestoredRideState {
   final RideState rideState;
   final RestorationAction nextAction;

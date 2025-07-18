@@ -49,13 +49,11 @@ class RideCubit extends Cubit<RideState> {
   final RealTimeDriverTrackingService _realTimeTrackingService;
   final RidePersistenceService _persistenceService;
 
-  // State tracking
   DateTime? _lastStatusUpdate;
   DateTime? _lastPersistenceTime;
   RideRequestModel? _currentRideRequest;
   bool _isDisposed = false;
 
-  // Socket subscriptions - keep your original pattern
   StreamSubscription<dynamic>? _driverStatusSubscription;
   StreamSubscription<dynamic>? _driverCancelledSubscription;
   StreamSubscription<dynamic>? _driverAcceptedSubscription;
@@ -65,32 +63,26 @@ class RideCubit extends Cubit<RideState> {
   StreamSubscription<dynamic>? _driverRejecetedSubscription;
   StreamSubscription<dynamic>? _driverPositionSubscription;
 
-  // Timers
   Timer? _timer;
   Timer? _persistenceTimer;
   Timer? _statusUpdateThrottle;
 
-  // Throttling variables
   static const Duration _statusUpdateInterval = Duration(milliseconds: 500);
   static const Duration _persistenceInterval = Duration(seconds: 10);
   String? _pendingStatusMessage;
 
   static const int maxSearchTime = 60;
 
-  // Getters
   RideRequestModel? get currentRideRequest => _currentRideRequest;
   int get searchTimeElapsed => state.searchTimeElapsed;
 
   set searchTimeElapsed(int searchTimeElapsed) =>
       emit(state.copyWith(searchTimeElapsed: searchTimeElapsed));
 
-  /// Initialize persistence monitoring
   void _initializePersistence() {
     _startPeriodicPersistence();
-    dev.log('✅ Persistence monitoring initialized');
   }
 
-  /// Start periodic persistence timer
   void _startPeriodicPersistence() {
     _persistenceTimer?.cancel();
 
@@ -106,72 +98,63 @@ class RideCubit extends Cubit<RideState> {
     });
   }
 
-  /// Enhanced emit with automatic persistence
   @override
   void emit(RideState state) {
     super.emit(state);
 
-    // Auto-persist critical states asynchronously
     if (state.currentRideId != null && state.hasActiveRide) {
-      dev.log('Auto-persisting state.. CurrentId: ${state.currentRideId}');
       _persistCurrentStateAsync();
     }
   }
 
-void _persistCurrentStateAsync() {
-  if (_isDisposed) return;
+  void _persistCurrentStateAsync() {
+    if (_isDisposed) return;
 
-  Future.microtask(() async {
-    try {
-      await _persistenceService.persistCompleteRideState(state);
+    Future.microtask(() async {
+      try {
+        await _persistenceService.persistCompleteRideState(state);
 
-      if (state.routeMarkers.isNotEmpty) {
-        await _persistenceService.persistMarkers(state.routeMarkers);
-      }
+        if (state.routeMarkers.isNotEmpty) {
+          await _persistenceService.persistMarkers(state.routeMarkers);
+        }
 
-      if (state.routePolylines.isNotEmpty) {
-        await _persistenceService.persistPolylines(state.routePolylines);
-      }
+        if (state.routePolylines.isNotEmpty) {
+          await _persistenceService.persistPolylines(state.routePolylines);
+        }
 
-      if (state.currentDriverPosition != null) {
-        await _persistenceService.persistDriverLocation(
-          state.currentDriverPosition!,
-          speed: state.currentSpeed,
-          timestamp: state.lastPositionUpdate,
-        );
-      }
+        if (state.currentDriverPosition != null) {
+          await _persistenceService.persistDriverLocation(
+            state.currentDriverPosition!,
+            speed: state.currentSpeed,
+            timestamp: state.lastPositionUpdate,
+          );
+        }
 
-      // Persist tracking state if active
-      if (state.isRealTimeTrackingActive && state.driverAccepted != null) {
-        await _persistenceService.persistTrackingState(
-          isActive: true,
-          rideId: state.currentRideId ?? '',
-          driverId: state.driverAccepted!.driverId ?? '',
-          destination: _currentRideRequest != null
-              ? LatLng(
-                  _currentRideRequest!.dropoffLocation.latitude,
-                  _currentRideRequest!.dropoffLocation.longitude,
-                )
-              : null,
-          trackingMetrics: _realTimeTrackingService.getTrackingMetrics(),
-        );
-      }
+        if (state.isRealTimeTrackingActive && state.driverAccepted != null) {
+          await _persistenceService.persistTrackingState(
+            isActive: true,
+            rideId: state.currentRideId ?? '',
+            driverId: state.driverAccepted!.driverId ?? '',
+            destination:
+                _currentRideRequest != null
+                    ? LatLng(
+                      _currentRideRequest!.dropoffLocation.latitude,
+                      _currentRideRequest!.dropoffLocation.longitude,
+                    )
+                    : null,
+            trackingMetrics: _realTimeTrackingService.getTrackingMetrics(),
+          );
+        }
 
-      _lastPersistenceTime = DateTime.now();
-    } catch (e) {
-      dev.log('❌ Auto-persistence failed: $e');
-    }
-  });
-}
+        _lastPersistenceTime = DateTime.now();
+      } catch (e) {}
+    });
+  }
 
-  /// Access to restore from persisted data (called by restoration manager)
   Future<void> restoreFromPersistedData(PersistedRideData persistedData) async {
     if (_isDisposed) return;
 
     try {
-      dev.log('🔄 Restoring ride from persisted data...');
-
-      // Restore current ride request if available
       if (persistedData.rideRequest != null) {
         _currentRideRequest = persistedData.rideRequest;
       }
@@ -184,10 +167,7 @@ void _persistCurrentStateAsync() {
 
       if (restoredMarkers != null && restoredMarkers.isNotEmpty) {
         finalMarkers = restoredMarkers;
-        dev.log('✅ Using ${finalMarkers.length} restored markers');
       } else if (_currentRideRequest != null) {
-        // Recreate markers from ride request data
-        dev.log('🔄 Recreating markers from ride request...');
         finalMarkers = await _recreateMarkersFromRideRequest(
           _currentRideRequest!,
           persistedData.currentDriverPosition,
@@ -196,10 +176,8 @@ void _persistCurrentStateAsync() {
 
       if (restoredPolylines != null && restoredPolylines.isNotEmpty) {
         finalPolylines = restoredPolylines;
-        dev.log('✅ Using ${finalPolylines.length} restored polylines');
       }
 
-      // Create restored state with ALL persisted data
       final restoredState = RideState(
         status: persistedData.status,
         currentRideId: persistedData.rideId,
@@ -243,100 +221,91 @@ void _persistCurrentStateAsync() {
 
       emit(restoredState);
 
-      // Re-establish socket listeners
       _listenToDriverStatus();
 
-      dev.log('   - Driver position: ${persistedData.currentDriverPosition}');
       dev.log(
         '   - Ride request: ${persistedData.rideRequest?.pickupLocation.address} → ${persistedData.rideRequest?.dropoffLocation.address}',
       );
     } catch (e, stack) {
-      dev.log('❌ Error restoring from persisted data: $e\n$stack');
       resetRideState();
     }
   }
 
-  /// Recreate markers from ride request when persisted markers are missing
-Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
-  RideRequestModel rideRequest,
-  LatLng? driverPosition,
-) async {
-  final markers = <MarkerId, Marker>{};
+  Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
+    RideRequestModel rideRequest,
+    LatLng? driverPosition,
+  ) async {
+    final markers = <MarkerId, Marker>{};
 
-  try {
-    // Ensure marker icons are available
-    await _ensureMarkerIcons();
+    try {
+      await _ensureMarkerIcons();
 
-    // Recreate pickup marker
-    const pickupMarkerId = MarkerId('pickup');
-    markers[pickupMarkerId] = Marker(
-      markerId: pickupMarkerId,
-      position: LatLng(
-        rideRequest.pickupLocation.latitude,
-        rideRequest.pickupLocation.longitude,
-      ),
-      icon: state.userLocationMarkerIcon ?? 
+      const pickupMarkerId = MarkerId('pickup');
+      markers[pickupMarkerId] = Marker(
+        markerId: pickupMarkerId,
+        position: LatLng(
+          rideRequest.pickupLocation.latitude,
+          rideRequest.pickupLocation.longitude,
+        ),
+        icon:
+            state.userLocationMarkerIcon ??
             BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-      infoWindow: InfoWindow(
-        title: 'Pickup Location',
-        snippet: rideRequest.pickupLocation.address,
-      ),
-    );
+        infoWindow: InfoWindow(
+          title: 'Pickup Location',
+          snippet: rideRequest.pickupLocation.address,
+        ),
+      );
 
-    // Recreate destination marker
-    const destinationMarkerId = MarkerId('destination');
-    markers[destinationMarkerId] = Marker(
-      markerId: destinationMarkerId,
-      position: LatLng(
-        rideRequest.dropoffLocation.latitude,
-        rideRequest.dropoffLocation.longitude,
-      ),
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-      infoWindow: InfoWindow(
-        title: 'Destination',
-        snippet: rideRequest.dropoffLocation.address,
-      ),
-    );
+      const destinationMarkerId = MarkerId('destination');
+      markers[destinationMarkerId] = Marker(
+        markerId: destinationMarkerId,
+        position: LatLng(
+          rideRequest.dropoffLocation.latitude,
+          rideRequest.dropoffLocation.longitude,
+        ),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+        infoWindow: InfoWindow(
+          title: 'Destination',
+          snippet: rideRequest.dropoffLocation.address,
+        ),
+      );
 
-    // Recreate additional stop markers if any
-    if (rideRequest.isMultiDestination && 
-        rideRequest.additionalDestinations != null) {
-      for (int i = 0; i < rideRequest.additionalDestinations!.length; i++) {
-        final stop = rideRequest.additionalDestinations![i];
-        final stopMarkerId = MarkerId('stop_$i');
-        
-        markers[stopMarkerId] = Marker(
-          markerId: stopMarkerId,
-          position: LatLng(stop.latitude, stop.longitude),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
-          infoWindow: InfoWindow(
-            title: 'Stop ${i + 1}',
-            snippet: stop.address,
-          ),
+      if (rideRequest.isMultiDestination &&
+          rideRequest.additionalDestinations != null) {
+        for (int i = 0; i < rideRequest.additionalDestinations!.length; i++) {
+          final stop = rideRequest.additionalDestinations![i];
+          final stopMarkerId = MarkerId('stop_$i');
+
+          markers[stopMarkerId] = Marker(
+            markerId: stopMarkerId,
+            position: LatLng(stop.latitude, stop.longitude),
+            icon: BitmapDescriptor.defaultMarkerWithHue(
+              BitmapDescriptor.hueOrange,
+            ),
+            infoWindow: InfoWindow(
+              title: 'Stop ${i + 1}',
+              snippet: stop.address,
+            ),
+          );
+        }
+      }
+
+      if (driverPosition != null) {
+        const driverMarkerId = MarkerId('driver');
+        markers[driverMarkerId] = Marker(
+          markerId: driverMarkerId,
+          position: driverPosition,
+          icon:
+              state.driverMarkerIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+          infoWindow: const InfoWindow(title: 'Driver Location'),
+          rotation: 0.0,
         );
       }
-    }
+    } catch (e) {}
 
-    // Recreate driver marker if position is available
-    if (driverPosition != null) {
-      const driverMarkerId = MarkerId('driver');
-      markers[driverMarkerId] = Marker(
-        markerId: driverMarkerId,
-        position: driverPosition,
-        icon: state.driverMarkerIcon ?? 
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        infoWindow: const InfoWindow(title: 'Driver Location'),
-        rotation: 0.0,
-      );
-    }
-
-    dev.log('✅ Recreated ${markers.length} markers from ride request');
-  } catch (e) {
-    dev.log('❌ Error recreating markers from ride request: $e');
+    return markers;
   }
-
-  return markers;
-}
 
   void _initSocketListener() {
     _driverStatusSubscription?.cancel();
@@ -349,14 +318,12 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     emit(state.copyWith(paymentMethod: paymentMethod));
   }
 
-  /// Request a ride with immediate persistence
   Future<void> requestRide(RideRequestModel request) async {
     if (_isDisposed) return;
 
     dev.log('🚗 Requesting ride: ${request.toJson()}');
     _currentRideRequest = request;
 
-    // Immediately persist the ride request
     await forcePersistence(reason: 'ride_request_initiated');
 
     emit(state.copyWith(status: RideRequestStatus.loading, errorMessage: null));
@@ -368,7 +335,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
           request.additionalDestinations!.isNotEmpty;
 
       if (hasMultipleDestinations) {
-        // await _processMultiDestinationRide(request);
       } else {
         await _processSingleDestinationRide(request);
       }
@@ -382,13 +348,10 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     }
   }
 
-  /// Force immediate persistence
   Future<void> forcePersistence({String reason = 'manual'}) async {
     if (_isDisposed) return;
 
     try {
-      dev.log('💾 Force persisting ride state: $reason');
-
       if (state.hasActiveRide) {
         await _persistenceService.persistCompleteRideState(state);
 
@@ -400,7 +363,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
           );
         }
 
-        // Persist route data if available
         if (state.routeDisplayed && state.routePolylines.isNotEmpty) {
           final routePoints = state.routePolylines.first.points;
           await _persistenceService.persistRouteData(
@@ -409,12 +371,8 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
             totalDistance: _routeService.calculateRouteDistance(routePoints),
           );
         }
-
-        dev.log('✅ Force persistence completed: $reason');
       }
-    } catch (e) {
-      dev.log('❌ Force persistence failed: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _processSingleDestinationRide(RideRequestModel request) async {
@@ -541,7 +499,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     );
   }
 
-  /// Cancel ride with persistence cleanup
   Future<void> cancelRide({required String reason}) async {
     if (_isDisposed) return;
 
@@ -580,7 +537,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
             ),
           );
 
-          // Clear persistence after cancellation
           _persistenceService.clearRideData();
         },
       );
@@ -594,7 +550,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     }
   }
 
-  /// Socket listeners - keeping your original implementation
   void _listenToDriverStatus() {
     final socketService = getIt<SocketService>();
     _cancelAllSubscriptions();
@@ -602,7 +557,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     _driverStatusSubscription = socketService.onDriverAcceptRide.listen((
       data,
     ) async {
-      dev.log('🚗 Driver accepted ride - showing STATIC route');
       _stopSearchTimer();
 
       emit(
@@ -621,7 +575,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
         await _displayStaticRouteOnly();
         await forcePersistence(reason: 'driver_accepted');
       } catch (e) {
-        dev.log('❌ Static route error: $e');
         emit(state.copyWith(errorMessage: 'Failed to display route: $e'));
       }
     });
@@ -629,8 +582,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     _driverStartedSubscription = socketService.onDriverStarted.listen((
       data,
     ) async {
-      dev.log('🚗 Driver STARTED ride - enabling real-time tracking');
-
       emit(
         state.copyWith(
           driverStarted: data,
@@ -644,7 +595,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     });
 
     _driverArrivedSubscription = socketService.onDriverArrived.listen((data) {
-      dev.log('🚗 Driver arrived at pickup');
       emit(state.copyWith(driverArrived: data, driverHasArrived: true));
       forcePersistence(reason: 'driver_arrived');
     });
@@ -692,12 +642,10 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
 
   Future<void> _displayStaticRouteOnly() async {
     if (_currentRideRequest == null) {
-      dev.log('❌ No current ride request for static route');
       return;
     }
 
     try {
-      dev.log('🗺️ Displaying STATIC route only');
       await _ensureMarkerIcons();
 
       final request = _currentRideRequest!;
@@ -713,10 +661,7 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
       } else {
         await _displaySingleDestinationStaticRoute(request, pickup);
       }
-
-      dev.log('✅ Static route displayed successfully');
     } catch (e) {
-      dev.log('❌ Error displaying static route: $e');
       emit(state.copyWith(errorMessage: 'Route display failed: $e'));
     }
   }
@@ -780,7 +725,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
         '✅ Static route displayed - ${cleanedMarkers.length} markers total',
       );
     } else {
-      dev.log('❌ Failed to get static route');
       emit(state.copyWith(errorMessage: 'Failed to load route'));
     }
   }
@@ -843,7 +787,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
 
       focusCameraOnRoute();
     } else {
-      dev.log('❌ Failed to get multi-destination static routes');
       emit(
         state.copyWith(errorMessage: 'Failed to load multi-destination route'),
       );
@@ -854,8 +797,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     if (_currentRideRequest == null || _isDisposed) return;
 
     try {
-      dev.log('🔴 Starting REAL-TIME tracking with animation');
-
       final destination = LatLng(
         _currentRideRequest!.dropoffLocation.latitude,
         _currentRideRequest!.dropoffLocation.longitude,
@@ -898,10 +839,7 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
           trackingStatusMessage: 'Live tracking with animation started',
         ),
       );
-
-      dev.log('✅ Real-time tracking with animation started successfully');
     } catch (e) {
-      dev.log('❌ Real-time tracking start error: $e');
       emit(
         state.copyWith(
           errorMessage: 'Failed to start live tracking: $e',
@@ -919,7 +857,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     if (!state.isRealTimeTrackingActive ||
         !state.rideInProgress ||
         _isDisposed) {
-      dev.log('⚠️ Ignoring position update - tracking not active');
       return;
     }
 
@@ -948,7 +885,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
       ),
     );
 
-    // Periodic persistence of driver location
     if (DateTime.now().millisecondsSinceEpoch % 5000 < 100) {
       _persistenceService.persistDriverLocation(
         position,
@@ -959,7 +895,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     }
 
     if (_realTimeTrackingService.hasReachedDestination(position)) {
-      dev.log('🏁 Driver reached destination');
       _handleDriverReachedDestination();
     }
   }
@@ -1003,9 +938,7 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
           currentDriverPosition: position,
         ),
       );
-    } catch (e) {
-      dev.log('❌ Driver marker update error: $e');
-    }
+    } catch (e) {}
   }
 
   bool _isDriverMarker(MarkerId markerId, Marker marker) {
@@ -1037,9 +970,7 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
       if (state.userLocationMarkerIcon == null) {
         await _createUserLocationMarkerIcon();
       }
-    } catch (e) {
-      dev.log('❌ Marker icons error: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _createDriverMarkerIcon() async {
@@ -1137,9 +1068,7 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
           emit(state.copyWith(routeRecalculated: false));
         }
       });
-    } catch (e) {
-      dev.log('❌ Route update error: $e');
-    }
+    } catch (e) {}
   }
 
   void _updateTrackingStatusThrottled(String status) {
@@ -1203,7 +1132,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
   void _handleDriverReachedDestination() {
     if (_isDisposed) return;
 
-    dev.log('🏁 Driver reached destination');
     _stopAllTrackingAndReset();
     emit(
       state.copyWith(
@@ -1214,8 +1142,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
   }
 
   void _stopAllTrackingAndReset() {
-    dev.log('🛑 Stopping all tracking and resetting');
-
     _realTimeTrackingService.stopTracking();
     _animationService.stopAll();
     _animationService.stopRealTimeTracking();
@@ -1245,7 +1171,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     _driverPositionSubscription?.cancel();
   }
 
-  /// Check ride status with server for restoration
   Future<void> checkRideStatus(String rideId) async {
     if (_isDisposed) return;
 
@@ -1264,9 +1189,7 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
           );
         },
         (statusResponse) async {
-          final currentStatus = statusResponse.data?.status;
-          dev.log('💾 Current ride status from server: $currentStatus');
-
+          final currentStatus = statusResponse.data.status;
           switch (currentStatus) {
             case 'accepted':
               emit(
@@ -1346,7 +1269,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
         },
       );
     } catch (e) {
-      dev.log('❌ Check ride status error: $e');
       emit(
         state.copyWith(
           status: RideRequestStatus.error,
@@ -1362,9 +1284,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
 
   Future<void> restoreRealTimeTracking() async {
     if (_isDisposed) return;
-
-    dev.log('🔴 Restoring real-time tracking...');
-
     try {
       await restoreStaticRoute();
       await Future.delayed(const Duration(milliseconds: 1000));
@@ -1373,13 +1292,9 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
       final lastLocation = await _persistenceService.loadLastDriverLocation();
 
       if (trackingState != null && trackingState.isActive) {
-        dev.log('🎯 Restoring tracking state: ${trackingState.rideId}');
-
         await _startRealTimeTrackingOnly();
 
         if (lastLocation != null) {
-          dev.log('📍 Updating to last known position: ${lastLocation.latLng}');
-
           _handleRealTimePositionUpdate(
             lastLocation.latLng,
             lastLocation.bearing ?? 0.0,
@@ -1396,7 +1311,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
 
         emit(state.copyWith(trackingStatusMessage: 'Live tracking restored'));
       } else {
-        dev.log('⚠️ No valid tracking state found');
         emit(
           state.copyWith(
             trackingStatusMessage: 'Unable to restore live tracking',
@@ -1404,7 +1318,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
         );
       }
     } catch (e) {
-      dev.log('❌ Error restoring real-time tracking: $e');
       emit(
         state.copyWith(
           errorMessage: 'Failed to restore tracking: $e',
@@ -1416,26 +1329,19 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
 
   Future<void> restoreStaticRoute() async {
     if (_isDisposed) return;
-
-    dev.log('🗺️ Restoring static route display...');
-
     try {
       await _ensureMarkerIcons();
 
       final routeData = await _persistenceService.loadRouteData();
 
       if (routeData != null && routeData.routePoints.isNotEmpty) {
-        dev.log('📍 Restoring route from persisted data');
         await _restoreRouteFromPersistedData(routeData);
       } else if (_currentRideRequest != null) {
-        dev.log('🔄 Regenerating route from ride request');
         await _displayStaticRouteOnly();
       } else {
-        dev.log('❌ No route data available for restoration');
         emit(state.copyWith(trackingStatusMessage: 'No route data available'));
       }
     } catch (e) {
-      dev.log('❌ Error restoring static route: $e');
       emit(state.copyWith(errorMessage: 'Failed to restore route: $e'));
     }
   }
@@ -1496,20 +1402,15 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
           trackingStatusMessage: 'Route restored from cache',
         ),
       );
-
-      dev.log('✅ Route restored from persisted data');
     } catch (e) {
-      dev.log('❌ Error restoring route from persisted data: $e');
       throw e;
     }
   }
 
-  /// Get tracking status for UI
   TrackingStatus getTrackingStatus() {
     return _realTimeTrackingService.getTrackingStatus();
   }
 
-  /// Get current route progress
   RouteProgress? getCurrentRouteProgress() {
     if (!_realTimeTrackingService.isTracking) return null;
 
@@ -1555,9 +1456,7 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
           ),
         );
       }
-    } catch (e) {
-      dev.log('❌ Route progress error: $e');
-    }
+    } catch (e) {}
 
     return null;
   }
@@ -1618,7 +1517,7 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     TrackingStatus trackingStatus,
   ) {
     final recentHistory = _realTimeTrackingService.locationHistory;
-    double averageSpeedMps = 8.33; // Default 30 km/h in m/s
+    double averageSpeedMps = 8.33;
 
     if (recentHistory.isNotEmpty) {
       final recentSpeeds =
@@ -1659,7 +1558,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     return earthRadius * c;
   }
 
-  /// Force route recalculation
   Future<void> forceRouteRecalculation() async {
     if (!_realTimeTrackingService.isTracking || _isDisposed) return;
 
@@ -1682,13 +1580,11 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
           _updateTrackingStatusThrottled('Route recalculation failed');
         }
       } catch (e) {
-        dev.log('❌ Force recalculation error: $e');
         _updateTrackingStatusThrottled('Route recalculation error');
       }
     }
   }
 
-  /// Handle app lifecycle changes
   Future<void> handleAppLifecycleChange(
     AppLifecycleState lifecycleState,
   ) async {
@@ -1696,19 +1592,16 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
 
     switch (lifecycleState) {
       case AppLifecycleState.paused:
-        dev.log('📱 App paused - persisting critical state');
         await forcePersistence(reason: 'app_paused');
         break;
 
       case AppLifecycleState.resumed:
-        dev.log('📱 App resumed - checking connection health');
         if (state.currentRideId != null) {
           await checkRideStatus(state.currentRideId!);
         }
         break;
 
       case AppLifecycleState.detached:
-        dev.log('📱 App detached - emergency persistence');
         await forcePersistence(reason: 'app_detached');
         break;
 
@@ -1717,7 +1610,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     }
   }
 
-  /// Reset ride state and clear persistence
   void resetRideState() {
     _stopAllTrackingAndReset();
     _persistenceService.clearRideData();
@@ -1751,7 +1643,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     );
   }
 
-  /// Public methods for restoration manager access
   Future<void> displayStaticRouteOnly() async {
     await _displayStaticRouteOnly();
   }
@@ -1776,7 +1667,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     _handleRealTimePositionUpdate(position, bearing, locationData);
   }
 
-  /// Get enhanced tracking metrics for debugging
   Map<String, dynamic> getEnhancedTrackingMetrics() {
     final baseMetrics = _realTimeTrackingService.getTrackingMetrics();
     final performanceMetrics = _realTimeTrackingService.getPerformanceMetrics();
@@ -1795,7 +1685,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
     };
   }
 
-  /// Get persistence statistics
   Future<Map<String, dynamic>> getRidePersistenceStats() async {
     try {
       final stats = await _persistenceService.getPersistenceStats();
@@ -1807,7 +1696,6 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
         'isDisposed': _isDisposed,
       };
     } catch (e) {
-      dev.log('❌ Error getting persistence stats: $e');
       return {'error': e.toString()};
     }
   }
@@ -1816,30 +1704,22 @@ Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
   Future<void> close() async {
     _isDisposed = true;
 
-    dev.log('🗑️ Disposing RideCubit...');
-
-    // Cancel all timers and subscriptions
     _statusUpdateThrottle?.cancel();
     _cancelAllSubscriptions();
     _timer?.cancel();
     _persistenceTimer?.cancel();
 
-    // Stop services
     _animationService.dispose();
     _realTimeTrackingService.stopTracking();
 
-    // Final persistence before disposal
     if (state.hasActiveRide) {
       await forcePersistence(reason: 'cubit_disposed');
     }
-
-    dev.log('✅ RideCubit disposed');
 
     return super.close();
   }
 }
 
-/// Route progress information
 class RouteProgress {
   final double progress;
   final double distanceCovered;
