@@ -403,14 +403,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                         deliveryState.deliveryTrackingStatusMessage!,
                       );
                     }
-
-                    // Handle delivery route recalculation
                     if (deliveryState.deliveryRouteRecalculated) {
                       _showEnhancedRouteUpdateNotification();
                     }
                   },
                   builder: (context, deliveryState) {
-                    // Calculate which sheets should be visible
                     final sheetVisibility = _calculateSheetVisibility(
                       rideState,
                       deliveryState,

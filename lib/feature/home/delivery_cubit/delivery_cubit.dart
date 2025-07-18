@@ -89,21 +89,16 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
   Future<void> _loadPersistedStateOnInit() async {
     try {
-      dev.log('🔄 Checking for persisted delivery state on init...');
-
       final persistedData =
           await _persistenceService.loadPersistedDeliveryState();
       if (persistedData == null) {
-        dev.log('📭 No valid persisted delivery state found');
         return;
       }
 
       dev.log(
         '✅ Loading persisted delivery state: ${persistedData.deliveryId}',
       );
-      dev.log('📊 Persisted state details:');
-      dev.log('  - riderFound: ${persistedData.riderFound}');
-      dev.log('  - deliveryInProgress: ${persistedData.deliveryInProgress}');
+
       dev.log(
         '  - driverAccepted: ${persistedData.deliveryDriverAccepted?.status}',
       );
@@ -145,26 +140,17 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
       // Always set up socket listeners if there's an active delivery
       if (persistedData.riderFound || persistedData.deliveryInProgress) {
-        dev.log('🔊 Setting up socket listeners for persisted delivery');
         _listenToDeliveryDriverStatus();
       }
 
       final shouldResumeTracking = shouldResumeRealTimeTracking(persistedData);
 
       if (shouldResumeTracking) {
-        dev.log('🔴 Resuming real-time tracking for persisted delivery');
-
         // Longer delay to ensure everything is properly initialized
         await Future.delayed(const Duration(milliseconds: 1000));
         await _resumeRealTimeDeliveryTracking(persistedData);
-      } else {
-        dev.log('📍 Delivery found but real-time tracking not needed yet');
-      }
-
-      dev.log('✅ Persisted delivery state loaded successfully');
+      } else {}
     } catch (e, stackTrace) {
-      dev.log('❌ Error loading persisted state: $e');
-      dev.log('Stack trace: $stackTrace');
       await _persistenceService.clearPersistedState();
     }
   }
@@ -173,10 +159,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     PersistedDeliveryData persistedData,
   ) async {
     try {
-      dev.log('🔄 Starting real-time tracking resume process...');
-
       if (_currentDeliveryRequest == null) {
-        dev.log('❌ Cannot resume tracking: missing delivery request');
         return;
       }
 
@@ -201,15 +184,11 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       final deliveryId = persistedData.deliveryId;
       final driverId = getDriverId(persistedData);
 
-      dev.log('📋 Resume tracking details:');
-      dev.log('  - deliveryId: $deliveryId');
-      dev.log('  - driverId: $driverId');
       dev.log(
         '  - destination: ${destination.latitude}, ${destination.longitude}',
       );
 
       if (driverId.isEmpty) {
-        dev.log('❌ Cannot resume tracking: missing driver ID');
         // Try to get driver info from server as fallback
         await _fetchLatestDeliveryStatus(deliveryId);
         return;
@@ -221,7 +200,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       );
 
       // Start the real-time tracking service
-      dev.log('🚀 Starting real-time tracking service...');
+
       _realTimeTrackingService.startTracking(
         rideId: deliveryId,
         driverId: driverId,
@@ -275,27 +254,18 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         ),
       );
 
-      dev.log('✅ Real-time delivery tracking resumed successfully');
-
       // Additional verification
       Future.delayed(const Duration(seconds: 3), () {
         final isServiceActive = _realTimeTrackingService.isTracking;
         final isAnimationActive = _deliveryAnimationService.isRealTimeTracking;
 
-        dev.log('🔍 Post-resume verification:');
-        dev.log('  - Tracking service active: $isServiceActive');
-        dev.log('  - Animation service active: $isAnimationActive');
         dev.log(
           '  - State tracking active: ${state.isRealTimeDeliveryTrackingActive}',
         );
 
-        if (!isServiceActive || !isAnimationActive) {
-          dev.log('⚠️ Some services failed to resume properly');
-        }
+        if (!isServiceActive || !isAnimationActive) {}
       });
     } catch (e, stackTrace) {
-      dev.log('❌ Error resuming real-time tracking: $e');
-      dev.log('Stack trace: $stackTrace');
       emit(
         state.copyWith(
           isRealTimeDeliveryTrackingActive: false,
@@ -307,51 +277,38 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
   Future<void> _fetchLatestDeliveryStatus(String deliveryId) async {
     try {
-      dev.log('🔄 Fetching latest delivery status as fallback...');
-
       final response = await deliveryRepository.checkDeliveryStatus(deliveryId);
-      response.fold(
-        (failure) {
-          dev.log('❌ Failed to fetch delivery status: ${failure.message}');
-        },
-        (statusData) {
-          dev.log('✅ Got latest delivery status, updating state');
+      response.fold((failure) {}, (statusData) {
+        emit(state.copyWith(statusData: statusData));
 
-          emit(state.copyWith(statusData: statusData));
+        // If we now have driver info, try to resume tracking
+        if (statusData.driverId?.isNotEmpty == true) {
+          final persistedData = PersistedDeliveryData(
+            deliveryId: deliveryId,
+            status: state.status,
+            riderFound: state.riderFound,
+            deliveryInProgress: state.deliveryInProgress,
+            deliveryDriverHasArrived: state.deliveryDriverHasArrived,
+            isRealTimeDeliveryTrackingActive:
+                state.isRealTimeDeliveryTrackingActive,
+            deliveryRouteDisplayed: state.deliveryRouteDisplayed,
+            currentDeliverySpeed: state.currentDeliverySpeed,
+            lastDeliveryPositionUpdate: state.lastDeliveryPositionUpdate,
+            deliveryTrackingStatusMessage: state.deliveryTrackingStatusMessage,
+            currentDeliveryDriverPosition: state.currentDeliveryDriverPosition,
+            deliveryData: state.deliveryData,
+            deliveryDriverAccepted: state.deliveryDriverAccepted,
+            deliveryDriverStarted: state.deliveryDriverStarted,
+            polylines: state.deliveryRoutePolylines,
+            markers: state.deliveryRouteMarkers,
+            deliveryRequest: _currentDeliveryRequest,
+            deliveryStatusResponse: statusData,
+          );
 
-          // If we now have driver info, try to resume tracking
-          if (statusData.driverId?.isNotEmpty == true) {
-            final persistedData = PersistedDeliveryData(
-              deliveryId: deliveryId,
-              status: state.status,
-              riderFound: state.riderFound,
-              deliveryInProgress: state.deliveryInProgress,
-              deliveryDriverHasArrived: state.deliveryDriverHasArrived,
-              isRealTimeDeliveryTrackingActive:
-                  state.isRealTimeDeliveryTrackingActive,
-              deliveryRouteDisplayed: state.deliveryRouteDisplayed,
-              currentDeliverySpeed: state.currentDeliverySpeed,
-              lastDeliveryPositionUpdate: state.lastDeliveryPositionUpdate,
-              deliveryTrackingStatusMessage:
-                  state.deliveryTrackingStatusMessage,
-              currentDeliveryDriverPosition:
-                  state.currentDeliveryDriverPosition,
-              deliveryData: state.deliveryData,
-              deliveryDriverAccepted: state.deliveryDriverAccepted,
-              deliveryDriverStarted: state.deliveryDriverStarted,
-              polylines: state.deliveryRoutePolylines,
-              markers: state.deliveryRouteMarkers,
-              deliveryRequest: _currentDeliveryRequest,
-              deliveryStatusResponse: statusData,
-            );
-
-            _resumeRealTimeDeliveryTracking(persistedData);
-          }
-        },
-      );
-    } catch (e) {
-      dev.log('❌ Error fetching latest delivery status: $e');
-    }
+          _resumeRealTimeDeliveryTracking(persistedData);
+        }
+      });
+    } catch (e) {}
   }
 
   @override
@@ -359,9 +316,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     super.emit(state);
 
     if (state.hasActiveDelivery) {
-      _persistenceService.persistDeliveryState(state).catchError((e) {
-        dev.log('❌ Error persisting state: $e');
-      });
+      _persistenceService.persistDeliveryState(state).catchError((e) {});
     }
   }
 
@@ -408,16 +363,12 @@ class DeliveryCubit extends Cubit<DeliveryState> {
   }
 
   void _listenToDeliveryDriverStatus() {
-    dev.log('🔊 Setting up delivery driver status listeners');
-
     final socketService = getIt<SocketService>();
-    dev.log('Socket connected: ${socketService.isConnected}');
 
     _cancelAllSubscriptions();
 
     _deliveryDriverAcceptedSubscription = socketService.onDeliveryManAccepted
         .listen((data) async {
-          dev.log('🚚 Delivery driver accepted - showing static route');
           _stopSearchTimer();
 
           emit(
@@ -431,9 +382,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
           try {
             await _displayStaticDeliveryRoute();
-            dev.log('✅ Static delivery route displayed successfully');
           } catch (e) {
-            dev.log('❌ Error displaying delivery route: $e');
             emit(state.copyWith(errorMessage: 'Failed to display route: $e'));
           }
         });
@@ -458,7 +407,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
     _deliveryDriverArrivedSubscription = socketService.onDeliveryManArrived
         .listen((data) {
-          dev.log('🚚 Delivery driver arrived at pickup location');
           emit(
             state.copyWith(
               deliveryDriverArrived: data,
@@ -496,10 +444,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
   }
 
   Future<void> _startDeliveryMarkerAnimation() async {
-    dev.log('🎬 Starting delivery marker animation from pickup to destination');
-
     if (_currentDeliveryRequest == null) {
-      dev.log('❌ No current delivery request for animation');
       return;
     }
 
@@ -512,7 +457,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       );
 
       if (pickupCoordinates == null || destinationCoordinates == null) {
-        dev.log('❌ Failed to get coordinates for animation');
         return;
       }
 
@@ -524,8 +468,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         destinationCoordinates.latitude,
         destinationCoordinates.longitude,
       );
-
-      dev.log('🎬 Using existing driver marker for animation');
 
       _deliveryAnimationService.startRealTimeTracking(
         onMarkerUpdate: (position, rotation) {
@@ -547,7 +489,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         '✅ Delivery marker animation started with existing driver marker',
       );
     } catch (e) {
-      dev.log('❌ Error starting delivery marker animation: $e');
       emit(state.copyWith(errorMessage: 'Failed to start animation: $e'));
     }
   }
@@ -559,7 +500,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       final bearing = locationData['bearing']?.toDouble() ?? 0.0;
 
       if (latitude == null || longitude == null) {
-        dev.log('❌ Invalid location data received');
         return;
       }
 
@@ -584,9 +524,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       if (_currentDeliveryRequest != null) {
         _checkIfDriverReachedDestination(newPosition);
       }
-    } catch (e) {
-      dev.log('❌ Error processing real-time location update: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _checkIfDriverReachedDestination(LatLng currentPosition) async {
@@ -607,12 +545,9 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       final distance = _calculateDistanceInMeters(currentPosition, destination);
 
       if (distance <= 50.0) {
-        dev.log('🏁 Delivery driver has reached destination');
         _handleDeliveryDriverReachedDestination();
       }
-    } catch (e) {
-      dev.log('❌ Error checking destination arrival: $e');
-    }
+    } catch (e) {}
   }
 
   double _calculateBearing(LatLng start, LatLng end) {
@@ -642,7 +577,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
   }
 
   void _stopDeliveryAnimation() {
-    dev.log('🛑 Stopping delivery marker animation');
     _deliveryAnimationService.stopRealTimeTracking();
   }
 
@@ -674,8 +608,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
         _persistenceService.updateDeliveryDriverPosition(position, rotation);
       } else {
-        dev.log('⚠️ Driver marker missing - creating fallback marker');
-
         // Use consistent custom marker for fallback too
         final driverMarker = Marker(
           markerId: driverMarkerId,
@@ -703,21 +635,15 @@ class DeliveryCubit extends Cubit<DeliveryState> {
           '🎬 Driver marker updated: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)} (${rotation.toStringAsFixed(1)}°)',
         );
       }
-    } catch (e) {
-      dev.log('❌ Error updating delivery marker position: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _displayStaticDeliveryRoute() async {
-    dev.log('🗺️ Displaying static delivery route');
-
     if (_currentDeliveryRequest == null) {
-      dev.log('❌ No current delivery request to display route for');
       return;
     }
 
     try {
-      dev.log('Displaying route for accepted delivery');
       await _ensureDeliveryMarkerIcons();
 
       final pickupCoordinates = await _getCoordinatesFromAddress(
@@ -728,7 +654,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       );
 
       if (pickupCoordinates == null || destinationCoordinates == null) {
-        dev.log('❌ Failed to get coordinates for delivery locations');
         emit(
           state.copyWith(errorMessage: 'Failed to locate delivery addresses'),
         );
@@ -747,7 +672,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       await _displaySingleDestinationDeliveryRoute(pickup, destination);
       _focusCameraOnDeliveryRoute();
     } catch (e) {
-      dev.log('❌ Error displaying static delivery route: $e');
       emit(state.copyWith(errorMessage: 'Failed to display route: $e'));
     }
   }
@@ -776,11 +700,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
           currentDeliveryDriverPosition: pickup,
         ),
       );
-
-      dev.log('✅ Delivery route displayed with driver marker at pickup');
-    } else {
-      dev.log('❌ Failed to get delivery route: ${routeResult.errorMessage}');
-    }
+    } else {}
   }
 
   Map<MarkerId, Marker> _createDeliveryMarkersFromCoordinatesWithDriver(
@@ -828,7 +748,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
   Future<LatLng?> _getCoordinatesFromAddress(String address) async {
     try {
-      dev.log('🔍 Getting coordinates for address: $address');
       final predictions = await locationRepository.getPlacePredictions(address);
 
       if (predictions.isNotEmpty) {
@@ -841,10 +760,9 @@ class DeliveryCubit extends Cubit<DeliveryState> {
           return LatLng(placeDetails.latitude, placeDetails.longitude);
         }
       }
-      dev.log('❌ Could not get coordinates for address: $address');
+
       return null;
     } catch (e) {
-      dev.log('❌ Error getting coordinates for address $address: $e');
       return null;
     }
   }
@@ -854,18 +772,14 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       if (state.deliveryDriverMarkerIcon == null) {
         await _createDeliveryDriverMarkerIcon();
       }
-    } catch (e) {
-      dev.log('❌ Error creating delivery marker icons: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _createDeliveryDriverMarkerIcon() async {
     try {
       final driverIcon = await _getConsistentDriverMarker();
       emit(state.copyWith(deliveryDriverMarkerIcon: driverIcon));
-      dev.log('✅ Custom delivery driver marker icon created');
     } catch (e) {
-      dev.log('❌ Error creating delivery marker icons: $e');
       final defaultDriverIcon = BitmapDescriptor.defaultMarkerWithHue(
         BitmapDescriptor.hueBlue,
       );
@@ -885,7 +799,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       );
       return driverIcon;
     } catch (e) {
-      dev.log('❌ Failed to load custom marker, using default: $e');
       return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue);
     }
   }
@@ -956,8 +869,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
   }
 
   void _handleDeliveryDriverReachedDestination() {
-    dev.log('🏁 Delivery driver reached destination');
-
     _stopDeliveryAnimation();
     _stopRealTimeDeliveryTracking();
 
@@ -986,7 +897,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
       response.fold(
         (failure) {
-          dev.log('❌ Delivery request failed: ${failure.message}');
           emit(
             state.copyWith(
               status: DeliveryStatus.failure,
@@ -1023,7 +933,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         },
       );
     } catch (e) {
-      dev.log('❌ Exception in requestDelivery: $e');
       emit(
         state.copyWith(
           status: DeliveryStatus.failure,
@@ -1119,8 +1028,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         return;
       }
 
-      dev.log('🔴 Starting real-time tracking');
-
       final gmapsDestination = gmaps.LatLng(
         destination.latitude,
         destination.longitude,
@@ -1143,10 +1050,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
           deliveryTrackingStatusMessage: 'Real-time tracking started',
         ),
       );
-
-      dev.log('✅ Real-time delivery tracking started');
     } catch (e) {
-      dev.log('❌ Error starting real-time delivery tracking: $e');
       emit(
         state.copyWith(
           errorMessage: 'Failed to start delivery tracking: $e',
@@ -1208,7 +1112,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     );
 
     if (_realTimeTrackingService.hasReachedDestination(position)) {
-      dev.log('🏁 Delivery driver has reached destination');
       _handleDeliveryDriverReachedDestination();
     }
   }
@@ -1227,7 +1130,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
   void _updateDeliveryRouteOnMap(List<gmaps.LatLng> newRoutePoints) {
     try {
       if (state.deliveryRoutePolylines.isEmpty) {
-        dev.log('❌ No existing delivery route to update');
         return;
       }
 
@@ -1254,15 +1156,12 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         ),
       );
 
-      dev.log('✅ Delivery route updated on map');
-
       Future.delayed(const Duration(seconds: 3), () {
         if (!isClosed) {
           emit(state.copyWith(deliveryRouteRecalculated: false));
         }
       });
     } catch (e) {
-      dev.log('❌ Error updating delivery route on map: $e');
       emit(
         state.copyWith(
           deliveryTrackingStatusMessage: 'Delivery route update failed: $e',
@@ -1272,8 +1171,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
   }
 
   void _updateDeliveryTrackingStatus(String status) {
-    dev.log('📊 Enhanced delivery tracking status: $status');
-
     final currentTime = DateTime.now();
     if (_lastStatusUpdate != null &&
         currentTime.difference(_lastStatusUpdate!).inSeconds < 2 &&
@@ -1311,8 +1208,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
   }
 
   void _stopRealTimeDeliveryTracking() {
-    dev.log('🛑 Stopping real-time delivery tracking');
-
     _realTimeTrackingService.stopTracking();
 
     emit(
@@ -1422,9 +1317,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
           ),
         );
       }
-    } catch (e) {
-      dev.log('❌ Error calculating delivery route progress: $e');
-    }
+    } catch (e) {}
 
     return null;
   }
@@ -1555,9 +1448,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       );
     }
 
-    if (serviceActive && !animationActive) {
-      dev.log('🚨 Animation service not active while tracking is active');
-    }
+    if (serviceActive && !animationActive) {}
 
     return serviceActive && stateActive;
   }
@@ -1697,7 +1588,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
       final predictions = await locationRepository.getPlacePredictions(query);
 
-      dev.log('Found ${predictions.length} predictions for $query');
       emit(
         state.copyWith(
           pickupPredictions: isPickup ? predictions : state.pickupPredictions,
@@ -1713,7 +1603,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
         ),
       );
     } catch (e) {
-      dev.log('Error searching places: $e');
       emit(
         state.copyWith(
           errorMessage: 'Failed to search locations: ${e.toString()}',
@@ -1939,22 +1828,17 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     try {
       final locations = await locationRepository.getRecentLocations();
       emit(state.copyWith(recentLocations: locations));
-    } catch (e) {
-      dev.log('Error fetching recent locations: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> clearRecentLocations() async {
     try {
       await locationRepository.clearRecentLocations();
       emit(state.copyWith(recentLocations: []));
-    } catch (e) {
-      dev.log('Error clearing recent locations: $e');
-    }
+    } catch (e) {}
   }
 
   void setActiveDestinationIndex(int index) {
-    dev.log('Setting active destination index to $index');
     emit(
       state.copyWith(
         activeDestinationIndex: index,
@@ -1966,8 +1850,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
   @override
   Future<void> close() {
-    dev.log('🗑️ Disposing DeliveryCubit...');
-
     _debounceTimer?.cancel();
     _timer?.cancel();
 
@@ -1978,7 +1860,6 @@ class DeliveryCubit extends Cubit<DeliveryState> {
     _stopRealTimeDeliveryTracking();
     _cancelAllSubscriptions();
 
-    dev.log('✅ DeliveryCubit disposed successfully');
     return super.close();
   }
 }

@@ -97,7 +97,6 @@ class DeliveryDataSourceImpl implements IDeliveryRemoteDataSource {
         headers: {'Authorization': 'Bearer ${await AppPreferences.getToken()}'},
       );
       final decoded = json.decode(response.body) as Map<String, dynamic>;
-      log('checkDeliveryStatus(): $decoded');
       if (decoded.containsKey('msg')) {
         throw ServerException(decoded['msg'].toString());
       }
