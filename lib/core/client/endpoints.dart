@@ -23,7 +23,7 @@ class Endpoints {
   static const String rideStatus = 'ride/';
   static const String trackDelivery = 'delivery/';
   static const String getRides = 'ride/rideHistory';
-  static const String messages = 'ride';
+  static const String messages = 'ride/';
   static const String deliveryMessages = 'delivery/';
   static const String cancelRide = 'ride/';
   static const String location = '/location';

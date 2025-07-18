@@ -125,17 +125,14 @@ void _persistCurrentStateAsync() {
     try {
       await _persistenceService.persistCompleteRideState(state);
 
-      // Persist markers separately for better handling
       if (state.routeMarkers.isNotEmpty) {
         await _persistenceService.persistMarkers(state.routeMarkers);
       }
 
-      // Persist polylines separately
       if (state.routePolylines.isNotEmpty) {
         await _persistenceService.persistPolylines(state.routePolylines);
       }
 
-      // Also persist driver location if available
       if (state.currentDriverPosition != null) {
         await _persistenceService.persistDriverLocation(
           state.currentDriverPosition!,

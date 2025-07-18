@@ -7,7 +7,6 @@ import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
-/// A service to handle Socket.IO connections and events.
 class SocketService {
   io.Socket? _socket;
   bool _isConnected = false;
@@ -92,10 +91,8 @@ class SocketService {
   Stream<Map<String, dynamic>> get onDeliveryManLocation =>
       _deliveryManLocationController.stream;
 
-  /// Get the connection status
   bool get isConnected => _isConnected;
 
-  /// Initialize and connect to the Socket.IO server
   void connect(
     String baseUrl, {
     String? authToken,
@@ -312,7 +309,7 @@ class SocketService {
         status: 'delivery_message',
         message: data['notification']['body'] as String,
       );
-      _driverMessageController.add(DriverMessage.fromJson(data));
+      _deliveryMessageController.add(DeliveryManMessage.fromJson(data));
     });
   }
 

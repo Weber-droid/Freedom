@@ -1,9 +1,9 @@
 import 'dart:developer';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:freedom/app_preference.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/home/delivery_cubit/delivery_cubit.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
@@ -11,12 +11,15 @@ import 'package:freedom/feature/message_driver/cubit/in_app_message_cubit.dart';
 import 'package:freedom/feature/message_driver/models/message_models.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';
+import 'package:freedom/shared/utils/context_helpers.dart';
 import 'package:freedom/shared/widgets/buttons.dart';
 import 'package:freedom/shared/widgets/text_field_factory.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class MessageDriverScreen extends StatefulWidget {
-  const MessageDriverScreen({super.key});
+  const MessageDriverScreen({super.key, this.messageContext});
+
+  final MessageContext? messageContext;
   static const routeName = '/message_driver_screen';
 
   @override
@@ -30,6 +33,7 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
   late RideCubit rideCubit;
   late DeliveryCubit deliveryCubit;
   String? _currentUserId;
+  MessageContextInfo? _contextInfo;
 
   @override
   void initState() {
@@ -37,31 +41,76 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
     rideCubit = context.read<RideCubit>();
     deliveryCubit = context.read<DeliveryCubit>();
     _initializeCurrentUserId();
+    _determineContext();
     _initializeChat();
+  }
+
+  void _determineContext() {
+    if (widget.messageContext != null) {
+      _contextInfo = _getContextInfoForType(widget.messageContext!);
+    } else {
+      _contextInfo = MessageContextHelper.getCurrentContext(context);
+    }
+
+    if (_contextInfo == null) {
+      log('❌ No active ride or delivery found');
+    } else {
+      log(
+        '✅ Using context: ${_contextInfo!.context.name} with ID: ${_contextInfo!.contextId}',
+      );
+    }
+  }
+
+  MessageContextInfo? _getContextInfoForType(MessageContext contextType) {
+    switch (contextType) {
+      case MessageContext.ride:
+        final rideId = rideCubit.state.driverAccepted?.rideId;
+        if (rideId?.isNotEmpty == true) {
+          return MessageContextInfo(
+            context: MessageContext.ride,
+            contextId: rideId!,
+            driverName: rideCubit.state.driverAccepted?.driverName ?? 'Driver',
+          );
+        }
+        break;
+      case MessageContext.delivery:
+        final deliveryId =
+            deliveryCubit.state.deliveryDriverAccepted?.deliveryId ??
+            deliveryCubit.state.currentDeliveryId;
+        if (deliveryId?.isNotEmpty == true) {
+          return MessageContextInfo(
+            context: MessageContext.delivery,
+            contextId: deliveryId!,
+            driverName: 'Delivery Driver',
+          );
+        }
+        break;
+    }
+    return null;
   }
 
   Future<void> _initializeChat() async {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       try {
-        final rideId =
-            rideCubit.state.driverAccepted?.driverId ??
-            await AppPreferences.getRideId();
-        final deliveryId =
-            deliveryCubit.state.deliveryData?.deliveryId ??
-            await AppPreferences.getDeliveryId() ??
-            '';
-
-        if (rideId.isNotEmpty) {
-          final messageCubit = context.read<InAppMessageCubit>();
-          await messageCubit.retrieveMessagFromCache();
-          messageCubit.startListeningToDriverMessages(rideId);
-          _scrollToBottom();
-          log('Chat initialized for ride: $rideId');
-        } else if (deliveryId.isNotEmpty) {
-          final messageCubit = context.read<InAppMessageCubit>();
-          await messageCubit.retrieveMessagFromCache();
-          messageCubit.startListeningToDriverMessages(deliveryId);
+        if (_contextInfo == null) {
+          log('❌ Cannot initialize chat: no context info');
+          return;
         }
+
+        log(
+          'Initializing chat with ${_contextInfo!.context.name}: ${_contextInfo!.contextId}',
+        );
+
+        final messageCubit = context.read<InAppMessageCubit>();
+        await messageCubit.retrieveMessagesFromCache(
+          _contextInfo!.contextId,
+          _contextInfo!.context,
+        );
+        messageCubit.startListeningToDriverMessages(
+          _contextInfo!.contextId,
+          _contextInfo!.context,
+        );
+        _scrollToBottom();
       } catch (e) {
         log('Error initializing chat: $e');
       }
@@ -72,6 +121,7 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
     _currentUserId = await RegisterLocalDataSource().getUser().then(
       (user) => user?.userId,
     );
+    log('Current user ID: $_currentUserId');
     setState(() {});
   }
 
@@ -87,25 +137,83 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
     }
   }
 
+  String _getContextTitle() {
+    if (_contextInfo == null) return 'Message';
+
+    switch (_contextInfo!.context) {
+      case MessageContext.ride:
+        return 'Communicate securely with Driver';
+      case MessageContext.delivery:
+        return 'Communicate securely with Delivery Driver';
+    }
+  }
+
+  String _getNoActiveContextMessage() {
+    if (_contextInfo == null) return 'No active ride or delivery found';
+
+    switch (_contextInfo!.context) {
+      case MessageContext.ride:
+        return 'No active ride found';
+      case MessageContext.delivery:
+        return 'No active delivery found';
+    }
+  }
+
   @override
   void dispose() {
+    messageController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Show error if no context
+    if (_contextInfo == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Messages'),
+          backgroundColor: const Color(0xFF8B7CB6),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 64, color: Colors.grey),
+              const SizedBox(height: 16),
+              Text(
+                _getNoActiveContextMessage(),
+                style: GoogleFonts.poppins(
+                  fontSize: 16,
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: CustomChatAppBar(
-        driverName: rideCubit.state.driverAccepted?.driverName ?? '',
+        driverName: _contextInfo!.driverName,
+        contextType: _contextInfo!.context,
       ),
       backgroundColor: Colors.white,
       body: BlocConsumer<InAppMessageCubit, InAppMessageState>(
         listener: (context, state) {
           if (state is InAppMessageError) {
+            log('InAppMessageError: ${state.error}');
             ScaffoldMessenger.of(
               context,
             ).showSnackBar(SnackBar(content: Text(state.error)));
           } else if (state is InAppMessageLoaded) {
+            log('InAppMessageLoaded: ${state.inAppMessages.length} messages');
             _scrollToBottom();
           }
         },
@@ -120,17 +228,30 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
                   Text('Error: ${state.error}'),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed:
+                    onPressed: () {
+                      if (_contextInfo != null) {
                         context
                             .read<InAppMessageCubit>()
-                            .retrieveMessagFromCache,
+                            .retrieveMessagesFromCache(
+                              _contextInfo!.contextId,
+                              _contextInfo!.context,
+                            );
+                      }
+                    },
                     child: const Text('Retry'),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<InAppMessageCubit>().refreshMessages();
+                    },
+                    child: const Text('Refresh Messages'),
                   ),
                 ],
               ),
             );
           } else if (state is InAppMessageLoaded) {
-            return _chatView(context, state, rideCubit);
+            return _chatView(context, state);
           } else {
             return const Center(child: CircularProgressIndicator.adaptive());
           }
@@ -139,11 +260,7 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
     );
   }
 
-  Widget _chatView(
-    BuildContext context,
-    InAppMessageState state,
-    RideCubit rideCubit,
-  ) {
+  Widget _chatView(BuildContext context, InAppMessageState state) {
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,13 +272,31 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Communicate securely with Driver',
+                  _getContextTitle(),
                   style: GoogleFonts.poppins(
                     color: Colors.black,
                     fontSize: 14.24,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
+                // Debug info (remove in production)
+                if (kDebugMode && _contextInfo != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${_contextInfo!.context.name}Id: ${_contextInfo!.contextId}',
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey,
+                      fontSize: 10,
+                    ),
+                  ),
+                  Text(
+                    'Messages: ${(state as InAppMessageLoaded).inAppMessages.length}',
+                    style: GoogleFonts.poppins(
+                      color: Colors.grey,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -224,30 +359,37 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
                 ),
                 const SizedBox(height: 16),
                 FreedomButton(
-                  onPressed: () async {
-                    if (message.isNotEmpty) {
-                      final deliveryId = await AppPreferences.getDeliveryId();
-                      log('deliveryId: $deliveryId');
-                      if (deliveryId != null) {
-                        context.read<InAppMessageCubit>().sendDeliveryMessage(
-                          message,
-                          deliveryId,
-                        );
-                      } else {
-                        context.read<InAppMessageCubit>().sendMessage(
-                          message,
-                          rideCubit.state.driverAccepted?.driverId ?? '',
-                        );
-                      }
+                  onPressed:
+                      message.trim().isEmpty
+                          ? null
+                          : () async {
+                            if (_contextInfo == null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(_getNoActiveContextMessage()),
+                                ),
+                              );
+                              return;
+                            }
 
-                      setState(() {
-                        message = '';
-                        messageController.clear();
-                      });
-                      // Scroll to bottom after sending message
-                      _scrollToBottom();
-                    }
-                  },
+                            log(
+                              'Sending message: $message for ${_contextInfo!.context.name}: ${_contextInfo!.contextId}',
+                            );
+
+                            await context.read<InAppMessageCubit>().sendMessage(
+                              message.trim(),
+                              _contextInfo!.contextId,
+                              _contextInfo!.context,
+                            );
+
+                            // Clear the message after sending
+                            messageController.clear();
+                            setState(() {
+                              message = '';
+                            });
+
+                            _scrollToBottom();
+                          },
                   useGradient: true,
                   titleColor: Colors.white,
                   buttonTitle: Text(
@@ -271,16 +413,29 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
   }
 
   Widget _buildChatMessages(List<MessageModels> messages) {
+    log('Building chat messages: ${messages.length} messages');
+
     if (messages.isEmpty) {
       return Center(
-        child: Text(
-          'No messages yet. Start the conversation!',
-          style: GoogleFonts.poppins(fontSize: 14),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'No messages yet. Start the conversation!',
+              style: GoogleFonts.poppins(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                context.read<InAppMessageCubit>().refreshMessages();
+              },
+              child: const Text('Refresh'),
+            ),
+          ],
         ),
       );
     }
 
-    // Sort messages by timestamp to ensure correct order
     final sortedMessages = List<MessageModels>.from(messages);
     sortedMessages.sort((a, b) {
       final timeA = a.timestamp ?? DateTime.now();
@@ -291,10 +446,9 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
     return ListView.builder(
       controller: _scrollController,
       padding: const EdgeInsets.symmetric(horizontal: 25),
-      reverse: true, // This makes newest messages appear at bottom
+      reverse: true,
       itemCount: sortedMessages.length,
       itemBuilder: (context, index) {
-        // Since reverse: true, we need to reverse the index
         final reversedIndex = sortedMessages.length - 1 - index;
         final message = sortedMessages[reversedIndex];
 
@@ -319,7 +473,6 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Show the sender's name for incoming messages
                 if (!isSender && message.driverName != null)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4),
@@ -354,7 +507,6 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
                         fontSize: 10,
                       ),
                     ),
-                    // Show delivery status for sent messages
                     if (isSender) ...[
                       const SizedBox(width: 4),
                       _buildDeliveryStatus(message.status),
@@ -398,6 +550,7 @@ class _MessageDriverScreenState extends State<MessageDriverScreen> {
 
 class CustomChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String driverName;
+  final MessageContext contextType;
   final VoidCallback? onBackPressed;
   final VoidCallback? onCallPressed;
   final bool isOnline;
@@ -405,6 +558,7 @@ class CustomChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   const CustomChatAppBar({
     super.key,
     required this.driverName,
+    required this.contextType,
     this.onBackPressed,
     this.onCallPressed,
     this.isOnline = true,
@@ -414,16 +568,23 @@ class CustomChatAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return Container(
       height: preferredSize.height,
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF8B7CB6), // Light purple
-            Color(0xFF6B5B95), // Medium purple
-            Color(0xFF4A4A6A), // Darker purple
-          ],
-          stops: [0.0, 0.5, 1.0],
+          colors:
+              contextType == MessageContext.delivery
+                  ? [
+                    const Color(0xFF6B7CB6),
+                    const Color(0xFF4B5B95),
+                    const Color(0xFF3A4A6A),
+                  ]
+                  : [
+                    const Color(0xFF8B7CB6),
+                    const Color(0xFF6B5B95),
+                    const Color(0xFF4A4A6A),
+                  ],
+          stops: const [0.0, 0.5, 1.0],
         ),
       ),
       child: SafeArea(
@@ -431,19 +592,16 @@ class CustomChatAppBar extends StatelessWidget implements PreferredSizeWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
-              // Back Button
               _buildRoundedButton(
                 icon: Icons.arrow_back_ios_new,
                 onPressed: onBackPressed ?? () => Navigator.pop(context),
               ),
-
-              // Driver Info (Centered)
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      driverName,
+                      driverName.isNotEmpty ? driverName : _getDefaultTitle(),
                       style: GoogleFonts.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -478,8 +636,6 @@ class CustomChatAppBar extends StatelessWidget implements PreferredSizeWidget {
                   ],
                 ),
               ),
-
-              // Call Button
               _buildRoundedButton(
                 icon: Icons.phone,
                 onPressed: onCallPressed ?? () {},
@@ -489,6 +645,15 @@ class CustomChatAppBar extends StatelessWidget implements PreferredSizeWidget {
         ),
       ),
     );
+  }
+
+  String _getDefaultTitle() {
+    switch (contextType) {
+      case MessageContext.ride:
+        return 'Driver';
+      case MessageContext.delivery:
+        return 'Delivery Driver';
+    }
   }
 
   Widget _buildRoundedButton({
