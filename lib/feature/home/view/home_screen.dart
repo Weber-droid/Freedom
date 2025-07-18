@@ -1554,15 +1554,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  // FIXED: Simplified _getCombinedMarkers with less verbose logging
   Set<Marker> _getCombinedMarkers(
     HomeState homeState,
     RideState rideState,
     DeliveryState deliveryState,
   ) {
     final markers = <Marker>{};
-
-    // Priority: Delivery markers > Ride markers > Home markers
     if (deliveryState.deliveryRouteDisplayed &&
         deliveryState.deliveryRouteMarkers.isNotEmpty) {
       markers.addAll(deliveryState.deliveryRouteMarkers.values);
@@ -1573,7 +1570,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       markers.addAll(rideState.routeMarkers.values);
       dev.log('📍 Using ride markers: ${rideState.routeMarkers.length}');
 
-      // DEBUG: Log each marker being added
       for (final marker in rideState.routeMarkers.values) {
         dev.log(
           '🔍 Adding marker: ${marker.markerId.value} at ${marker.position}',

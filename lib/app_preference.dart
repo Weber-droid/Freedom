@@ -91,9 +91,9 @@ class AppPreferences {
     await prefs.setString(_deliveryIdKey, deliveryId);
   }
 
-  static Future<String?> getDeliveryId() async {
+  static Future<String> getDeliveryId() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_deliveryIdKey);
+    return prefs.getString(_deliveryIdKey) ?? '';
   }
 
   static Future<void> saveDeliveryState(

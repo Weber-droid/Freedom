@@ -176,8 +176,6 @@ class AppLifecycleManager extends WidgetsBindingObserver {
       if (_currentDeliveryId != null) {
         dev.log('🔍 Checking delivery status after background period...');
         final deliveryCubit = getIt<DeliveryCubit>();
-        // Assuming similar method exists for delivery
-        // await deliveryCubit.checkDeliveryStatus(_currentDeliveryId!);
       }
     } catch (e) {
       dev.log('❌ Error handling long background return: $e');

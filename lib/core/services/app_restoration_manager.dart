@@ -9,6 +9,7 @@ import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
 import 'package:freedom/core/services/socket_service.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/shared/enums/enums.dart';
+import 'package:freedom/shared/utils/marker_converter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 /// Manages the complete ride restoration process after app restart
@@ -304,8 +305,6 @@ class RideRestorationManager {
     }
   }
 
-  /// Restore static route state (driver accepted, not started)
-  /// Enhanced restore static route state with proper marker restoration
   Future<RideRestorationResult> _restoreStaticRouteState(
     PersistedRideData persistedData,
   ) async {
@@ -317,9 +316,11 @@ class RideRestorationManager {
     final restoredPolylines =
         await _persistenceService.loadPersistedPolylines() ?? <Polyline>{};
     final routeData = await _persistenceService.loadRouteData();
-
+        final convertedMarkers = await MarkerConverter.convertRestoredMarkers(
+      restoredMarkers,
+    );
     dev.log(
-      '📍 Restored ${restoredMarkers.length} markers and ${restoredPolylines.length} polylines',
+      '📍 Restored ${restoredMarkers.entries.map((e) => e.value.toJson())} markers and ${restoredPolylines.length} polylines',
     );
 
     return RideRestorationResult.success(
@@ -361,7 +362,6 @@ class RideRestorationManager {
           nearestDriverDistance: persistedData.nearestDriverDistance,
           lastRouteRecalculation: persistedData.lastRouteRecalculation,
           cameraTarget: persistedData.cameraTarget,
-          // Use the restored route data
           routePolylines: restoredPolylines,
           routeMarkers: restoredMarkers,
           routeSegments: persistedData.routeSegments,
@@ -373,7 +373,6 @@ class RideRestorationManager {
     );
   }
 
-  /// Restore real-time tracking state (ride in progress)
   Future<RideRestorationResult> _restoreRealTimeTrackingState(
     PersistedRideData persistedData,
   ) async {
@@ -403,8 +402,7 @@ class RideRestorationManager {
           showRiderFound: true,
           riderAvailable: true,
           rideInProgress: true,
-          isRealTimeTrackingActive:
-              false, // Will be activated after restoration
+          isRealTimeTrackingActive: false,
           routeDisplayed: persistedData.routeDisplayed,
           currentDriverPosition:
               lastLocation?.latLng ?? persistedData.currentDriverPosition,

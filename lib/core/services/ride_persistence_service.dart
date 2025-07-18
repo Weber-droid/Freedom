@@ -8,7 +8,6 @@ import 'package:freedom/feature/home/models/request_ride_model.dart';
 import 'package:freedom/feature/home/models/request_ride_response.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
-import 'package:freedom/shared/enums/enums.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -189,6 +188,7 @@ class RidePersistenceService {
       if (polylinesJson == null) return null;
 
       final polylinesData = jsonDecode(polylinesJson) as Map<String, dynamic>;
+      dev.log('PolyLibejson data: $polylinesData');
       final restoredPolylines = <Polyline>{};
 
       for (final entry in polylinesData.entries) {
@@ -203,7 +203,7 @@ class RidePersistenceService {
                   ),
                 )
                 .toList();
-
+        log('points: $points');
         final polyline = Polyline(
           polylineId: PolylineId(polylineData['polylineId'] as String),
           points: points,
@@ -550,7 +550,6 @@ class RidePersistenceService {
     return rideId != null && stateData != null;
   }
 
-  /// Check if app was killed during active ride
   Future<bool> wasAppKilledDuringRide() async {
     final appStateJson = _prefs.getString(_appStateKey);
     if (appStateJson == null) return false;
@@ -859,7 +858,6 @@ class PersistedRideData {
     Map<String, dynamic> json,
   ) {
     try {
-      // Deserialize polylines
       Set<Polyline>? polylines;
       final polylinesData = json['routePolylines'] as List<dynamic>?;
       if (polylinesData != null && polylinesData.isNotEmpty) {
@@ -868,7 +866,6 @@ class PersistedRideData {
         );
       }
 
-      // Deserialize markers
       Map<MarkerId, Marker>? markers;
       final markersData = json['routeMarkers'] as List<dynamic>?;
       if (markersData != null && markersData.isNotEmpty) {
