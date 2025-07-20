@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:freedom/core/services/push_notification_service/socket_delivery_model.dart';
 import 'package:freedom/core/services/push_notification_service/socket_ride_models.dart';
 import 'package:freedom/core/services/socket_service.dart';
@@ -79,9 +81,10 @@ class UnifiedMessageStream {
       (msg) => RideDriverMessage(msg) as UnifiedDriverMessage,
     );
 
-    final deliveryStream = socketService.onDeliveryMessage.map(
-      (msg) => DeliveryDriverMessage(msg) as UnifiedDriverMessage,
-    );
+    final deliveryStream = socketService.onDeliveryMessage.map((msg) {
+      log('Received delivery message: ${msg.notification.body}');
+      return DeliveryDriverMessage(msg) as UnifiedDriverMessage;
+    });
 
     return StreamGroup.merge([rideStream, deliveryStream]);
   }

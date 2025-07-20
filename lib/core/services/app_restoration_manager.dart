@@ -289,11 +289,26 @@ class RideRestorationManager {
     final restoredPolylines =
         await _persistenceService.loadPersistedPolylines() ?? <Polyline>{};
     final routeData = await _persistenceService.loadRouteData();
-    final convertedMarkers = await MarkerConverter.convertRestoredMarkers(
-      restoredMarkers,
-    );
+
+    // Convert restored markers if needed
+    Map<MarkerId, Marker> convertedMarkers = {};
+    try {
+      final stringKeyMarkers = await MarkerConverter.convertRestoredMarkers(
+        restoredMarkers,
+      );
+
+      // Convert Map<String, Marker> to Map<MarkerId, Marker>
+      for (final entry in stringKeyMarkers.entries) {
+        final markerId = MarkerId(entry.key);
+        convertedMarkers[markerId] = entry.value;
+      }
+    } catch (e) {
+      dev.log('⚠️ Marker conversion failed: $e, using original markers');
+      convertedMarkers = restoredMarkers;
+    }
+
     dev.log(
-      '📍 Restored ${restoredMarkers.entries.map((e) => e.value.toJson())} markers and ${restoredPolylines.length} polylines',
+      '📍 Restored ${convertedMarkers.length} markers and ${restoredPolylines.length} polylines',
     );
 
     return RideRestorationResult.success(
@@ -306,7 +321,7 @@ class RideRestorationManager {
           riderAvailable: true,
           showStackedBottomSheet: false,
           routeDisplayed:
-              restoredMarkers.isNotEmpty || restoredPolylines.isNotEmpty,
+              convertedMarkers.isNotEmpty || restoredPolylines.isNotEmpty,
           currentDriverPosition: persistedData.currentDriverPosition,
           paymentMethod: persistedData.paymentMethod ?? 'cash',
           isMultiDestination: persistedData.isMultiDestination,
@@ -336,7 +351,7 @@ class RideRestorationManager {
           lastRouteRecalculation: persistedData.lastRouteRecalculation,
           cameraTarget: persistedData.cameraTarget,
           routePolylines: restoredPolylines,
-          routeMarkers: restoredMarkers,
+          routeMarkers: convertedMarkers,
           routeSegments: persistedData.routeSegments,
         ),
         nextAction: RestorationAction.displayStaticRoute,
@@ -559,16 +574,34 @@ class RideRestorationManager {
           break;
 
         case RestorationAction.displayStaticRoute:
+          // Set the current ride request in the cubit first
+          if (restoredState.rideState.rideRequestModel != null) {
+            rideCubit.currentRideRequest =
+                restoredState.rideState.rideRequestModel;
+          }
+
           rideCubit.emit(restoredState.rideState);
           await _restoreStaticRoute(rideCubit, restoredState);
           break;
 
         case RestorationAction.resumeRealTimeTracking:
+          // Set the current ride request in the cubit first
+          if (restoredState.rideState.rideRequestModel != null) {
+            rideCubit.currentRideRequest =
+                restoredState.rideState.rideRequestModel;
+          }
+
           rideCubit.emit(restoredState.rideState);
           await _restoreRealTimeTracking(rideCubit, restoredState);
           break;
 
         case RestorationAction.showDriverArrived:
+          // Set the current ride request in the cubit first
+          if (restoredState.rideState.rideRequestModel != null) {
+            rideCubit.currentRideRequest =
+                restoredState.rideState.rideRequestModel;
+          }
+
           rideCubit.emit(restoredState.rideState);
           break;
 
@@ -595,16 +628,25 @@ class RideRestorationManager {
           '🗺️ Restoring route with ${restoredState.routeData!.routePoints.length} points',
         );
 
+        // Use the public restoreStaticRoute method
         await rideCubit.restoreStaticRoute();
         rideCubit.focusCameraOnRoute();
       } else {
         dev.log('🔄 Regenerating route from ride request');
-        if (rideCubit.currentRideRequest != null) {
-          await rideCubit.displayStaticRouteOnly();
-        }
+        // Since _displayStaticRoute is private, we need to trigger it through restoration
+        await rideCubit.restoreStaticRoute();
       }
     } catch (e) {
       dev.log('❌ Error restoring static route: $e');
+      // Fallback: restore from persisted data if available
+      try {
+        await rideCubit.restoreFromPersistedData(
+          await _persistenceService.loadCompleteRideState() ??
+              _createFallbackPersistedData(restoredState),
+        );
+      } catch (fallbackError) {
+        dev.log('❌ Fallback restoration failed: $fallbackError');
+      }
     }
   }
 
@@ -615,16 +657,19 @@ class RideRestorationManager {
     try {
       dev.log('🔴 Restoring real-time tracking...');
 
+      // First restore the static route
       await _restoreStaticRoute(rideCubit, restoredState);
 
       await Future.delayed(const Duration(milliseconds: 1000));
 
+      // Use the public restoreRealTimeTracking method
       await rideCubit.restoreRealTimeTracking();
 
       if (restoredState.lastKnownLocation != null) {
         final location = restoredState.lastKnownLocation!;
         dev.log('📍 Updating to last known position: ${location.latLng}');
 
+        // Use the public method to handle position updates
         rideCubit.handleRealTimePositionUpdate(
           location.latLng,
           location.bearing ?? 0.0,
@@ -642,6 +687,12 @@ class RideRestorationManager {
       dev.log('✅ Real-time tracking restoration completed');
     } catch (e) {
       dev.log('❌ Error restoring real-time tracking: $e');
+      // Fallback to static route restoration
+      try {
+        await _restoreStaticRoute(rideCubit, restoredState);
+      } catch (fallbackError) {
+        dev.log('❌ Fallback to static route failed: $fallbackError');
+      }
     }
   }
 
@@ -658,12 +709,61 @@ class RideRestorationManager {
         await Future.delayed(const Duration(seconds: 2));
       }
 
+      // Use the private method through reflection or trigger it indirectly
+      // Since _listenToDriverStatus is private, we'll call a public method that triggers it
       rideCubit.listenToDriverStatus();
 
       dev.log('✅ Socket connection re-established');
     } catch (e) {
       dev.log('❌ Error re-establishing socket connection: $e');
     }
+  }
+
+  /// Create fallback persisted data from restored state
+  PersistedRideData _createFallbackPersistedData(
+    RestoredRideState restoredState,
+  ) {
+    final state = restoredState.rideState;
+
+    return PersistedRideData(
+      rideId: state.currentRideId,
+      status: state.status,
+      rideResponse: state.rideResponse,
+      showRiderFound: state.showRiderFound,
+      riderAvailable: state.riderAvailable,
+      isSearching: state.isSearching,
+      searchTimeElapsed: state.searchTimeElapsed,
+      rideInProgress: state.rideInProgress,
+      driverHasArrived: state.driverHasArrived,
+      isRealTimeTrackingActive: state.isRealTimeTrackingActive,
+      isMultiDestination: state.isMultiDestination,
+      paymentMethod: state.paymentMethod,
+      currentSpeed: state.currentSpeed,
+      lastPositionUpdate: state.lastPositionUpdate,
+      routeRecalculated: state.routeRecalculated,
+      routeProgress: state.routeProgress,
+      driverOffRoute: state.driverOffRoute,
+      driverAnimationComplete: state.driverAnimationComplete,
+      currentSegmentIndex: state.currentSegmentIndex,
+      estimatedDistance: state.estimatedDistance,
+      estimatedTimeArrival: state.estimatedTimeArrival,
+      nearestDriverDistance: state.nearestDriverDistance,
+      lastRouteRecalculation: state.lastRouteRecalculation,
+      currentDriverPosition: state.currentDriverPosition,
+      cameraTarget: state.cameraTarget,
+      rideRequest: state.rideRequestModel,
+      driverAccepted: state.driverAccepted,
+      driverStarted: state.driverStarted,
+      driverArrived: state.driverArrived,
+      driverCompleted: state.driverCompleted,
+      driverCancelled: state.driverCancelled,
+      driverRejected: state.driverRejected,
+      routeDisplayed: state.routeDisplayed,
+      polylines: state.routePolylines,
+      markers: state.routeMarkers,
+      routeSegments: state.routeSegments,
+      timestamp: DateTime.now().toIso8601String(),
+    );
   }
 }
 

@@ -916,6 +916,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
                 deliveryData: deliveryResponse.data,
                 showDeliverySearchSheet: true,
                 currentDeliveryId: deliveryResponse.data?.deliveryId,
+                deliveryModel: deliveryRequestModel,
                 isSearching: true,
                 riderFound: false,
               ),
@@ -1069,7 +1070,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       state.copyWith(
         shouldUpdateCamera: true,
         cameraTarget: position,
-        streetLevelZoom: 16.5,
+        streetLevelZoom: 30,
       ),
     );
 

@@ -60,6 +60,7 @@ class DeliveryState extends Equatable {
     this.deliveryDriverMarkerIcon,
     this.streetLevelZoom,
     this.statusData,
+    this.deliveryModel,
   });
 
   final DeliveryStatus status;
@@ -117,7 +118,7 @@ class DeliveryState extends Equatable {
   final BitmapDescriptor? deliveryDriverMarkerIcon;
   final double? streetLevelZoom;
   final DeliveryStatusResponse? statusData;
-
+  final DeliveryModel? deliveryModel;
   @override
   List<Object?> get props => [
     status,
@@ -167,6 +168,7 @@ class DeliveryState extends Equatable {
     deliveryDriverMarkerIcon,
     streetLevelZoom,
     statusData,
+    deliveryModel,
   ];
 
   DeliveryState copyWith({
@@ -217,6 +219,7 @@ class DeliveryState extends Equatable {
     BitmapDescriptor? deliveryDriverMarkerIcon,
     double? streetLevelZoom,
     DeliveryStatusResponse? statusData,
+    DeliveryModel? deliveryModel,
   }) {
     return DeliveryState(
       status: status ?? this.status,
@@ -294,6 +297,7 @@ class DeliveryState extends Equatable {
           deliveryDriverMarkerIcon ?? this.deliveryDriverMarkerIcon,
       streetLevelZoom: streetLevelZoom ?? this.streetLevelZoom,
       statusData: statusData ?? this.statusData,
+      deliveryModel: deliveryModel ?? this.deliveryModel,
     );
   }
 

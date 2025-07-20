@@ -219,12 +219,14 @@ class SocketService {
     });
 
     _socket!.on('ride_message', (data) {
+      log('ride_message: $data');
       getIt<PushNotificationService>().showRideStatusNotification(
         status: 'ride_message',
         message: data['notification']['body'] as String,
       );
       _driverMessageController.add(DriverMessage.fromJson(data));
     });
+
     _socket!.on('driver_location_update', (data) {
       log('Driver location update: $data');
       try {
@@ -305,11 +307,12 @@ class SocketService {
     });
 
     _socket!.on('delivery_message', (data) {
-      getIt<PushNotificationService>().showRideStatusNotification(
-        status: 'delivery_message',
-        message: data['notification']['body'] as String,
-      );
-      _deliveryMessageController.add(DeliveryManMessage.fromJson(data));
+      // log('delivery_message: $data');
+      // getIt<PushNotificationService>().showRideStatusNotification(
+      //   status: 'delivery_message',
+      //   message: data['notification']['body'] as String,
+      // );
+      // _deliveryMessageController.add(DeliveryManMessage.fromJson(data));
     });
   }
 

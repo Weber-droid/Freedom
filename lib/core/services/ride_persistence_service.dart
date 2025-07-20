@@ -267,12 +267,6 @@ class RidePersistenceService {
         final markerData = entry.value as Map<String, dynamic>;
         final markerId = MarkerId(markerData['markerId'] as String);
 
-        // Recreate the marker icon based on type
-        final icon = await _recreateMarkerIcon(
-          markerData['iconType'] as String,
-          markerId.value,
-        );
-
         final marker = Marker(
           markerId: markerId,
           position: LatLng(
@@ -283,7 +277,6 @@ class RidePersistenceService {
             title: markerData['infoWindowTitle'] as String?,
             snippet: markerData['infoWindowSnippet'] as String?,
           ),
-          icon: icon,
           rotation: markerData['rotation'] as double? ?? 0.0,
           anchor: Offset(
             markerData['anchor']['dx'] as double? ?? 0.5,
@@ -307,7 +300,6 @@ class RidePersistenceService {
     }
   }
 
-  /// Helper method to determine icon type for persistence
   String _getIconType(MarkerId markerId, Marker marker) {
     final id = markerId.value.toLowerCase();
     final title = marker.infoWindow.title?.toLowerCase() ?? '';
@@ -329,54 +321,6 @@ class RidePersistenceService {
     return 'default';
   }
 
-  Future<BitmapDescriptor> _recreateMarkerIcon(
-    String iconType,
-    String markerId,
-  ) async {
-    try {
-      switch (iconType) {
-        case 'driver':
-          try {
-            return await BitmapDescriptor.asset(
-              const ImageConfiguration(size: Size(48, 48)),
-              'assets/images/bike_marker.png',
-            );
-          } catch (e) {
-            return BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueBlue,
-            );
-          }
-
-        case 'pickup':
-          try {
-            return await BitmapDescriptor.asset(
-              const ImageConfiguration(size: Size(40, 40)),
-              'assets/images/user_pin.png',
-            );
-          } catch (e) {
-            return BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueGreen,
-            );
-          }
-
-        case 'destination':
-          return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-
-        case 'stop':
-          return BitmapDescriptor.defaultMarkerWithHue(
-            BitmapDescriptor.hueOrange,
-          );
-
-        default:
-          return BitmapDescriptor.defaultMarker;
-      }
-    } catch (e) {
-      dev.log('❌ Error recreating marker icon for $iconType: $e');
-      return BitmapDescriptor.defaultMarker;
-    }
-  }
-
-  /// Persist tracking state for real-time mode
   Future<void> persistTrackingState({
     required bool isActive,
     required String rideId,
@@ -406,7 +350,6 @@ class RidePersistenceService {
     }
   }
 
-  /// Persist route data for route reconstruction
   Future<void> persistRouteData(
     List<LatLng> routePoints, {
     List<RouteSegment>? segments,
@@ -471,15 +414,12 @@ class RidePersistenceService {
     }
   }
 
-  /// Load complete persisted ride state
   Future<PersistedRideData?> loadCompleteRideState() async {
     try {
       final stateJson = _prefs.getString(_rideStateKey);
       if (stateJson == null) return null;
 
       final stateData = jsonDecode(stateJson) as Map<String, dynamic>;
-
-      // Check if state is too old (older than 24 hours)
       final timestamp = DateTime.tryParse(stateData['timestamp'] ?? '');
       if (timestamp != null &&
           DateTime.now().difference(timestamp).inHours > 24) {
@@ -625,43 +565,6 @@ class RidePersistenceService {
     };
   }
 
-  // Helper methods for serialization
-  List<Map<String, dynamic>> _serializePolylines(Set<Polyline> polylines) {
-    return polylines
-        .map(
-          (polyline) => {
-            'polylineId': polyline.polylineId.value,
-            'points':
-                polyline.points
-                    .map(
-                      (point) => {
-                        'latitude': point.latitude,
-                        'longitude': point.longitude,
-                      },
-                    )
-                    .toList(),
-            'color': polyline.color.value,
-            'width': polyline.width,
-          },
-        )
-        .toList();
-  }
-
-  List<Map<String, dynamic>> _serializeMarkers(Map<MarkerId, Marker> markers) {
-    return markers.values
-        .map(
-          (marker) => {
-            'markerId': marker.markerId.value,
-            'latitude': marker.position.latitude,
-            'longitude': marker.position.longitude,
-            'infoWindowTitle': marker.infoWindow.title,
-            'infoWindowSnippet': marker.infoWindow.snippet,
-            'rotation': marker.rotation,
-          },
-        )
-        .toList();
-  }
-
   List<Map<String, dynamic>>? _serializeRouteSegments(
     List<RouteSegment>? segments,
   ) {
@@ -688,7 +591,6 @@ class RidePersistenceService {
   }
 }
 
-/// Enhanced persisted ride data model
 class PersistedRideData {
   final String timestamp;
   final RideRequestStatus status;
@@ -942,7 +844,6 @@ class PersistedRideData {
       print(
         '❌ Error in PersistedRideData.fromJsonWithDeserialization: $e\n$stack',
       );
-      // Fallback to basic deserialization without polylines/markers
       return PersistedRideData.fromJson(json);
     }
   }

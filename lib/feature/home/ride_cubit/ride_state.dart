@@ -1,5 +1,7 @@
 part of 'ride_cubit.dart';
 
+enum CameraFollowingMode { none, followDriver, showRoute, followWithRoute }
+
 class RideState extends Equatable {
   const RideState({
     this.status = RideRequestStatus.initial,
@@ -51,6 +53,8 @@ class RideState extends Equatable {
     this.lastRouteRecalculation,
     this.rideRequestModel,
     this.driverAnimationComplete = false,
+    this.followDriverCamera = false,
+    this.cameraFollowingMode = CameraFollowingMode.none,
   });
   final RideRequestStatus status;
   final RequestRideResponse? rideResponse;
@@ -101,6 +105,8 @@ class RideState extends Equatable {
   final DateTime? lastRouteRecalculation;
   final RideRequestModel? rideRequestModel;
   final bool driverAnimationComplete;
+  final bool followDriverCamera;
+  final CameraFollowingMode cameraFollowingMode;
   RideState copyWith({
     RideRequestStatus? status,
     String? errorMessage,
@@ -151,6 +157,8 @@ class RideState extends Equatable {
     DateTime? lastRouteRecalculation,
     RideRequestModel? rideRequestModel,
     bool? driverAnimationComplete,
+    bool? followDriverCamera,
+    CameraFollowingMode? cameraFollowingMode,
   }) {
     return RideState(
       status: status ?? this.status,
@@ -210,6 +218,8 @@ class RideState extends Equatable {
           lastRouteRecalculation ?? this.lastRouteRecalculation,
       driverAnimationComplete:
           driverAnimationComplete ?? this.driverAnimationComplete,
+      followDriverCamera: followDriverCamera ?? this.followDriverCamera,
+      cameraFollowingMode: cameraFollowingMode ?? this.cameraFollowingMode,
     );
   }
 
@@ -265,5 +275,7 @@ class RideState extends Equatable {
     rideRequestModel,
     driverAnimationComplete,
     rideRequestModel,
+    followDriverCamera,
+    cameraFollowingMode,
   ];
 }
