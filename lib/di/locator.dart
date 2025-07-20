@@ -75,7 +75,7 @@ Future<void> locator() async {
     ..registerFactory(
       () => InAppMessageCubit(
         messageRemoteDataSource: getIt(),
-        socketService: getIt<SocketService>(),
+        socketService: getIt(),
       ),
     )
     ..registerLazySingleton(

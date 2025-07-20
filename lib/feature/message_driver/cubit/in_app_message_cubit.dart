@@ -47,7 +47,6 @@ class InAppMessageCubit extends Cubit<InAppMessageState> {
       'Starting to listen for driver messages for ${context.name}: $contextId',
     );
 
-    // Create unified stream that handles both ride and delivery messages
     final unifiedStream = UnifiedMessageStream.create(socketService);
 
     _unifiedMessageSubscription = unifiedStream.listen(
@@ -70,7 +69,6 @@ class InAppMessageCubit extends Cubit<InAppMessageState> {
     MessageContext context,
   ) async {
     try {
-      // Only process messages that match our current context
       if (unifiedMessage.context != context) {
         log(
           'Skipping message - context mismatch: ${unifiedMessage.context.name} != ${context.name}',
@@ -97,7 +95,6 @@ class InAppMessageCubit extends Cubit<InAppMessageState> {
         currentContextId,
       );
 
-      // Simple duplicate check
       final messageAlreadyExists = existingMessages.any(
         (msg) =>
             msg.message == unifiedMessage.messageBody &&
@@ -141,27 +138,11 @@ class InAppMessageCubit extends Cubit<InAppMessageState> {
     }
   }
 
-  String _getMessageContextId(
-    DriverMessage driverMessage,
-    MessageContext context,
-  ) {
-    // This method is no longer needed since we use UnifiedDriverMessage
-    // but keeping it for backwards compatibility if needed
-    switch (context) {
-      case MessageContext.ride:
-        return driverMessage.notification.rideId;
-      case MessageContext.delivery:
-        // For delivery messages, the rideId field actually contains the deliveryId
-        return driverMessage.notification.rideId;
-    }
-  }
-
   DateTime _parseTimestampSafely(String timestampString) {
     log('Raw timestamp from driver: "$timestampString"');
     log('Current local time: ${DateTime.now()}');
 
     try {
-      // First, try parsing as ISO string
       final parsedTimestamp = DateTime.tryParse(timestampString);
       if (parsedTimestamp != null) {
         final localTimestamp = parsedTimestamp.toLocal();
@@ -170,12 +151,10 @@ class InAppMessageCubit extends Cubit<InAppMessageState> {
         return localTimestamp;
       }
 
-      // Try parsing as milliseconds/seconds
       final milliseconds = int.tryParse(timestampString);
       if (milliseconds != null) {
         DateTime timestamp;
         if (milliseconds.toString().length == 10) {
-          // Unix timestamp (seconds)
           timestamp =
               DateTime.fromMillisecondsSinceEpoch(
                 milliseconds * 1000,
@@ -183,7 +162,6 @@ class InAppMessageCubit extends Cubit<InAppMessageState> {
               ).toLocal();
           log('Parsed as Unix seconds and converted to local: $timestamp');
         } else {
-          // Milliseconds
           timestamp =
               DateTime.fromMillisecondsSinceEpoch(
                 milliseconds,
@@ -274,10 +252,7 @@ class InAppMessageCubit extends Cubit<InAppMessageState> {
           contextId,
         );
       case MessageContext.delivery:
-        // Use the same sendMessage method but with delivery context
-        // You might need to add a delivery-specific method to your MessageRemoteDataSource
-        // For now, assuming the same API endpoint works for both
-        return await messageRemoteDataSource.sendMessage(
+        return await messageRemoteDataSource.sendDeliveryMessage(
           messageText,
           contextId,
         );

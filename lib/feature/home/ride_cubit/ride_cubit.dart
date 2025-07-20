@@ -17,6 +17,7 @@ import 'package:freedom/feature/home/models/request_ride_response.dart';
 import 'package:freedom/feature/home/models/ride_status_response.dart';
 import 'package:freedom/feature/home/repository/models/location.dart';
 import 'package:freedom/feature/home/repository/ride_request_repository.dart';
+import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:freedom/shared/enums/enums.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -54,30 +55,231 @@ class RideCubit extends Cubit<RideState> {
   RideRequestModel? _currentRideRequest;
   bool _isDisposed = false;
 
+  // Socket subscriptions
   StreamSubscription<dynamic>? _driverStatusSubscription;
   StreamSubscription<dynamic>? _driverCancelledSubscription;
   StreamSubscription<dynamic>? _driverAcceptedSubscription;
   StreamSubscription<dynamic>? _driverArrivedSubscription;
   StreamSubscription<dynamic>? _driverCompletedSubscription;
   StreamSubscription<dynamic>? _driverStartedSubscription;
-  StreamSubscription<dynamic>? _driverRejecetedSubscription;
+  StreamSubscription<dynamic>? _driverRejectedSubscription;
   StreamSubscription<dynamic>? _driverPositionSubscription;
 
+  // Timers
   Timer? _timer;
   Timer? _persistenceTimer;
   Timer? _statusUpdateThrottle;
 
   static const Duration _statusUpdateInterval = Duration(milliseconds: 500);
   static const Duration _persistenceInterval = Duration(seconds: 10);
-  String? _pendingStatusMessage;
-
   static const int maxSearchTime = 60;
 
+  String? _pendingStatusMessage;
+
+  set currentRideRequest(RideRequestModel? request) =>
+      _currentRideRequest = request;
+  // Getters
   RideRequestModel? get currentRideRequest => _currentRideRequest;
   int get searchTimeElapsed => state.searchTimeElapsed;
 
   set searchTimeElapsed(int searchTimeElapsed) =>
       emit(state.copyWith(searchTimeElapsed: searchTimeElapsed));
+
+  // ============================================================================
+  // CENTRALIZED MARKER MANAGEMENT
+  // ============================================================================
+
+  void listenToDriverStatus() {
+    _listenToDriverStatus();
+  }
+
+  void enableDriverCameraFollow() {
+    emit(
+      state.copyWith(
+        followDriverCamera: true,
+        cameraFollowingMode: CameraFollowingMode.followDriver,
+      ),
+    );
+  }
+
+  void disableDriverCameraFollow() {
+    emit(
+      state.copyWith(
+        followDriverCamera: false,
+        cameraFollowingMode: CameraFollowingMode.none,
+      ),
+    );
+  }
+
+  void toggleCameraFollowingMode() {
+    if (state.followDriverCamera) {
+      disableDriverCameraFollow();
+    } else {
+      enableDriverCameraFollow();
+    }
+  }
+
+  void setCameraToFollowWithRoute() {
+    emit(
+      state.copyWith(
+        followDriverCamera: true,
+        cameraFollowingMode: CameraFollowingMode.followWithRoute,
+      ),
+    );
+  }
+
+  /// Central method for creating all markers consistently
+  Map<MarkerId, Marker> _createMarkers({
+    required RideRequestModel rideRequest,
+    LatLng? driverPosition,
+    double driverRotation = 0.0,
+  }) {
+    final markers = <MarkerId, Marker>{};
+
+    // Pickup marker
+    const pickupMarkerId = MarkerId('pickup_location');
+    markers[pickupMarkerId] = Marker(
+      markerId: pickupMarkerId,
+      position: LatLng(
+        rideRequest.pickupLocation.latitude,
+        rideRequest.pickupLocation.longitude,
+      ),
+      icon:
+          state.userLocationMarkerIcon ??
+          BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+      infoWindow: InfoWindow(
+        title: 'Pickup Location',
+        snippet: rideRequest.pickupLocation.address,
+      ),
+    );
+
+    // Destination marker
+    const destinationMarkerId = MarkerId('destination_location');
+    markers[destinationMarkerId] = Marker(
+      markerId: destinationMarkerId,
+      position: LatLng(
+        rideRequest.dropoffLocation.latitude,
+        rideRequest.dropoffLocation.longitude,
+      ),
+      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      infoWindow: InfoWindow(
+        title: 'Destination',
+        snippet: rideRequest.dropoffLocation.address,
+      ),
+    );
+
+    // Additional destinations for multi-destination rides
+    if (rideRequest.isMultiDestination &&
+        rideRequest.additionalDestinations != null) {
+      for (int i = 0; i < rideRequest.additionalDestinations!.length; i++) {
+        final stop = rideRequest.additionalDestinations![i];
+        final stopMarkerId = MarkerId('stop_$i');
+
+        markers[stopMarkerId] = Marker(
+          markerId: stopMarkerId,
+          position: LatLng(stop.latitude, stop.longitude),
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueOrange,
+          ),
+          infoWindow: InfoWindow(title: 'Stop ${i + 1}', snippet: stop.address),
+        );
+      }
+    }
+
+    // Driver marker (only if position is available)
+    if (driverPosition != null) {
+      const driverMarkerId = MarkerId('driver_location');
+      markers[driverMarkerId] = Marker(
+        markerId: driverMarkerId,
+        position: driverPosition,
+        icon:
+            state.driverMarkerIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        infoWindow: const InfoWindow(title: 'Driver Location'),
+        rotation: driverRotation,
+      );
+    }
+
+    return markers;
+  }
+
+  /// Update only the driver marker position and rotation
+  void _updateDriverMarker(LatLng position, double rotation) {
+    if (_isDisposed) return;
+
+    final updatedMarkers = Map<MarkerId, Marker>.from(state.routeMarkers);
+    const driverMarkerId = MarkerId('driver_location');
+
+    if (updatedMarkers.containsKey(driverMarkerId)) {
+      final currentMarker = updatedMarkers[driverMarkerId]!;
+      updatedMarkers[driverMarkerId] = currentMarker.copyWith(
+        positionParam: position,
+        rotationParam: rotation,
+      );
+    } else {
+      // Create new driver marker if it doesn't exist
+      updatedMarkers[driverMarkerId] = Marker(
+        markerId: driverMarkerId,
+        position: position,
+        icon:
+            state.driverMarkerIcon ??
+            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+        infoWindow: const InfoWindow(title: 'Driver Location'),
+        rotation: rotation,
+      );
+    }
+
+    emit(
+      state.copyWith(
+        routeMarkers: updatedMarkers,
+        currentDriverPosition: position,
+      ),
+    );
+  }
+
+  /// Ensure marker icons are loaded
+  Future<void> _ensureMarkerIcons() async {
+    if (state.driverMarkerIcon == null) {
+      await _createDriverMarkerIcon();
+    }
+    if (state.userLocationMarkerIcon == null) {
+      await _createUserLocationMarkerIcon();
+    }
+  }
+
+  Future<void> _createDriverMarkerIcon() async {
+    try {
+      final driverIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(25, 25)),
+        'assets/images/bike_marker.png',
+      );
+      emit(state.copyWith(driverMarkerIcon: driverIcon));
+    } catch (e) {
+      final defaultDriverIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueBlue,
+      );
+      emit(state.copyWith(driverMarkerIcon: defaultDriverIcon));
+    }
+  }
+
+  Future<void> _createUserLocationMarkerIcon() async {
+    try {
+      final userIcon = await BitmapDescriptor.asset(
+        const ImageConfiguration(size: Size(25, 25)),
+        'assets/images/user_pin.png',
+      );
+      emit(state.copyWith(userLocationMarkerIcon: userIcon));
+    } catch (e) {
+      final defaultUserIcon = BitmapDescriptor.defaultMarkerWithHue(
+        BitmapDescriptor.hueGreen,
+      );
+      emit(state.copyWith(userLocationMarkerIcon: defaultUserIcon));
+    }
+  }
+
+  // ============================================================================
+  // PERSISTENCE MANAGEMENT
+  // ============================================================================
 
   void _initializePersistence() {
     _startPeriodicPersistence();
@@ -147,9 +349,44 @@ class RideCubit extends Cubit<RideState> {
         }
 
         _lastPersistenceTime = DateTime.now();
-      } catch (e) {}
+      } catch (e) {
+        dev.log('Persistence error: $e');
+      }
     });
   }
+
+  Future<void> forcePersistence({String reason = 'manual'}) async {
+    if (_isDisposed) return;
+
+    try {
+      if (state.hasActiveRide) {
+        await _persistenceService.persistCompleteRideState(state);
+
+        if (state.currentDriverPosition != null) {
+          await _persistenceService.persistDriverLocation(
+            state.currentDriverPosition!,
+            speed: state.currentSpeed,
+            timestamp: state.lastPositionUpdate,
+          );
+        }
+
+        if (state.routeDisplayed && state.routePolylines.isNotEmpty) {
+          final routePoints = state.routePolylines.first.points;
+          await _persistenceService.persistRouteData(
+            routePoints,
+            segments: state.routeSegments,
+            totalDistance: _routeService.calculateRouteDistance(routePoints),
+          );
+        }
+      }
+    } catch (e) {
+      dev.log('Force persistence error: $e');
+    }
+  }
+
+  // ============================================================================
+  // RIDE STATE RESTORATION
+  // ============================================================================
 
   Future<void> restoreFromPersistedData(PersistedRideData persistedData) async {
     if (_isDisposed) return;
@@ -158,24 +395,23 @@ class RideCubit extends Cubit<RideState> {
       if (persistedData.rideRequest != null) {
         _currentRideRequest = persistedData.rideRequest;
       }
-      final restoredMarkers = await _persistenceService.loadPersistedMarkers();
+
+      // Load persisted polylines
       final restoredPolylines =
           await _persistenceService.loadPersistedPolylines();
-
-      Map<MarkerId, Marker> finalMarkers = {};
       Set<Polyline> finalPolylines = {};
-
-      if (restoredMarkers != null && restoredMarkers.isNotEmpty) {
-        finalMarkers = restoredMarkers;
-      } else if (_currentRideRequest != null) {
-        finalMarkers = await _recreateMarkersFromRideRequest(
-          _currentRideRequest!,
-          persistedData.currentDriverPosition,
-        );
-      }
-
       if (restoredPolylines != null && restoredPolylines.isNotEmpty) {
         finalPolylines = restoredPolylines;
+      }
+
+      // Create markers using centralized method
+      Map<MarkerId, Marker> finalMarkers = {};
+      if (_currentRideRequest != null) {
+        await _ensureMarkerIcons();
+        finalMarkers = _createMarkers(
+          rideRequest: _currentRideRequest!,
+          driverPosition: persistedData.currentDriverPosition,
+        );
       }
 
       final restoredState = RideState(
@@ -217,106 +453,23 @@ class RideCubit extends Cubit<RideState> {
         routeDisplayed: finalMarkers.isNotEmpty || finalPolylines.isNotEmpty,
         routeSegments: persistedData.routeSegments,
         showStackedBottomSheet: false,
+        driverMarkerIcon: state.driverMarkerIcon,
+        userLocationMarkerIcon: state.userLocationMarkerIcon,
       );
 
       emit(restoredState);
-
       _listenToDriverStatus();
 
-      dev.log(
-        '   - Ride request: ${persistedData.rideRequest?.pickupLocation.address} → ${persistedData.rideRequest?.dropoffLocation.address}',
-      );
+      dev.log('✅ Ride state restored with ${finalMarkers.length} markers');
     } catch (e, stack) {
+      dev.log('❌ Failed to restore ride state: $e');
       resetRideState();
     }
   }
 
-  Future<Map<MarkerId, Marker>> _recreateMarkersFromRideRequest(
-    RideRequestModel rideRequest,
-    LatLng? driverPosition,
-  ) async {
-    final markers = <MarkerId, Marker>{};
-
-    try {
-      await _ensureMarkerIcons();
-
-      const pickupMarkerId = MarkerId('pickup');
-      markers[pickupMarkerId] = Marker(
-        markerId: pickupMarkerId,
-        position: LatLng(
-          rideRequest.pickupLocation.latitude,
-          rideRequest.pickupLocation.longitude,
-        ),
-        icon:
-            state.userLocationMarkerIcon ??
-            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        infoWindow: InfoWindow(
-          title: 'Pickup Location',
-          snippet: rideRequest.pickupLocation.address,
-        ),
-      );
-
-      const destinationMarkerId = MarkerId('destination');
-      markers[destinationMarkerId] = Marker(
-        markerId: destinationMarkerId,
-        position: LatLng(
-          rideRequest.dropoffLocation.latitude,
-          rideRequest.dropoffLocation.longitude,
-        ),
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        infoWindow: InfoWindow(
-          title: 'Destination',
-          snippet: rideRequest.dropoffLocation.address,
-        ),
-      );
-
-      if (rideRequest.isMultiDestination &&
-          rideRequest.additionalDestinations != null) {
-        for (int i = 0; i < rideRequest.additionalDestinations!.length; i++) {
-          final stop = rideRequest.additionalDestinations![i];
-          final stopMarkerId = MarkerId('stop_$i');
-
-          markers[stopMarkerId] = Marker(
-            markerId: stopMarkerId,
-            position: LatLng(stop.latitude, stop.longitude),
-            icon: BitmapDescriptor.defaultMarkerWithHue(
-              BitmapDescriptor.hueOrange,
-            ),
-            infoWindow: InfoWindow(
-              title: 'Stop ${i + 1}',
-              snippet: stop.address,
-            ),
-          );
-        }
-      }
-
-      if (driverPosition != null) {
-        const driverMarkerId = MarkerId('driver');
-        markers[driverMarkerId] = Marker(
-          markerId: driverMarkerId,
-          position: driverPosition,
-          icon:
-              state.driverMarkerIcon ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          infoWindow: const InfoWindow(title: 'Driver Location'),
-          rotation: 0.0,
-        );
-      }
-    } catch (e) {}
-
-    return markers;
-  }
-
-  void _initSocketListener() {
-    _driverStatusSubscription?.cancel();
-    _driverStatusSubscription = null;
-    _driverCancelledSubscription?.cancel();
-    _driverCancelledSubscription = null;
-  }
-
-  void setPayMentMethod(String paymentMethod) {
-    emit(state.copyWith(paymentMethod: paymentMethod));
-  }
+  // ============================================================================
+  // RIDE REQUEST FLOW
+  // ============================================================================
 
   Future<void> requestRide(RideRequestModel request) async {
     if (_isDisposed) return;
@@ -329,15 +482,7 @@ class RideCubit extends Cubit<RideState> {
     emit(state.copyWith(status: RideRequestStatus.loading, errorMessage: null));
 
     try {
-      final hasMultipleDestinations =
-          request.isMultiDestination &&
-          request.additionalDestinations != null &&
-          request.additionalDestinations!.isNotEmpty;
-
-      if (hasMultipleDestinations) {
-      } else {
-        await _processSingleDestinationRide(request);
-      }
+      await _processSingleDestinationRide(request);
     } catch (e) {
       emit(
         state.copyWith(
@@ -346,33 +491,6 @@ class RideCubit extends Cubit<RideState> {
         ),
       );
     }
-  }
-
-  Future<void> forcePersistence({String reason = 'manual'}) async {
-    if (_isDisposed) return;
-
-    try {
-      if (state.hasActiveRide) {
-        await _persistenceService.persistCompleteRideState(state);
-
-        if (state.currentDriverPosition != null) {
-          await _persistenceService.persistDriverLocation(
-            state.currentDriverPosition!,
-            speed: state.currentSpeed,
-            timestamp: state.lastPositionUpdate,
-          );
-        }
-
-        if (state.routeDisplayed && state.routePolylines.isNotEmpty) {
-          final routePoints = state.routePolylines.first.points;
-          await _persistenceService.persistRouteData(
-            routePoints,
-            segments: state.routeSegments,
-            totalDistance: _routeService.calculateRouteDistance(routePoints),
-          );
-        }
-      }
-    } catch (e) {}
   }
 
   Future<void> _processSingleDestinationRide(RideRequestModel request) async {
@@ -439,6 +557,10 @@ class RideCubit extends Cubit<RideState> {
     );
   }
 
+  // ============================================================================
+  // TIMER MANAGEMENT
+  // ============================================================================
+
   void _startTimer() {
     _timer?.cancel();
     emit(state.copyWith(searchTimeElapsed: 0));
@@ -470,84 +592,19 @@ class RideCubit extends Cubit<RideState> {
     _timer = null;
   }
 
-  Future<void> getRides(String status, int page, int limit) async {
-    emit(state.copyWith(requestRidesStatus: RequestRidesStatus.loading));
-
-    final response = await rideRequestRepository.getRideHistory(
-      status,
-      page,
-      limit,
-    );
-
-    response.fold(
-      (failure) {
-        emit(
-          state.copyWith(
-            requestRidesStatus: RequestRidesStatus.error,
-            errorMessage: failure.message,
-          ),
-        );
-      },
-      (success) {
-        emit(
-          state.copyWith(
-            requestRidesStatus: RequestRidesStatus.success,
-            rideHistory: success.data,
-          ),
-        );
-      },
-    );
+  void resumeSearchTimer() {
+    _startTimer();
   }
 
-  Future<void> cancelRide({required String reason}) async {
-    if (_isDisposed) return;
+  // ============================================================================
+  // SOCKET LISTENERS
+  // ============================================================================
 
-    try {
-      emit(
-        state.copyWith(cancellationStatus: RideCancellationStatus.canceling),
-      );
-      _stopSearchTimer();
-      _stopAllTrackingAndReset();
-
-      if (state.currentRideId == null) {
-        throw Exception('No active ride to cancel');
-      }
-
-      final response = await rideRequestRepository.cancelRide(
-        state.currentRideId!,
-        reason,
-      );
-
-      response.fold(
-        (failure) {
-          emit(
-            state.copyWith(
-              cancellationStatus: RideCancellationStatus.error,
-              errorMessage: failure.message,
-            ),
-          );
-        },
-        (success) {
-          emit(
-            state.copyWith(
-              cancellationStatus: RideCancellationStatus.cancelled,
-              message: success.message,
-              showStackedBottomSheet: true,
-              showRiderFound: false,
-            ),
-          );
-
-          _persistenceService.clearRideData();
-        },
-      );
-    } catch (e) {
-      emit(
-        state.copyWith(
-          cancellationStatus: RideCancellationStatus.error,
-          errorMessage: e.toString(),
-        ),
-      );
-    }
+  void _initSocketListener() {
+    _driverStatusSubscription?.cancel();
+    _driverStatusSubscription = null;
+    _driverCancelledSubscription?.cancel();
+    _driverCancelledSubscription = null;
   }
 
   void _listenToDriverStatus() {
@@ -572,7 +629,7 @@ class RideCubit extends Cubit<RideState> {
       );
 
       try {
-        await _displayStaticRouteOnly();
+        await displayStaticRoute();
         await forcePersistence(reason: 'driver_accepted');
       } catch (e) {
         emit(state.copyWith(errorMessage: 'Failed to display route: $e'));
@@ -590,7 +647,7 @@ class RideCubit extends Cubit<RideState> {
         ),
       );
 
-      await _startRealTimeTrackingOnly();
+      await _startRealTimeTracking();
       await forcePersistence(reason: 'ride_started');
     });
 
@@ -628,22 +685,33 @@ class RideCubit extends Cubit<RideState> {
       data,
     ) {
       _stopAllTrackingAndReset();
-      emit(state.copyWith(driverCompleted: data));
+      resetRideState();
       _persistenceService.clearRideData();
     });
 
-    _driverRejecetedSubscription = socketService.onDriverRejected.listen((
-      data,
-    ) {
-      resetRideState();
+    _driverRejectedSubscription = socketService.onDriverRejected.listen((data) {
+     
       emit(state.copyWith(driverRejected: data));
     });
   }
 
-  Future<void> _displayStaticRouteOnly() async {
-    if (_currentRideRequest == null) {
-      return;
-    }
+  void _cancelAllSubscriptions() {
+    _driverStatusSubscription?.cancel();
+    _driverCancelledSubscription?.cancel();
+    _driverAcceptedSubscription?.cancel();
+    _driverArrivedSubscription?.cancel();
+    _driverCompletedSubscription?.cancel();
+    _driverStartedSubscription?.cancel();
+    _driverRejectedSubscription?.cancel();
+    _driverPositionSubscription?.cancel();
+  }
+
+  // ============================================================================
+  // ROUTE DISPLAY AND TRACKING
+  // ============================================================================
+
+  Future<void> displayStaticRoute() async {
+    if (_currentRideRequest == null) return;
 
     try {
       await _ensureMarkerIcons();
@@ -657,16 +725,16 @@ class RideCubit extends Cubit<RideState> {
       if (request.isMultiDestination &&
           request.additionalDestinations != null &&
           request.additionalDestinations!.isNotEmpty) {
-        await _displayMultiDestinationStaticRoute(request, pickup);
+        await _displayMultiDestinationRoute(request, pickup);
       } else {
-        await _displaySingleDestinationStaticRoute(request, pickup);
+        await _displaySingleDestinationRoute(request, pickup);
       }
     } catch (e) {
       emit(state.copyWith(errorMessage: 'Route display failed: $e'));
     }
   }
 
-  Future<void> _displaySingleDestinationStaticRoute(
+  Future<void> _displaySingleDestinationRoute(
     RideRequestModel request,
     LatLng pickup,
   ) async {
@@ -685,34 +753,16 @@ class RideCubit extends Cubit<RideState> {
         ),
       );
 
-      final routeMarkers = _routeService.createMarkers(
-        request.pickupLocation,
-        request.dropoffLocation,
-        null,
-      );
-
-      final cleanedMarkers = <MarkerId, Marker>{};
-      routeMarkers.forEach((markerId, marker) {
-        if (!_isDriverMarker(markerId, marker)) {
-          cleanedMarkers[markerId] = marker;
-        }
-      });
-
-      const driverMarkerId = MarkerId('driver');
-      cleanedMarkers[driverMarkerId] = Marker(
-        markerId: driverMarkerId,
-        position: pickup,
-        icon:
-            state.driverMarkerIcon ??
-            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        infoWindow: const InfoWindow(title: 'Driver Location'),
-        rotation: 0.0,
+      // Use centralized marker creation
+      final markers = _createMarkers(
+        rideRequest: request,
+        driverPosition: pickup,
       );
 
       emit(
         state.copyWith(
           routePolylines: {routeResult.polyline!},
-          routeMarkers: cleanedMarkers,
+          routeMarkers: markers,
           routeDisplayed: true,
           currentDriverPosition: pickup,
           isRealTimeTrackingActive: false,
@@ -720,16 +770,13 @@ class RideCubit extends Cubit<RideState> {
       );
 
       focusCameraOnRoute();
-
-      dev.log(
-        '✅ Static route displayed - ${cleanedMarkers.length} markers total',
-      );
+      dev.log('✅ Static route displayed with ${markers.length} markers');
     } else {
       emit(state.copyWith(errorMessage: 'Failed to load route'));
     }
   }
 
-  Future<void> _displayMultiDestinationStaticRoute(
+  Future<void> _displayMultiDestinationRoute(
     RideRequestModel request,
     LatLng pickup,
   ) async {
@@ -750,34 +797,16 @@ class RideCubit extends Cubit<RideState> {
     );
 
     if (routesResult.isSuccess && routesResult.polylines != null) {
-      final allLocations = <FreedomLocation>[
-        request.pickupLocation,
-        request.dropoffLocation,
-        ...request.additionalDestinations!,
-      ];
-
-      final routeMarkers = _routeService.createMarkersForMultipleLocations(
-        allLocations,
-        state.driverMarkerIcon,
-      );
-
-      final updatedMarkers = Map<MarkerId, Marker>.from(routeMarkers);
-      const driverMarkerId = MarkerId('driver');
-
-      updatedMarkers[driverMarkerId] = Marker(
-        markerId: driverMarkerId,
-        position: pickup,
-        icon:
-            state.driverMarkerIcon ??
-            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-        infoWindow: const InfoWindow(title: 'Driver Location'),
-        rotation: 0.0,
+      // Use centralized marker creation
+      final markers = _createMarkers(
+        rideRequest: request,
+        driverPosition: pickup,
       );
 
       emit(
         state.copyWith(
           routePolylines: routesResult.polylines!,
-          routeMarkers: updatedMarkers,
+          routeMarkers: markers,
           routeDisplayed: true,
           routeSegments: routesResult.routeSegments,
           currentDriverPosition: pickup,
@@ -793,7 +822,7 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
-  Future<void> _startRealTimeTrackingOnly() async {
+  Future<void> _startRealTimeTracking() async {
     if (_currentRideRequest == null || _isDisposed) return;
 
     try {
@@ -812,22 +841,17 @@ class RideCubit extends Cubit<RideState> {
         return;
       }
 
-      final gmapsDestination = LatLng(
-        destination.latitude,
-        destination.longitude,
-      );
-
       _animationService.transitionToRealTimeTracking(
         onPositionUpdate: (position, rotation) {
-          _updateDriverMarkerPositionRealTime(position, rotation);
+          _updateDriverMarker(position, rotation);
         },
       );
 
       _realTimeTrackingService.startTracking(
         rideId: rideId,
         driverId: driverId,
-        destination: gmapsDestination,
-        onPositionUpdate: _handleRealTimePositionUpdate,
+        destination: destination,
+        onPositionUpdate: handleRealTimePositionUpdate,
         onRouteUpdated: _updateRouteOnMap,
         onStatusUpdate: _updateTrackingStatusThrottled,
         onMarkerUpdate: _handlePreciseMarkerUpdate,
@@ -836,7 +860,9 @@ class RideCubit extends Cubit<RideState> {
       emit(
         state.copyWith(
           isRealTimeTrackingActive: true,
-          trackingStatusMessage: 'Live tracking with animation started',
+          trackingStatusMessage: 'Live tracking started',
+          followDriverCamera: true,
+          cameraFollowingMode: CameraFollowingMode.followDriver,
         ),
       );
     } catch (e) {
@@ -849,7 +875,7 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
-  void _handleRealTimePositionUpdate(
+  void handleRealTimePositionUpdate(
     LatLng position,
     double bearing,
     DriverLocationData locationData,
@@ -859,10 +885,6 @@ class RideCubit extends Cubit<RideState> {
         _isDisposed) {
       return;
     }
-
-    dev.log(
-      '🎬 Real-time position update: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}',
-    );
 
     _animationService.updateRealTimePosition(
       position,
@@ -874,7 +896,7 @@ class RideCubit extends Cubit<RideState> {
       },
     );
 
-    _updateDriverMarkerPositionRealTime(position, bearing);
+    _updateDriverMarker(position, bearing);
 
     emit(
       state.copyWith(
@@ -882,9 +904,18 @@ class RideCubit extends Cubit<RideState> {
         lastPositionUpdate: locationData.lastUpdate,
         currentSpeed: locationData.speed,
         trackingStatusMessage: _getEnhancedTrackingMessage(locationData),
+        // Trigger camera update when following driver
+        shouldUpdateCamera: state.followDriverCamera,
+        cameraTarget: state.followDriverCamera ? position : state.cameraTarget,
       ),
     );
 
+    // Auto-follow camera if enabled
+    if (state.followDriverCamera) {
+      _updateCameraToFollowDriver(position);
+    }
+
+    // Periodic persistence
     if (DateTime.now().millisecondsSinceEpoch % 5000 < 100) {
       _persistenceService.persistDriverLocation(
         position,
@@ -899,137 +930,62 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
-  void _updateDriverMarkerPositionRealTime(LatLng position, double rotation) {
-    if (_isDisposed) return;
+  void _updateCameraToFollowDriver(LatLng driverPosition) {
+    if (!state.followDriverCamera || _isDisposed) return;
 
-    try {
-      final updatedMarkers = Map<MarkerId, Marker>.from(state.routeMarkers);
-      const driverMarkerId = MarkerId('driver');
+    switch (state.cameraFollowingMode) {
+      case CameraFollowingMode.followDriver:
+        // Simple follow - just center on driver
+        _centerCameraOnPosition(driverPosition);
+        break;
 
-      if (updatedMarkers.containsKey(driverMarkerId)) {
-        final currentMarker = updatedMarkers[driverMarkerId]!;
-        final newMarker = currentMarker.copyWith(
-          positionParam: position,
-          rotationParam: rotation,
-        );
-        updatedMarkers[driverMarkerId] = newMarker;
+      case CameraFollowingMode.followWithRoute:
+        // Follow driver but keep route visible
+        _centerCameraOnDriverWithRoute(driverPosition);
+        break;
 
-        dev.log(
-          '🚗 Updated driver marker position: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}',
-        );
-      } else {
-        updatedMarkers[driverMarkerId] = Marker(
-          markerId: driverMarkerId,
-          position: position,
-          icon:
-              state.driverMarkerIcon ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          infoWindow: const InfoWindow(title: 'Driver'),
-          rotation: rotation,
-        );
-        dev.log(
-          '🚗 Created new driver marker at: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}',
-        );
-      }
+      case CameraFollowingMode.showRoute:
+        // Show full route
+        focusCameraOnRoute();
+        break;
 
-      emit(
-        state.copyWith(
-          routeMarkers: updatedMarkers,
-          currentDriverPosition: position,
-        ),
-      );
-    } catch (e) {}
-  }
-
-  bool _isDriverMarker(MarkerId markerId, Marker marker) {
-    final id = markerId.value.toLowerCase();
-    final title = marker.infoWindow.title?.toLowerCase() ?? '';
-
-    final driverKeywords = [
-      'driver',
-      'bike',
-      'car',
-      'vehicle',
-      'pickup',
-      'origin',
-    ];
-
-    for (final keyword in driverKeywords) {
-      if (id.contains(keyword) || title.contains(keyword)) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  Future<void> _ensureMarkerIcons() async {
-    try {
-      if (state.driverMarkerIcon == null) {
-        await _createDriverMarkerIcon();
-      }
-      if (state.userLocationMarkerIcon == null) {
-        await _createUserLocationMarkerIcon();
-      }
-    } catch (e) {}
-  }
-
-  Future<void> _createDriverMarkerIcon() async {
-    try {
-      final driverIcon = await BitmapDescriptor.asset(
-        const ImageConfiguration(size: Size(48, 48)),
-        'assets/images/bike_marker.png',
-      );
-      emit(state.copyWith(driverMarkerIcon: driverIcon));
-    } catch (e) {
-      final defaultDriverIcon = BitmapDescriptor.defaultMarkerWithHue(
-        BitmapDescriptor.hueBlue,
-      );
-      emit(state.copyWith(driverMarkerIcon: defaultDriverIcon));
+      case CameraFollowingMode.none:
+        // No automatic camera updates
+        break;
     }
   }
 
-  Future<void> _createUserLocationMarkerIcon() async {
-    try {
-      final userIcon = await BitmapDescriptor.asset(
-        const ImageConfiguration(size: Size(40, 40)),
-        'assets/images/user_pin.png',
-      );
-      emit(state.copyWith(userLocationMarkerIcon: userIcon));
-    } catch (e) {
-      final defaultUserIcon = BitmapDescriptor.defaultMarkerWithHue(
-        BitmapDescriptor.hueGreen,
-      );
-      emit(state.copyWith(userLocationMarkerIcon: defaultUserIcon));
+  void _centerCameraOnDriverWithRoute(LatLng driverPosition) {
+    if (state.routePolylines.isEmpty) {
+      _centerCameraOnPosition(driverPosition);
+      return;
     }
-  }
 
-  void focusCameraOnRoute() {
-    if (state.routePolylines.isEmpty) return;
+    // Calculate bounds that include driver and route
+    final routePoints = state.routePolylines.first.points;
+    final allPoints = [driverPosition, ...routePoints];
 
-    emit(state.copyWith(shouldUpdateCamera: true));
+    emit(
+      state.copyWith(shouldUpdateCamera: true, cameraTarget: driverPosition),
+    );
 
-    Future.delayed(const Duration(milliseconds: 1000), () {
+    Future.delayed(const Duration(milliseconds: 100), () {
       if (!isClosed) {
         emit(state.copyWith(shouldUpdateCamera: false));
       }
     });
   }
 
-  void centerCameraOnDriver() {
-    if (state.currentDriverPosition != null) {
-      emit(
-        state.copyWith(
-          shouldUpdateCamera: true,
-          cameraTarget: state.currentDriverPosition,
-        ),
-      );
+  /// Center camera on specific position
+  void _centerCameraOnPosition(LatLng position) {
+    emit(state.copyWith(shouldUpdateCamera: true, cameraTarget: position));
 
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (!isClosed) {
-          emit(state.copyWith(shouldUpdateCamera: false));
-        }
-      });
-    }
+    // Reset camera update flag after short delay
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (!isClosed) {
+        emit(state.copyWith(shouldUpdateCamera: false));
+      }
+    });
   }
 
   String _getEnhancedTrackingMessage(DriverLocationData locationData) {
@@ -1068,7 +1024,9 @@ class RideCubit extends Cubit<RideState> {
           emit(state.copyWith(routeRecalculated: false));
         }
       });
-    } catch (e) {}
+    } catch (e) {
+      dev.log('Route update error: $e');
+    }
   }
 
   void _updateTrackingStatusThrottled(String status) {
@@ -1121,12 +1079,6 @@ class RideCubit extends Cubit<RideState> {
         _animationService.currentBearing,
       );
     }
-
-    if (DateTime.now().millisecondsSinceEpoch % 5000 < 200) {
-      dev.log(
-        '🎯 Precise marker update: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}',
-      );
-    }
   }
 
   void _handleDriverReachedDestination() {
@@ -1156,20 +1108,17 @@ class RideCubit extends Cubit<RideState> {
         isRealTimeTrackingActive: false,
         rideInProgress: false,
         trackingStatusMessage: null,
+        // Reset camera following
+        followDriverCamera: false,
+        cameraFollowingMode: CameraFollowingMode.none,
+        shouldUpdateCamera: false,
+        cameraTarget: null,
       ),
     );
   }
-
-  void _cancelAllSubscriptions() {
-    _driverStatusSubscription?.cancel();
-    _driverCancelledSubscription?.cancel();
-    _driverAcceptedSubscription?.cancel();
-    _driverArrivedSubscription?.cancel();
-    _driverCompletedSubscription?.cancel();
-    _driverStartedSubscription?.cancel();
-    _driverRejecetedSubscription?.cancel();
-    _driverPositionSubscription?.cancel();
-  }
+  // ============================================================================
+  // RIDE STATUS AND RESTORATION
+  // ============================================================================
 
   Future<void> checkRideStatus(String rideId) async {
     if (_isDisposed) return;
@@ -1206,7 +1155,6 @@ class RideCubit extends Cubit<RideState> {
               break;
 
             case 'in_progress':
-            case 'started':
               emit(
                 state.copyWith(
                   status: RideRequestStatus.success,
@@ -1216,7 +1164,6 @@ class RideCubit extends Cubit<RideState> {
                   rideInProgress: true,
                 ),
               );
-              await restoreStaticRoute();
               await restoreRealTimeTracking();
               break;
 
@@ -1278,12 +1225,99 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
-  void resumeSearchTimer() {
-    _startTimer();
+  Future<void> restoreStaticRoute() async {
+    if (_isDisposed) return;
+
+    try {
+      await _ensureMarkerIcons();
+
+      final routeData = await _persistenceService.loadRouteData();
+
+      if (routeData != null && routeData.routePoints.isNotEmpty) {
+        await _restoreRouteFromPersistedData(routeData);
+      } else if (_currentRideRequest != null) {
+        await displayStaticRoute();
+      } else {
+        emit(state.copyWith(trackingStatusMessage: 'No route data available'));
+      }
+    } catch (e) {
+      emit(state.copyWith(errorMessage: 'Failed to restore route: $e'));
+    }
+  }
+
+  Future<void> _restoreRouteFromPersistedData(
+    PersistedRouteData routeData,
+  ) async {
+    if (_isDisposed || routeData.routePoints.isEmpty) return;
+
+    try {
+      final polyline = Polyline(
+        polylineId: const PolylineId('restored_route'),
+        color: Colors.orange,
+        points: routeData.routePoints,
+        width: 5,
+        patterns: [PatternItem.dash(20), PatternItem.gap(10)],
+      );
+
+      // Create markers using centralized method
+      Map<MarkerId, Marker> markers = {};
+
+      if (_currentRideRequest != null) {
+        markers = _createMarkers(
+          rideRequest: _currentRideRequest!,
+          driverPosition: state.currentDriverPosition,
+        );
+      } else {
+        // Fallback: create basic markers from route points
+        const pickupMarkerId = MarkerId('pickup_location');
+        markers[pickupMarkerId] = Marker(
+          markerId: pickupMarkerId,
+          position: routeData.routePoints.first,
+          icon:
+              state.userLocationMarkerIcon ??
+              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
+          infoWindow: const InfoWindow(title: 'Pickup'),
+        );
+
+        const destinationMarkerId = MarkerId('destination_location');
+        markers[destinationMarkerId] = Marker(
+          markerId: destinationMarkerId,
+          position: routeData.routePoints.last,
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+          infoWindow: const InfoWindow(title: 'Destination'),
+        );
+
+        if (state.currentDriverPosition != null) {
+          const driverMarkerId = MarkerId('driver_location');
+          markers[driverMarkerId] = Marker(
+            markerId: driverMarkerId,
+            position: state.currentDriverPosition!,
+            icon:
+                state.driverMarkerIcon ??
+                BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
+            infoWindow: const InfoWindow(title: 'Driver Location'),
+          );
+        }
+      }
+
+      emit(
+        state.copyWith(
+          routePolylines: {polyline},
+          routeMarkers: markers,
+          routeDisplayed: true,
+          trackingStatusMessage: 'Route restored from cache',
+        ),
+      );
+
+      dev.log('✅ Route restored with ${markers.length} markers');
+    } catch (e) {
+      throw e;
+    }
   }
 
   Future<void> restoreRealTimeTracking() async {
     if (_isDisposed) return;
+
     try {
       await restoreStaticRoute();
       await Future.delayed(const Duration(milliseconds: 1000));
@@ -1292,10 +1326,10 @@ class RideCubit extends Cubit<RideState> {
       final lastLocation = await _persistenceService.loadLastDriverLocation();
 
       if (trackingState != null && trackingState.isActive) {
-        await _startRealTimeTrackingOnly();
+        await _startRealTimeTracking();
 
         if (lastLocation != null) {
-          _handleRealTimePositionUpdate(
+          handleRealTimePositionUpdate(
             lastLocation.latLng,
             lastLocation.bearing ?? 0.0,
             DriverLocationData(
@@ -1327,85 +1361,138 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
-  Future<void> restoreStaticRoute() async {
+  // ============================================================================
+  // RIDE OPERATIONS
+  // ============================================================================
+
+  Future<void> cancelRide({required String reason}) async {
     if (_isDisposed) return;
+
     try {
-      await _ensureMarkerIcons();
+      emit(
+        state.copyWith(cancellationStatus: RideCancellationStatus.canceling),
+      );
+      _stopSearchTimer();
+      _stopAllTrackingAndReset();
 
-      final routeData = await _persistenceService.loadRouteData();
-
-      if (routeData != null && routeData.routePoints.isNotEmpty) {
-        await _restoreRouteFromPersistedData(routeData);
-      } else if (_currentRideRequest != null) {
-        await _displayStaticRouteOnly();
-      } else {
-        emit(state.copyWith(trackingStatusMessage: 'No route data available'));
+      if (state.currentRideId == null) {
+        throw Exception('No active ride to cancel');
       }
+
+      final response = await rideRequestRepository.cancelRide(
+        state.currentRideId!,
+        reason,
+      );
+
+      response.fold(
+        (failure) {
+          emit(
+            state.copyWith(
+              cancellationStatus: RideCancellationStatus.error,
+              errorMessage: failure.message,
+            ),
+          );
+        },
+        (success) {
+          emit(
+            state.copyWith(
+              cancellationStatus: RideCancellationStatus.cancelled,
+              message: success.message,
+              showStackedBottomSheet: true,
+              showRiderFound: false,
+            ),
+          );
+
+          _persistenceService.clearRideData();
+        },
+      );
     } catch (e) {
-      emit(state.copyWith(errorMessage: 'Failed to restore route: $e'));
-    }
-  }
-
-  Future<void> _restoreRouteFromPersistedData(
-    PersistedRouteData routeData,
-  ) async {
-    if (_isDisposed) return;
-
-    try {
-      if (routeData.routePoints.isEmpty) return;
-
-      final polyline = Polyline(
-        polylineId: const PolylineId('restored_route'),
-        color: Colors.orange,
-        points: routeData.routePoints,
-        width: 5,
-        patterns: [PatternItem.dash(20), PatternItem.gap(10)],
-      );
-
-      final markers = <MarkerId, Marker>{};
-
-      const pickupMarkerId = MarkerId('pickup');
-      markers[pickupMarkerId] = Marker(
-        markerId: pickupMarkerId,
-        position: routeData.routePoints.first,
-        icon:
-            state.userLocationMarkerIcon ??
-            BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
-        infoWindow: const InfoWindow(title: 'Pickup'),
-      );
-
-      const destinationMarkerId = MarkerId('destination');
-      markers[destinationMarkerId] = Marker(
-        markerId: destinationMarkerId,
-        position: routeData.routePoints.last,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-        infoWindow: const InfoWindow(title: 'Destination'),
-      );
-
-      if (state.currentDriverPosition != null) {
-        const driverMarkerId = MarkerId('driver');
-        markers[driverMarkerId] = Marker(
-          markerId: driverMarkerId,
-          position: state.currentDriverPosition!,
-          icon:
-              state.driverMarkerIcon ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          infoWindow: const InfoWindow(title: 'Driver'),
-        );
-      }
-
       emit(
         state.copyWith(
-          routePolylines: {polyline},
-          routeMarkers: markers,
-          routeDisplayed: true,
-          trackingStatusMessage: 'Route restored from cache',
+          cancellationStatus: RideCancellationStatus.error,
+          errorMessage: e.toString(),
         ),
       );
-    } catch (e) {
-      throw e;
     }
   }
+
+  Future<void> getRides(String status, int page, int limit) async {
+    emit(state.copyWith(requestRidesStatus: RequestRidesStatus.loading));
+
+    final response = await rideRequestRepository.getRideHistory(
+      status,
+      page,
+      limit,
+    );
+
+    response.fold(
+      (failure) {
+        emit(
+          state.copyWith(
+            requestRidesStatus: RequestRidesStatus.error,
+            errorMessage: failure.message,
+          ),
+        );
+      },
+      (success) {
+        emit(
+          state.copyWith(
+            requestRidesStatus: RequestRidesStatus.success,
+            rideHistory: success.data,
+          ),
+        );
+      },
+    );
+  }
+
+  // ============================================================================
+  // CAMERA AND UI CONTROLS
+  // ============================================================================
+
+  void focusCameraOnRoute() {
+    if (state.routePolylines.isEmpty) return;
+
+    emit(
+      state.copyWith(
+        shouldUpdateCamera: true,
+        cameraFollowingMode: CameraFollowingMode.showRoute,
+        followDriverCamera: false,
+      ),
+    );
+
+    Future.delayed(const Duration(milliseconds: 1000), () {
+      if (!isClosed) {
+        emit(state.copyWith(shouldUpdateCamera: false));
+      }
+    });
+  }
+
+  void centerCameraOnDriver() {
+    if (state.currentDriverPosition != null) {
+      emit(
+        state.copyWith(
+          shouldUpdateCamera: true,
+          cameraTarget: state.currentDriverPosition,
+          followDriverCamera: true,
+          cameraFollowingMode: CameraFollowingMode.followDriver,
+        ),
+      );
+
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (!isClosed) {
+          emit(state.copyWith(shouldUpdateCamera: false));
+        }
+      });
+    }
+  }
+
+  void setPayMentMethod(String paymentMethod) {
+    emit(state.copyWith(paymentMethod: paymentMethod));
+  }
+
+  // ============================================================================
+  // ROUTE PROGRESS AND TRACKING METRICS
+  // ============================================================================
 
   TrackingStatus getTrackingStatus() {
     return _realTimeTrackingService.getTrackingStatus();
@@ -1456,7 +1543,9 @@ class RideCubit extends Cubit<RideState> {
           ),
         );
       }
-    } catch (e) {}
+    } catch (e) {
+      dev.log('Route progress calculation error: $e');
+    }
 
     return null;
   }
@@ -1585,6 +1674,10 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
+  // ============================================================================
+  // LIFECYCLE AND STATE MANAGEMENT
+  // ============================================================================
+
   Future<void> handleAppLifecycleChange(
     AppLifecycleState lifecycleState,
   ) async {
@@ -1643,29 +1736,9 @@ class RideCubit extends Cubit<RideState> {
     );
   }
 
-  Future<void> displayStaticRouteOnly() async {
-    await _displayStaticRouteOnly();
-  }
-
-  Future<void> startRealTimeTrackingOnly() async {
-    await _startRealTimeTrackingOnly();
-  }
-
-  void listenToDriverStatus() {
-    _listenToDriverStatus();
-  }
-
-  Future<void> ensureMarkerIcons() async {
-    await _ensureMarkerIcons();
-  }
-
-  void handleRealTimePositionUpdate(
-    LatLng position,
-    double bearing,
-    DriverLocationData locationData,
-  ) {
-    _handleRealTimePositionUpdate(position, bearing, locationData);
-  }
+  // ============================================================================
+  // DEBUG AND METRICS
+  // ============================================================================
 
   Map<String, dynamic> getEnhancedTrackingMetrics() {
     final baseMetrics = _realTimeTrackingService.getTrackingMetrics();
@@ -1700,6 +1773,10 @@ class RideCubit extends Cubit<RideState> {
     }
   }
 
+  // ============================================================================
+  // DISPOSAL
+  // ============================================================================
+
   @override
   Future<void> close() async {
     _isDisposed = true;
@@ -1719,6 +1796,10 @@ class RideCubit extends Cubit<RideState> {
     return super.close();
   }
 }
+
+// ============================================================================
+// ROUTE PROGRESS MODEL
+// ============================================================================
 
 class RouteProgress {
   final double progress;

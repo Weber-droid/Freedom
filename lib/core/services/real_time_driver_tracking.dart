@@ -10,7 +10,6 @@ import 'package:latlong2/latlong.dart' as ll;
 class RealTimeDriverTrackingService {
   final RouteService _routeService = getIt<RouteService>();
 
-  // Tracking state
   bool _isTracking = false;
   gmaps.LatLng? _lastKnownDriverPosition;
   gmaps.LatLng? _currentDestination;
@@ -31,17 +30,14 @@ class RealTimeDriverTrackingService {
 
   static const double _maxSpeedKmh = 120.0;
   static const double _minAccuracyMeters = 5.0;
-  static const double _maxJumpDistanceMeters =
-      200.0; // Max distance between updates
+  static const double _maxJumpDistanceMeters = 200.0;
 
-  // Callbacks for UI updates
   void Function(gmaps.LatLng position, double bearing, DriverLocationData data)?
   onDriverPositionUpdate;
   void Function(List<gmaps.LatLng> newRoute)? onRouteUpdate;
   void Function(String message)? onTrackingStatusUpdate;
   void Function(gmaps.LatLng position)? onDriverMarkerUpdate;
 
-  /// Initialize tracking for a ride in progress
   void startTracking({
     required String rideId,
     required String driverId,
@@ -67,20 +63,17 @@ class RealTimeDriverTrackingService {
     _lastRouteRecalculation = null;
     _locationHistory.clear();
 
-    // Set callbacks
     onDriverPositionUpdate = onPositionUpdate;
     onRouteUpdate = onRouteUpdated;
     onTrackingStatusUpdate = onStatusUpdate;
     onDriverMarkerUpdate = onMarkerUpdate;
 
-    // Start monitoring timer for stale updates
     _startUpdateMonitoring();
 
     _notifyStatus('Enhanced real-time tracking started (3s intervals)');
     dev.log('📍 Destination set: $destination');
   }
 
-  /// Start monitoring for stale updates
   void _startUpdateMonitoring() {
     _updateTimer?.cancel();
     _updateTimer = Timer.periodic(Duration(seconds: 5), (timer) {
@@ -88,7 +81,6 @@ class RealTimeDriverTrackingService {
     });
   }
 
-  /// Check for stale location updates
   void _checkForStaleUpdates() {
     if (!_isTracking || _lastPositionUpdate == null) return;
 
@@ -103,7 +95,6 @@ class RealTimeDriverTrackingService {
     }
   }
 
-  /// Process incoming driver location from socket with enhanced precision
   Future<void> processDriverLocation(Map<String, dynamic> locationData) async {
     if (!_isTracking) {
       dev.log('⚠️ Received location data but tracking is not active');
@@ -124,23 +115,18 @@ class RealTimeDriverTrackingService {
         return;
       }
 
-      // Update location history
       _updateLocationHistory(driverLocationData);
 
-      // Update driver position with smoothed data
       await _updateDriverPosition(smoothedPosition);
 
-      // Update marker with precise position
       onDriverMarkerUpdate?.call(smoothedPosition.position);
 
-      // Check if route recalculation is needed
       await _checkForRouteRecalculation(smoothedPosition.position);
     } catch (e) {
       dev.log('❌ Error processing driver location: $e');
     }
   }
 
-  /// Enhanced location data parsing with better validation
   DriverLocationData? _parseLocationData(Map<String, dynamic> data) {
     try {
       dev.log('🔍 Raw driver location data: $data');
@@ -150,7 +136,6 @@ class RealTimeDriverTrackingService {
         return null;
       }
 
-      // Server sends [longitude, latitude] but we need [latitude, longitude]
       final serverLatitude = (coordinates[0] as num).toDouble();
       final serverLongitude = (coordinates[1] as num).toDouble();
 
@@ -164,7 +149,6 @@ class RealTimeDriverTrackingService {
         '✅ Corrected driver position: LatLng($serverLatitude, $serverLongitude)',
       );
 
-      // Extract other fields with better defaults
       final driverId = data['driverId'] as String?;
       final rideId = data['rideId'] as String?;
       final status = data['status'] as String?;
@@ -178,7 +162,6 @@ class RealTimeDriverTrackingService {
       final isSignificantMovement =
           data['isSignificantMovement'] as bool? ?? true;
 
-      // Parse ETA
       EtaData? eta;
       final etaMap = data['eta'] as Map<String, dynamic>?;
       if (etaMap != null) {
@@ -188,7 +171,6 @@ class RealTimeDriverTrackingService {
         );
       }
 
-      // Parse lastUpdate with fallback
       DateTime lastUpdate = DateTime.now();
       final lastUpdateStr = data['lastUpdate'] as String?;
       if (lastUpdateStr != null) {
@@ -215,32 +197,27 @@ class RealTimeDriverTrackingService {
   }
 
   bool _isValidPosition(DriverLocationData data) {
-    // Check GPS accuracy
     if (data.accuracy > 50.0) {
       dev.log('⚠️ Poor GPS accuracy: ${data.accuracy}m');
       return false;
     }
 
-    // Check for unrealistic speed
     if (data.speed > _maxSpeedKmh) {
       dev.log('⚠️ Unrealistic speed: ${data.speed} km/h');
       return false;
     }
 
-    // Check for position jumps if we have previous position
     if (_lastKnownDriverPosition != null) {
       final distance = _calculateDistanceInMeters(
         _lastKnownDriverPosition!,
         data.position,
       );
 
-      // Calculate time since last update
       final timeDiff =
           _lastPositionUpdate != null
               ? data.lastUpdate.difference(_lastPositionUpdate!).inSeconds
               : 3;
 
-      // Check for unrealistic position jumps
       if (distance > _maxJumpDistanceMeters && timeDiff < 10) {
         dev.log(
           '⚠️ Unrealistic position jump: ${distance.toStringAsFixed(1)}m in ${timeDiff}s',
@@ -252,13 +229,11 @@ class RealTimeDriverTrackingService {
     return true;
   }
 
-  /// Apply position smoothing using location history
   DriverLocationData? _applySmoothening(DriverLocationData newData) {
     if (_locationHistory.isEmpty) {
       return newData;
     }
 
-    // Simple moving average for smoothing
     final recentPositions =
         _locationHistory
             .where((h) => DateTime.now().difference(h.timestamp).inSeconds < 15)
@@ -268,21 +243,19 @@ class RealTimeDriverTrackingService {
       return newData;
     }
 
-    // Calculate weighted average position
     double totalWeight = 0.0;
     double weightedLat = 0.0;
     double weightedLng = 0.0;
 
     for (int i = 0; i < recentPositions.length; i++) {
       final history = recentPositions[i];
-      final weight = (i + 1).toDouble(); // More recent = higher weight
+      final weight = (i + 1).toDouble();
 
       totalWeight += weight;
       weightedLat += history.position.latitude * weight;
       weightedLng += history.position.longitude * weight;
     }
 
-    // Include new position with highest weight
     final newWeight = recentPositions.length + 1.0;
     totalWeight += newWeight;
     weightedLat += newData.position.latitude * newWeight;
@@ -308,7 +281,6 @@ class RealTimeDriverTrackingService {
     );
   }
 
-  /// Update location history
   void _updateLocationHistory(DriverLocationData data) {
     _locationHistory.add(
       LocationHistory(
@@ -319,17 +291,14 @@ class RealTimeDriverTrackingService {
       ),
     );
 
-    // Keep only recent history
     if (_locationHistory.length > _maxHistoryLength) {
       _locationHistory.removeAt(0);
     }
 
-    // Remove old entries
     final cutoffTime = DateTime.now().subtract(Duration(minutes: 2));
     _locationHistory.removeWhere((h) => h.timestamp.isBefore(cutoffTime));
   }
 
-  /// Enhanced driver position update with better bearing calculation
   Future<void> _updateDriverPosition(DriverLocationData locationData) async {
     final position = locationData.position;
     final bearing = _calculateEnhancedBearing(position, locationData);
@@ -337,10 +306,8 @@ class RealTimeDriverTrackingService {
     _lastKnownDriverPosition = position;
     _lastPositionUpdate = locationData.lastUpdate;
 
-    // Calculate precise route progress
     final progressInfo = _calculateRouteProgress(position);
 
-    // Notify UI with enhanced data
     onDriverPositionUpdate?.call(position, bearing, locationData);
 
     dev.log(
@@ -357,7 +324,6 @@ class RealTimeDriverTrackingService {
     }
   }
 
-  /// Enhanced bearing calculation using multiple methods
   double _calculateEnhancedBearing(
     gmaps.LatLng currentPosition,
     DriverLocationData data,
@@ -366,7 +332,6 @@ class RealTimeDriverTrackingService {
       return data.heading!;
     }
 
-    // Calculate bearing from movement history
     if (_locationHistory.length >= 2) {
       final recentPositions =
           _locationHistory
@@ -381,7 +346,6 @@ class RealTimeDriverTrackingService {
       }
     }
 
-    // Fallback to previous position
     if (_lastKnownDriverPosition != null) {
       return _calculateBearingBetweenPoints(
         _lastKnownDriverPosition!,
@@ -392,7 +356,6 @@ class RealTimeDriverTrackingService {
     return 0.0;
   }
 
-  /// Calculate bearing between two points
   double _calculateBearingBetweenPoints(gmaps.LatLng start, gmaps.LatLng end) {
     final lat1 = start.latitude * math.pi / 180;
     final lat2 = end.latitude * math.pi / 180;
@@ -407,11 +370,9 @@ class RealTimeDriverTrackingService {
     return (bearing + 360) % 360;
   }
 
-  /// Enhanced route recalculation with better thresholds
   Future<void> _checkForRouteRecalculation(gmaps.LatLng driverPosition) async {
     if (_currentDestination == null) return;
 
-    // Always calculate route if we don't have one
     if (_currentRoutePoints.isEmpty) {
       await _calculateNewRoute(driverPosition, _currentDestination!);
       return;
@@ -419,7 +380,6 @@ class RealTimeDriverTrackingService {
 
     final distanceFromRoute = _calculateDistanceFromRoute(driverPosition);
 
-    // More aggressive recalculation for better tracking
     if (distanceFromRoute > _routeDeviationThresholdMeters) {
       dev.log(
         '🔄 Driver deviated ${distanceFromRoute.toStringAsFixed(1)}m from route '
@@ -432,7 +392,6 @@ class RealTimeDriverTrackingService {
     }
   }
 
-  /// Calculate distance from current route
   double _calculateDistanceFromRoute(gmaps.LatLng driverPosition) {
     if (_currentRoutePoints.isEmpty) return double.infinity;
 
@@ -453,7 +412,6 @@ class RealTimeDriverTrackingService {
     return minDistance;
   }
 
-  /// Calculate distance from point to line segment
   double distanceToLineSegment(
     gmaps.LatLng point,
     gmaps.LatLng lineStart,
@@ -461,7 +419,6 @@ class RealTimeDriverTrackingService {
   ) {
     final geodesy = geo.Geodesy();
 
-    // Convert to latlong2 format for geodesy calculations
     final projectedPoint = geodesy.projectPointOntoGeodesicLine(
       LatLngExtensions(point).toLatLong2(),
       LatLngExtensions(lineStart).toLatLong2(),
@@ -473,7 +430,6 @@ class RealTimeDriverTrackingService {
       projectedPoint,
     );
 
-    // Check if projection falls within the line segment
     final segmentLength = geodesy.distanceBetweenTwoGeoPoints(
       LatLngExtensions(lineStart).toLatLong2(),
       LatLngExtensions(lineEnd).toLatLong2(),
@@ -484,7 +440,6 @@ class RealTimeDriverTrackingService {
       projectedPoint,
     );
 
-    // If projection is outside the segment, return distance to closest endpoint
     if (distanceToProjection < 0 || distanceToProjection > segmentLength) {
       final distanceToStart = geodesy.distanceBetweenTwoGeoPoints(
         LatLngExtensions(point).toLatLong2(),
@@ -500,9 +455,8 @@ class RealTimeDriverTrackingService {
     return distance.toDouble();
   }
 
-  /// Calculate distance between two points in meters
   double _calculateDistanceInMeters(gmaps.LatLng point1, gmaps.LatLng point2) {
-    const double earthRadius = 6371000; // Earth's radius in meters
+    const double earthRadius = 6371000;
 
     final lat1Rad = point1.latitude * math.pi / 180;
     final lat2Rad = point2.latitude * math.pi / 180;
@@ -520,7 +474,6 @@ class RealTimeDriverTrackingService {
     return earthRadius * c;
   }
 
-  /// Check if route should be recalculated (respecting cooldown)
   bool _shouldRecalculateRoute() {
     if (_lastRouteRecalculation == null) return true;
 
@@ -531,7 +484,6 @@ class RealTimeDriverTrackingService {
         _routeRecalculationCooldownSeconds;
   }
 
-  /// Enhanced route calculation with better error handling
   Future<void> _calculateNewRoute(gmaps.LatLng from, gmaps.LatLng to) async {
     try {
       dev.log(
@@ -552,7 +504,6 @@ class RealTimeDriverTrackingService {
         );
         _notifyStatus('Route updated - ${_currentRoutePoints.length} points');
 
-        // Notify UI of route update
         onRouteUpdate?.call(_currentRoutePoints);
       } else {
         dev.log('❌ Failed to calculate route: ${routeResult.errorMessage}');
@@ -564,11 +515,9 @@ class RealTimeDriverTrackingService {
     }
   }
 
-  /// Calculate progress along current route
   RouteProgress? _calculateRouteProgress(gmaps.LatLng driverPosition) {
     if (_currentRoutePoints.isEmpty) return null;
 
-    // Find closest point on route
     double minDistance = double.infinity;
     int closestSegmentIndex = 0;
 
@@ -585,7 +534,6 @@ class RealTimeDriverTrackingService {
       }
     }
 
-    // Calculate total distance and distance covered
     double totalDistance = 0;
     double distanceCovered = 0;
 
@@ -614,14 +562,12 @@ class RealTimeDriverTrackingService {
     );
   }
 
-  /// Calculate estimated time of arrival
   Duration _calculateETA(double remainingDistanceMeters) {
-    const double averageSpeedMps = 8.33; // ~30 km/h in m/s
+    const double averageSpeedMps = 8.33;
     final etaSeconds = remainingDistanceMeters / averageSpeedMps;
     return Duration(seconds: etaSeconds.round());
   }
 
-  /// Get enhanced tracking status
   TrackingStatus getTrackingStatus() {
     return TrackingStatus(
       isTracking: _isTracking,
@@ -641,7 +587,6 @@ class RealTimeDriverTrackingService {
     );
   }
 
-  /// Calculate average GPS accuracy from recent history
   double _calculateAverageAccuracy() {
     if (_locationHistory.isEmpty) return 0.0;
 
@@ -656,16 +601,13 @@ class RealTimeDriverTrackingService {
     return totalAccuracy / recentHistory.length;
   }
 
-  /// Check if receiving regular updates
   bool _isReceivingRegularUpdates() {
     if (_lastPositionUpdate == null) return false;
 
     final timeSinceLastUpdate = DateTime.now().difference(_lastPositionUpdate!);
-    return timeSinceLastUpdate <
-        Duration(seconds: 6); // Within 2x expected interval
+    return timeSinceLastUpdate < Duration(seconds: 6);
   }
 
-  /// Stop tracking with proper cleanup
   void stopTracking() {
     dev.log('🛑 Stopping enhanced real-time driver tracking');
 
@@ -679,11 +621,9 @@ class RealTimeDriverTrackingService {
     _lastRouteRecalculation = null;
     _locationHistory.clear();
 
-    // Clean up timer
     _updateTimer?.cancel();
     _updateTimer = null;
 
-    // Clear callbacks
     onDriverPositionUpdate = null;
     onRouteUpdate = null;
     onTrackingStatusUpdate = null;
@@ -692,13 +632,11 @@ class RealTimeDriverTrackingService {
     _notifyStatus('Enhanced tracking stopped');
   }
 
-  /// Notify status updates
   void _notifyStatus(String message) {
     onTrackingStatusUpdate?.call(message);
     dev.log('📊 Tracking status: $message');
   }
 
-  /// Check if driver has reached destination
   bool hasReachedDestination(gmaps.LatLng driverPosition) {
     if (_currentDestination == null) return false;
 
@@ -707,35 +645,27 @@ class RealTimeDriverTrackingService {
       _currentDestination!,
     );
 
-    const double arrivalThresholdMeters = 100.0; // 100 meters
+    const double arrivalThresholdMeters = 100.0;
     return distanceToDestination <= arrivalThresholdMeters;
   }
 
-  /// Get current route points
   List<gmaps.LatLng> get currentRoutePoints =>
       List.unmodifiable(_currentRoutePoints);
 
-  /// Check if tracking is active
   bool get isTracking => _isTracking;
 
-  /// Get last known driver position
   gmaps.LatLng? get lastKnownDriverPosition => _lastKnownDriverPosition;
 
-  /// Get current destination
   gmaps.LatLng? get currentDestination => _currentDestination;
 
-  /// Get current ride ID
   String? get currentRideId => _currentRideId;
 
-  /// Get current driver ID
   String? get currentDriverId => _currentDriverId;
 
-  /// Get location history for debugging/analysis
   List<LocationHistory> get locationHistory =>
       List.unmodifiable(_locationHistory);
 }
 
-/// Location history for position smoothing
 class LocationHistory {
   final gmaps.LatLng position;
   final DateTime timestamp;
@@ -755,7 +685,6 @@ class LocationHistory {
   }
 }
 
-/// Enhanced driver location data
 class DriverLocationData {
   final String? driverId;
   final String? rideId;
@@ -763,9 +692,9 @@ class DriverLocationData {
   final String? status;
   final bool isMultiStop;
   final EtaData? eta;
-  final double speed; // km/h
-  final double? heading; // degrees
-  final double accuracy; // meters
+  final double speed;
+  final double? heading;
+  final double accuracy;
   final DateTime lastUpdate;
   final bool isSignificantMovement;
 
@@ -792,7 +721,6 @@ class DriverLocationData {
   }
 }
 
-/// ETA information
 class EtaData {
   final double value;
   final String text;
@@ -802,7 +730,6 @@ class EtaData {
   String toString() => 'EtaData(value: $value, text: $text)';
 }
 
-/// Route progress information
 class RouteProgress {
   final double progress;
   final double distanceCovered;
@@ -849,7 +776,6 @@ class RouteProgress {
   }
 }
 
-/// Enhanced tracking status information
 class TrackingStatus {
   final bool isTracking;
   final String? rideId;
@@ -915,7 +841,7 @@ class TrackingStatus {
   double? get distanceToDestination {
     if (lastKnownPosition == null || destination == null) return null;
 
-    const double earthRadius = 6371000; // Earth's radius in meters
+    const double earthRadius = 6371000;
     final lat1Rad = lastKnownPosition!.latitude * math.pi / 180;
     final lat2Rad = destination!.latitude * math.pi / 180;
     final dLat =
@@ -969,7 +895,6 @@ extension LatLngExtensions on gmaps.LatLng {
     return '${latitude.toStringAsFixed(precision)}, ${longitude.toStringAsFixed(precision)}';
   }
 
-  /// Validate if coordinates are within valid ranges
   bool get isValid {
     return latitude >= -90 &&
         latitude <= 90 &&
@@ -977,7 +902,6 @@ extension LatLngExtensions on gmaps.LatLng {
         longitude <= 180;
   }
 
-  /// Round coordinates to specified decimal places
   gmaps.LatLng roundToPrecision(int decimalPlaces) {
     final factor = math.pow(10, decimalPlaces);
     return gmaps.LatLng(
@@ -986,7 +910,6 @@ extension LatLngExtensions on gmaps.LatLng {
     );
   }
 
-  /// Calculate distance to another point in meters
   double distanceTo(gmaps.LatLng other) {
     const double earthRadius = 6371000;
 
@@ -1006,7 +929,6 @@ extension LatLngExtensions on gmaps.LatLng {
     return earthRadius * c;
   }
 
-  /// Calculate bearing to another point in degrees
   double bearingTo(gmaps.LatLng other) {
     final lat1 = latitude * math.pi / 180;
     final lat2 = other.latitude * math.pi / 180;
@@ -1021,16 +943,13 @@ extension LatLngExtensions on gmaps.LatLng {
     return (bearing + 360) % 360;
   }
 
-  /// Get debug string with validation status
   String get debugString {
     return 'Lat: ${latitude.toStringAsFixed(6)}, Lng: ${longitude.toStringAsFixed(6)} ${isValid ? "✓" : "✗"}';
   }
 }
 
-/// Additional utility methods for the tracking service
 extension RealTimeDriverTrackingServiceExtensions
     on RealTimeDriverTrackingService {
-  /// Get detailed tracking metrics for debugging
   Map<String, dynamic> getTrackingMetrics() {
     final status = getTrackingStatus();
 
@@ -1054,25 +973,21 @@ extension RealTimeDriverTrackingServiceExtensions
     };
   }
 
-  /// Force route recalculation (bypassing cooldown) - useful for debugging
   Future<void> forceRouteRecalculation() async {
     if (_lastKnownDriverPosition != null && _currentDestination != null) {
-      _lastRouteRecalculation = null; // Reset cooldown
+      _lastRouteRecalculation = null;
       await _calculateNewRoute(_lastKnownDriverPosition!, _currentDestination!);
     }
   }
 
-  /// Clear location history - useful for resetting tracking state
   void clearLocationHistory() {
     _locationHistory.clear();
     dev.log('📊 Location history cleared');
   }
 
-  /// Get current tracking performance metrics
   Map<String, dynamic> getPerformanceMetrics() {
     final now = DateTime.now();
 
-    // Calculate update frequency
     double averageUpdateInterval = 0.0;
     if (_locationHistory.length > 1) {
       final intervals = <double>[];
@@ -1088,14 +1003,12 @@ extension RealTimeDriverTrackingServiceExtensions
           intervals.reduce((a, b) => a + b) / intervals.length;
     }
 
-    // Calculate accuracy stats
     final accuracyValues = _locationHistory.map((h) => h.accuracy).toList();
     double minAccuracy =
         accuracyValues.isNotEmpty ? accuracyValues.reduce(math.min) : 0.0;
     double maxAccuracy =
         accuracyValues.isNotEmpty ? accuracyValues.reduce(math.max) : 0.0;
 
-    // Calculate speed stats
     final speedValues = _locationHistory.map((h) => h.speed).toList();
     double averageSpeed =
         speedValues.isNotEmpty
@@ -1128,7 +1041,6 @@ extension RealTimeDriverTrackingServiceExtensions
     };
   }
 
-  /// Validate current tracking state and return issues
   List<String> validateTrackingState() {
     final issues = <String>[];
     final status = getTrackingStatus();
@@ -1171,7 +1083,6 @@ extension RealTimeDriverTrackingServiceExtensions
     return issues;
   }
 
-  /// Get summary of recent location updates
   List<Map<String, dynamic>> getRecentLocationSummary({int count = 5}) {
     final recentHistory =
         _locationHistory
