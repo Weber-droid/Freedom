@@ -1201,10 +1201,33 @@ class BuildProfileImage extends StatelessWidget {
               case ProfileError():
                 return _buildEmptyImage();
               case ProfileLoaded():
+                final profilePicture = state.user?.data.profilePicture;
+
+                if (profilePicture == null || profilePicture.trim().isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
                 return CircleAvatar(
                   radius: 15,
-                  backgroundImage: NetworkImage(
-                    state.user?.data.profilePicture ?? '',
+                  backgroundImage: NetworkImage(profilePicture),
+                  onBackgroundImageError: (exception, stackTrace) {
+                    log('Error loading profile image: $exception');
+                  },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: thickFillColor),
+                      borderRadius: BorderRadius.circular(50),
+                    ),
+                    child: CircleAvatar(
+                      radius: 10,
+                      backgroundColor: Colors.white,
+                      child: SvgPicture.asset(
+                        'assets/images/user.svg',
+                        height: 15,
+                        width: 15,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
                   ),
                 );
               case ProfileLoading():
@@ -1217,23 +1240,23 @@ class BuildProfileImage extends StatelessWidget {
       ),
     );
   }
-}
 
-Widget _buildEmptyImage() {
-  return Container(
-    decoration: BoxDecoration(
-      border: Border.all(color: thickFillColor),
-      borderRadius: BorderRadius.circular(50),
-    ),
-    child: CircleAvatar(
-      radius: 10,
-      backgroundColor: Colors.white,
-      child: SvgPicture.asset(
-        'assets/images/user.svg',
-        height: 15,
-        width: 15,
-        fit: BoxFit.contain,
+  Widget _buildEmptyImage() {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: thickFillColor),
+        borderRadius: BorderRadius.circular(50),
       ),
-    ),
-  );
+      child: CircleAvatar(
+        radius: 10,
+        backgroundColor: Colors.white,
+        child: SvgPicture.asset(
+          'assets/images/user.svg',
+          height: 15,
+          width: 15,
+          fit: BoxFit.contain,
+        ),
+      ),
+    );
+  }
 }

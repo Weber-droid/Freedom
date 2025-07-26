@@ -794,7 +794,7 @@ class DeliveryCubit extends Cubit<DeliveryState> {
 
     try {
       final driverIcon = await BitmapDescriptor.asset(
-        const ImageConfiguration(size: Size(32, 32)), // Consistent size
+        const ImageConfiguration(size: Size(32, 32)),
         'assets/images/delivery_marker.png',
       );
       return driverIcon;
@@ -894,6 +894,8 @@ class DeliveryCubit extends Cubit<DeliveryState> {
       final response = await deliveryRepository.requestDelivery(
         deliveryRequestModel,
       );
+
+      log('requestDelivery() response: $response');
 
       response.fold(
         (failure) {

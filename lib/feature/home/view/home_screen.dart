@@ -80,7 +80,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  // ... keeping all existing initialization methods unchanged ...
   Future<void> _initializeServices() async {
     try {
       dev.log('🚀 Initializing HomeScreen services...');
@@ -92,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         userId: user!.userId ?? '',
         userName: user.firstName ?? '',
       );
-
+      log('user_token: ${user.token}');
       await _checkPersistedStates();
       await _getPaymentMethods();
 
@@ -105,7 +104,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _checkPersistedStates() async {
     if (_hasAttemptedRestoration) {
-      dev.log('⚠️ Restoration already attempted, skipping...');
       return;
     }
 

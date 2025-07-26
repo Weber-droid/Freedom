@@ -4,7 +4,7 @@ description: "User end for freedom"
 
 publish_to: 'none' 
 
-version: 1.0.0+1
+version: 1.0.0+3
 
 environment:
   sdk: ^3.7.2
@@ -53,7 +53,7 @@ dependencies:
   flutter_google_maps_webservices: ^1.1.1
   flutter_dotenv: ^5.2.1
   flutter_polyline_points: ^2.1.0
-  firebase_messaging: ^15.2.5
+  firebase_messaging: ^15.2.10
   socket_io_client: ^3.1.2
   stream_chat_flutter: ^9.9.0
   json_annotation: ^4.9.0

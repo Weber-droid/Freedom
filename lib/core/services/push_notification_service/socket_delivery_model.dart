@@ -122,21 +122,6 @@ class DeliveryManRejected {
   final String? status;
 }
 
-class DeliveryManMessage {
-  DeliveryManMessage(this.type, this.notification);
-
-  factory DeliveryManMessage.fromJson(Map<String, dynamic> json) {
-    return DeliveryManMessage(
-      json['type'] as String,
-      DriverNotificationBody.fromJson(
-        json['notification'] as Map<String, dynamic>,
-      ),
-    );
-  }
-  final String type;
-  final DriverNotificationBody notification;
-}
-
 class DeliveryManNotificationBody {
   DeliveryManNotificationBody({
     required this.rideId,
@@ -166,5 +151,114 @@ class DeliveryManNotificationBody {
   @override
   String toString() {
     return 'DriverNotificationBody(rideId: $rideId, title: $title, body: $body, from: $from, notificationId: $notificationId, timestamp: $timestamp)';
+  }
+}
+
+class DeliveryManMessage {
+  final String type;
+  final DeliveryNotification notification;
+
+  DeliveryManMessage({required this.type, required this.notification});
+
+  factory DeliveryManMessage.fromJson(Map<String, dynamic> json) {
+    return DeliveryManMessage(
+      type: json['type'] as String,
+      notification: DeliveryNotification.fromJson(
+        json['notification'] as Map<String, dynamic>,
+      ),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'type': type, 'notification': notification.toJson()};
+  }
+
+  @override
+  String toString() {
+    return 'DeliveryMessage(type: $type, notification: $notification)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is DeliveryManMessage &&
+        other.type == type &&
+        other.notification == notification;
+  }
+
+  @override
+  int get hashCode => type.hashCode ^ notification.hashCode;
+}
+
+class DeliveryNotification {
+  final String title;
+  final String body;
+  final String type;
+  final String deliveryId;
+  final String from;
+  final String notificationId;
+  final String timestamp;
+
+  DeliveryNotification({
+    required this.title,
+    required this.body,
+    required this.type,
+    required this.deliveryId,
+    required this.from,
+    required this.notificationId,
+    required this.timestamp,
+  });
+
+  factory DeliveryNotification.fromJson(Map<String, dynamic> json) {
+    return DeliveryNotification(
+      title: json['title'] as String,
+      body: json['body'] as String,
+      type: json['type'] as String,
+      deliveryId: json['deliveryId'] as String,
+      from: json['from'] as String,
+      notificationId: json['notificationId'] as String,
+      timestamp: json['timestamp'] as String,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'body': body,
+      'type': type,
+      'deliveryId': deliveryId,
+      'from': from,
+      'notificationId': notificationId,
+      'timestamp': timestamp,
+    };
+  }
+
+  @override
+  String toString() {
+    return 'DeliveryNotification(title: $title, body: $body, type: $type, deliveryId: $deliveryId, from: $from, notificationId: $notificationId, timestamp: $timestamp)';
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is DeliveryNotification &&
+        other.title == title &&
+        other.body == body &&
+        other.type == type &&
+        other.deliveryId == deliveryId &&
+        other.from == from &&
+        other.notificationId == notificationId &&
+        other.timestamp == timestamp;
+  }
+
+  @override
+  int get hashCode {
+    return title.hashCode ^
+        body.hashCode ^
+        type.hashCode ^
+        deliveryId.hashCode ^
+        from.hashCode ^
+        notificationId.hashCode ^
+        timestamp.hashCode;
   }
 }

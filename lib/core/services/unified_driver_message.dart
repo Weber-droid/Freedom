@@ -45,7 +45,6 @@ class RideDriverMessage implements UnifiedDriverMessage {
   DriverMessage get originalMessage => _driverMessage;
 }
 
-// Wrapper for delivery messages
 class DeliveryDriverMessage implements UnifiedDriverMessage {
   final DeliveryManMessage _deliveryMessage;
 
@@ -55,7 +54,7 @@ class DeliveryDriverMessage implements UnifiedDriverMessage {
   String get messageType => _deliveryMessage.type;
 
   @override
-  String get contextId => _deliveryMessage.notification.rideId; // This actually contains deliveryId
+  String get contextId => _deliveryMessage.notification.deliveryId;
 
   @override
   String get messageBody => _deliveryMessage.notification.body;
