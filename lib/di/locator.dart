@@ -113,7 +113,7 @@ Future<void> locator() async {
     ..registerLazySingleton<SocketService>(SocketService.new)
     ..registerLazySingleton<IMessageService>(MessageService.new)
     ..registerLazySingleton<PushNotificationService>(
-      PushNotificationService.new,
+      () => PushNotificationService.instance,
     )
     ..registerLazySingleton<RideRestorationManager>(
       () => RideRestorationManager(

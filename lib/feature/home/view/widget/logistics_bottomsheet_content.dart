@@ -701,7 +701,6 @@ class _LogisticsBottomSheetContentState
             !context.read<DeliveryCubit>().state.showDestinationPredictions)) {
       return const SizedBox.shrink();
     }
-
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
       decoration: BoxDecoration(
@@ -931,8 +930,6 @@ class _LogisticsBottomSheetContentState
     } else {
       destinations = [widget.itemDestinationController.text];
     }
-
-    
 
     final model = DeliveryModel.withMultipleDestinations(
       pickupLocation: widget.pickUpController.text,

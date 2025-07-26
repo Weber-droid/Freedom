@@ -18,7 +18,8 @@ class LocationRepositoryImpl implements LocationRepository {
   Future<List<PlacePrediction>> getPlacePredictions(String query) async {
     try {
       final models = await remoteDataSource.getPlacePredictions(query);
-      log('Place predictions: ${models[0].mainText}');;
+      log('Place predictions: ${models[0].mainText}');
+      ;
       return models
           .map(
             (model) => PlacePrediction(
@@ -44,8 +45,7 @@ class LocationRepositoryImpl implements LocationRepository {
       if (model == null) return null;
 
       await localDataSource.addToRecent(model);
-
-      return FreedomLocation(
+      final location = FreedomLocation(
         id: model.id,
         placeId: model.placeId,
         name: model.name,
@@ -55,6 +55,8 @@ class LocationRepositoryImpl implements LocationRepository {
         iconType: model.iconType,
         isFavorite: model.isFavorite,
       );
+      log('Place details: ${location.latitude} ${location.longitude}');
+      return location;
     } catch (e) {
       log('Repository error: $e');
       return null;
@@ -66,16 +68,18 @@ class LocationRepositoryImpl implements LocationRepository {
     try {
       final models = await localDataSource.getSavedLocations();
       return models
-          .map((model) => FreedomLocation(
-                id: model.id,
-                placeId: model.placeId,
-                name: model.name,
-                address: model.address,
-                latitude: model.latitude,
-                longitude: model.longitude,
-                iconType: model.iconType,
-                isFavorite: true,
-              ))
+          .map(
+            (model) => FreedomLocation(
+              id: model.id,
+              placeId: model.placeId,
+              name: model.name,
+              address: model.address,
+              latitude: model.latitude,
+              longitude: model.longitude,
+              iconType: model.iconType,
+              isFavorite: true,
+            ),
+          )
           .toList();
     } catch (e) {
       log('Repository error: $e');

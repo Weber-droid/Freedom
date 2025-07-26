@@ -236,6 +236,15 @@ class SocketService {
       }
     });
 
+    _socket!.on('delivery_message', (data) {
+      log('delivery_message: $data');
+      getIt<PushNotificationService>().showRideStatusNotification(
+        status: 'delivery_message',
+        message: data['notification']['body'] as String,
+      );
+      _deliveryMessageController.add(DeliveryManMessage.fromJson(data));
+    });
+
     ///Delivery status updated
     _socket!.on('delivery_status_updated', (data) {
       log('delivery_status_updated: $data');
@@ -304,15 +313,6 @@ class SocketService {
       } catch (e, stackTrace) {
         log('Error parsing ride_status_updated payload: $e\n$stackTrace');
       }
-    });
-
-    _socket!.on('delivery_message', (data) {
-      // log('delivery_message: $data');
-      // getIt<PushNotificationService>().showRideStatusNotification(
-      //   status: 'delivery_message',
-      //   message: data['notification']['body'] as String,
-      // );
-      // _deliveryMessageController.add(DeliveryManMessage.fromJson(data));
     });
   }
 

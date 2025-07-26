@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:ui';
 
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:freedom/app_preference.dart';
-import 'package:freedom/core/services/push_notification_service/socket_ride_models.dart';
+import 'package:freedom/core/services/background_service.dart';
 import 'package:freedom/core/services/socket_service.dart';
 import 'package:freedom/core/services/unified_driver_message.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
@@ -28,6 +29,7 @@ class InAppMessageCubit extends Cubit<InAppMessageState> {
   String? _currentUserId;
   String? _currentContextId;
   MessageContext? _currentContext;
+  VoidCallback? _backgroundMessageCallback;
 
   Future<void> _initializeCurrentUserId() async {
     _currentUserId ??= await RegisterLocalDataSource().getUser().then(
@@ -41,100 +43,34 @@ class InAppMessageCubit extends Cubit<InAppMessageState> {
   ) {
     _currentContextId = contextId;
     _currentContext = context;
-    _unifiedMessageSubscription?.cancel();
 
     log(
       'Starting to listen for driver messages for ${context.name}: $contextId',
     );
 
-    final unifiedStream = UnifiedMessageStream.create(socketService);
+    // Stop any existing unified message subscription since background service handles it
+    _unifiedMessageSubscription?.cancel();
+    _unifiedMessageSubscription = null;
 
-    _unifiedMessageSubscription = unifiedStream.listen(
-      (unifiedMessage) async {
-        log(
-          'Received unified message: ${unifiedMessage.messageBody} (context: ${unifiedMessage.context.name})',
-        );
-        await _handleIncomingUnifiedMessage(unifiedMessage, contextId, context);
-      },
-      onError: (error) {
-        log('Error listening to unified messages: $error');
-        emit(InAppMessageError(error: 'Connection error: $error'));
-      },
+    // Set up callback to refresh messages when background service receives new ones
+    _backgroundMessageCallback = () {
+      _refreshMessagesFromBackground();
+    };
+
+    // Add callback to background service
+    BackgroundMessageService.instance.addMessageCallback(
+      _backgroundMessageCallback!,
+    );
+
+    log(
+      'Started listening via background service for ${context.name}: $contextId',
     );
   }
 
-  Future<void> _handleIncomingUnifiedMessage(
-    UnifiedDriverMessage unifiedMessage,
-    String currentContextId,
-    MessageContext context,
-  ) async {
-    try {
-      if (unifiedMessage.context != context) {
-        log(
-          'Skipping message - context mismatch: ${unifiedMessage.context.name} != ${context.name}',
-        );
-        return;
-      }
-
-      // Check if message belongs to current context ID
-      if (unifiedMessage.contextId != currentContextId) {
-        log(
-          'Skipping message - ${context.name} ID mismatch: ${unifiedMessage.contextId} != $currentContextId',
-        );
-        return;
-      }
-
-      await _initializeCurrentUserId();
-
-      if (_currentUserId != null && unifiedMessage.senderId == _currentUserId) {
-        log('Skipping own message to avoid duplicate');
-        return;
-      }
-
-      final existingMessages = await InAppMessageCache.getMessages(
-        currentContextId,
-      );
-
-      final messageAlreadyExists = existingMessages.any(
-        (msg) =>
-            msg.message == unifiedMessage.messageBody &&
-            msg.senderId == unifiedMessage.senderId,
-      );
-
-      if (messageAlreadyExists) {
-        log('Message already exists, skipping duplicate');
-        return;
-      }
-
-      final messageTimestamp = _parseTimestampSafely(unifiedMessage.timeStamp);
-
-      final incomingMessage = MessageModels(
-        unifiedMessage.messageBody,
-        unifiedMessage.senderId,
-        messageTimestamp,
-        unifiedMessage.contextId,
-        null,
-        null,
-        unifiedMessage.notificationId,
-        status: MessageStatus.delivered,
-      );
-
-      log(
-        'Adding new message to cache: ${incomingMessage.message} at $messageTimestamp',
-      );
-
-      final cache = InAppMessageCache();
-      await cache.addMessage(currentContextId, incomingMessage);
-
-      final updatedMessages = await InAppMessageCache.getMessages(
-        currentContextId,
-      );
-      log('Updated messages count: ${updatedMessages.length}');
-
-      emit(InAppMessageLoaded(inAppMessages: updatedMessages));
-    } catch (e) {
-      log('Error handling incoming unified message: $e');
-      emit(InAppMessageError(error: 'Failed to process message: $e'));
+  void _refreshMessagesFromBackground() {
+    if (_currentContextId != null && _currentContext != null) {
+      log('Background service notified of new message, refreshing...');
+      retrieveMessagesFromCache(_currentContextId, _currentContext!);
     }
   }
 
@@ -292,7 +228,7 @@ class InAppMessageCubit extends Cubit<InAppMessageState> {
       case MessageContext.ride:
         return await AppPreferences.getRideId();
       case MessageContext.delivery:
-        return await AppPreferences.getRideId();
+        return await AppPreferences.getDeliveryId();
     }
   }
 
@@ -388,6 +324,13 @@ class InAppMessageCubit extends Cubit<InAppMessageState> {
   }
 
   void stopListeningToDriverMessages() {
+    if (_backgroundMessageCallback != null) {
+      BackgroundMessageService.instance.removeMessageCallback(
+        _backgroundMessageCallback!,
+      );
+      _backgroundMessageCallback = null;
+    }
+
     _unifiedMessageSubscription?.cancel();
     _unifiedMessageSubscription = null;
     log('Stopped listening to driver messages');
