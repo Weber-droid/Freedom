@@ -6,7 +6,6 @@ import 'package:freedom/core/services/app_restoration_manager.dart';
 import 'package:freedom/core/services/life_cycle_manager.dart';
 import 'package:freedom/core/services/real_time_driver_tracking.dart';
 import 'package:freedom/core/services/map_services.dart';
-import 'package:freedom/core/services/message_service/mesage_service.dart';
 import 'package:freedom/core/services/push_notification_service/push_nofication_service.dart';
 import 'package:freedom/core/services/ride_persistence_service.dart';
 import 'package:freedom/core/services/route_animation_services.dart';
@@ -31,7 +30,6 @@ import 'package:freedom/feature/home/use_cases/get_saved_location.dart';
 import 'package:freedom/feature/home/use_cases/remove_location.dart';
 import 'package:freedom/feature/home/use_cases/save_location.dart';
 import 'package:freedom/feature/message_driver/cubit/in_app_message_cubit.dart';
-import 'package:freedom/feature/message_driver/cubit/message_driver_cubit.dart';
 import 'package:freedom/feature/message_driver/remote_data_source/message_remote_data_source.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:get_it/get_it.dart';
@@ -54,9 +52,6 @@ Future<void> locator() async {
         animationService: getIt(),
         routeService: getIt(),
       ),
-    )
-    ..registerFactory<MessageDriverCubit>(
-      () => MessageDriverCubit(chatService: getIt()),
     )
     ..registerFactory(
       () => RideCubit(
@@ -111,7 +106,6 @@ Future<void> locator() async {
     ..registerLazySingleton(() => ClearRecentLocations(getIt()))
     ..registerLazySingleton(MapService.new)
     ..registerLazySingleton<SocketService>(SocketService.new)
-    ..registerLazySingleton<IMessageService>(MessageService.new)
     ..registerLazySingleton<PushNotificationService>(
       () => PushNotificationService.instance,
     )

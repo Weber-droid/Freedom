@@ -56,7 +56,7 @@ class AppLifecycleManager extends WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    dev.log('📱 App lifecycle changed: ${_lastLifecycleState} -> $state');
+    dev.log('📱 App lifecycle changed: $_lastLifecycleState -> $state');
     _lastLifecycleState = state;
 
     switch (state) {
@@ -78,7 +78,6 @@ class AppLifecycleManager extends WidgetsBindingObserver {
     }
   }
 
-  /// Handle app resumed from background
   void _handleAppResumed() async {
     dev.log('🟢 App resumed from background');
 

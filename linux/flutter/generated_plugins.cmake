@@ -4,14 +4,9 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   awesome_notifications
-  desktop_drop
   file_selector_linux
   flutter_secure_storage_linux
-  media_kit_video
-  record_linux
-  stream_webrtc_flutter
   url_launcher_linux
-  volume_controller
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
