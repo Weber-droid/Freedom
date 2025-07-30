@@ -24,8 +24,7 @@ void main() async {
   await dotenv.load();
   await locator();
   await initializeStorage();
-  final callService = StreamCallService();
-  final service = await getIt<SocketService>();
+  final service = getIt<SocketService>();
   await BackgroundMessageService.instance.initialize(service);
-  await bootstrap(() => App(callService: callService));
+  await bootstrap(() => App());
 }

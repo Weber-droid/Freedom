@@ -14,7 +14,6 @@ import 'package:freedom/core/services/ride_persistence_service.dart';
 import 'package:freedom/core/services/socket_service.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
-import 'package:freedom/feature/home/audio_call_cubit/call_cubit.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/delivery_cubit/delivery_cubit.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
@@ -86,16 +85,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _persistenceService = getIt<RidePersistenceService>();
       _restorationManager = getIt<RideRestorationManager>();
       await _connectToSocket();
-      final user = await RegisterLocalDataSource().getUser();
-      await context.read<CallCubit>().initialize(
-        userId: user!.userId ?? '',
-        userName: user.firstName ?? '',
-      );
-      log('user_token: ${user.token}');
       await _checkPersistedStates();
       await _getPaymentMethods();
-
-      dev.log('✅ HomeScreen services initialized successfully');
     } catch (e, stack) {
       dev.log('❌ Error initializing HomeScreen services: $e\n$stack');
       context.read<HomeCubit>().checkPermissionStatus();

@@ -1,10 +1,9 @@
 name: freedom
 description: "User end for freedom"
 
+publish_to: "none"
 
-publish_to: 'none' 
-
-version: 1.0.0+3
+version: 1.0.0+10
 
 environment:
   sdk: ^3.7.2
@@ -46,7 +45,6 @@ dependencies:
   permission_handler: ^11.4.0
   http_parser: ^4.1.2
   image_picker: ^1.1.2
-  stream_video_flutter: ^0.8.4
   geocoding: ^3.0.0
   flutter_secure_storage: ^9.2.4
   internet_connection_checker: ^3.0.1
@@ -55,7 +53,6 @@ dependencies:
   flutter_polyline_points: ^2.1.0
   firebase_messaging: ^15.2.10
   socket_io_client: ^3.1.2
-  stream_chat_flutter: ^9.9.0
   json_annotation: ^4.9.0
   awesome_notifications: ^0.10.1
   equatable: ^2.0.7
@@ -88,10 +85,9 @@ flutter_launcher_icons:
   min_sdk_android: 21
   adaptive_icon_background: "#de4a0a"
   adaptive_icon_foreground: "assets/images/bold_bcg.jpg"
-  
+
 dependency_overrides:
   intl: ^0.20.0
- 
 
 flutter:
   uses-material-design: true
@@ -101,34 +97,3 @@ flutter:
     - assets/images/nav_icon/inactive/
     - .env
     - assets/images/bike_marker.png
-
-  
-  
-  
-  
-
-  
-  
-
-  
-  
-
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  

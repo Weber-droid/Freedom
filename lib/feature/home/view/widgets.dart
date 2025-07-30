@@ -1002,13 +1002,7 @@ class _RiderContainerAndRideActionsState
                             '${DateTime.now().millisecondsSinceEpoch}';
                         Navigator.of(context).push(
                           MaterialPageRoute<dynamic>(
-                            builder:
-                                (context) => AudioCallScreen(
-                                  callId: callId,
-                                  driverName:
-                                      state.driverAccepted?.driverName ?? '',
-                                  driverPhoto: 'assets/images/rider_image.png',
-                                ),
+                            builder: (context) => SizedBox(),
                           ),
                         );
                       },

@@ -1,172 +1,171 @@
-import 'dart:async';
+// import 'dart:async';
 
-import 'package:bloc/bloc.dart';
-import 'package:equatable/equatable.dart';
-import 'package:freedom/core/services/message_service/mesage_service.dart';
-import 'package:stream_chat_flutter/stream_chat_flutter.dart';
+// import 'package:bloc/bloc.dart';
+// import 'package:equatable/equatable.dart';
+// import 'package:freedom/core/services/message_service/mesage_service.dart';
 
-part 'message_driver_state.dart';
-
+// part 'message_driver_state.dart';
 
 
-class MessageDriverCubit extends Cubit<MessageDriverState> {
 
-  MessageDriverCubit({
-    required IMessageService chatService,
-  }) : _chatService = chatService,
-        super(ChatInitial());
-  final IMessageService _chatService;
-  StreamSubscription<dynamic>? _channelSubscription;
+// class MessageDriverCubit extends Cubit<MessageDriverState> {
 
-  Future<void> initialize({
-    required String userId,
-    required String userName,
-  }) async {
-    emit(ChatLoading());
+//   MessageDriverCubit({
+//     required IMessageService chatService,
+//   }) : _chatService = chatService,
+//         super(ChatInitial());
+//   final IMessageService _chatService;
+//   StreamSubscription<dynamic>? _channelSubscription;
 
-    try {
-      await _chatService.initializeChat(
-        userId: userId,
-        userName: userName,
-      );
+//   Future<void> initialize({
+//     required String userId,
+//     required String userName,
+//   }) async {
+//     emit(ChatLoading());
 
-      await _chatService.connectUser(
-        userId: userId,
-        userName: userName,
-      );
+//     try {
+//       await _chatService.initializeChat(
+//         userId: userId,
+//         userName: userName,
+//       );
 
-      final user = _chatService.client!.state.currentUser!;
-      emit(ChatConnected(user));
-    } catch (e) {
-      emit(ChatError('Failed to initialize chat: ${e.toString()}'));
-    }
-  }
+//       await _chatService.connectUser(
+//         userId: userId,
+//         userName: userName,
+//       );
 
-  Future<void> createOrJoinChannel({
-    required String channelId,
-    required String channelName,
-    List<String>? members,
-    String? imageUrl,
-  }) async {
-    if (state is! ChatConnected) {
-      emit(const ChatError('User not connected. Please initialize first.'));
-      return;
-    }
+//       final user = _chatService.client!.state.currentUser!;
+//       emit(ChatConnected(user));
+//     } catch (e) {
+//       emit(ChatError('Failed to initialize chat: ${e.toString()}'));
+//     }
+//   }
 
-    emit(ChatLoading());
+//   Future<void> createOrJoinChannel({
+//     required String channelId,
+//     required String channelName,
+//     List<String>? members,
+//     String? imageUrl,
+//   }) async {
+//     if (state is! ChatConnected) {
+//       emit(const ChatError('User not connected. Please initialize first.'));
+//       return;
+//     }
 
-    try {
-      // Create or join channel
-      final channel = await _chatService.createChannel(
-        channelId: channelId,
-        name: channelName,
-        members: members,
-        imageUrl: imageUrl,
-      );
+//     emit(ChatLoading());
 
-      // Get messages
-      final messages = await channel.getMessagesById([channelId]);
+//     try {
+//       // Create or join channel
+//       final channel = await _chatService.createChannel(
+//         channelId: channelId,
+//         name: channelName,
+//         members: members,
+//         imageUrl: imageUrl,
+//       );
 
-      emit(ChatChannelLoaded(
-        channel: channel,
-        messages: messages.messages,
-      ));
+//       // Get messages
+//       final messages = await channel.getMessagesById([channelId]);
 
-      _listenToChannel(channel);
-    } catch (e) {
-      emit(ChatError('Failed to create or join channel: ${e.toString()}'));
-    }
-  }
+//       emit(ChatChannelLoaded(
+//         channel: channel,
+//         messages: messages.messages,
+//       ));
 
-  Future<void> loadChannel(String channelId) async {
-    if (state is! ChatConnected) {
-      emit(const ChatError('User not connected. Please initialize first.'));
-      return;
-    }
+//       _listenToChannel(channel);
+//     } catch (e) {
+//       emit(ChatError('Failed to create or join channel: ${e.toString()}'));
+//     }
+//   }
 
-    emit(ChatLoading());
+//   Future<void> loadChannel(String channelId) async {
+//     if (state is! ChatConnected) {
+//       emit(const ChatError('User not connected. Please initialize first.'));
+//       return;
+//     }
 
-    try {
-      final channel = await _chatService.getChannel(channelId: channelId);
+//     emit(ChatLoading());
 
-      // Get messages
-      final messages = await channel.getMessagesById([channelId]);
+//     try {
+//       final channel = await _chatService.getChannel(channelId: channelId);
 
-      emit(ChatChannelLoaded(
-        channel: channel,
-        messages: messages.messages,
-      ));
+//       // Get messages
+//       final messages = await channel.getMessagesById([channelId]);
 
-      // Listen for channel updates
-      _listenToChannel(channel);
-    } catch (e) {
-      emit(ChatError('Failed to load channel: ${e.toString()}'));
-    }
-  }
+//       emit(ChatChannelLoaded(
+//         channel: channel,
+//         messages: messages.messages,
+//       ));
 
-  Future<void> sendMessage(String text) async {
-    if (state is! ChatChannelLoaded) {
-      emit(const ChatError('No active channel. Please join a channel first.'));
-      return;
-    }
+//       // Listen for channel updates
+//       _listenToChannel(channel);
+//     } catch (e) {
+//       emit(ChatError('Failed to load channel: ${e.toString()}'));
+//     }
+//   }
 
-    try {
-      final channelState = state as ChatChannelLoaded;
-      await _chatService.sendMessage(
-        channelId: channelState.channel.id!,
-        text: text,
-      );
-    } catch (e) {
-      emit(ChatError('Failed to send message: ${e.toString()}'));
-    }
-  }
+//   Future<void> sendMessage(String text) async {
+//     if (state is! ChatChannelLoaded) {
+//       emit(const ChatError('No active channel. Please join a channel first.'));
+//       return;
+//     }
 
-  Future<void> markChannelRead() async {
-    if (state is! ChatChannelLoaded) return;
+//     try {
+//       final channelState = state as ChatChannelLoaded;
+//       await _chatService.sendMessage(
+//         channelId: channelState.channel.id!,
+//         text: text,
+//       );
+//     } catch (e) {
+//       emit(ChatError('Failed to send message: ${e.toString()}'));
+//     }
+//   }
 
-    try {
-      final channelState = state as ChatChannelLoaded;
-      await _chatService.markChannelRead(channelId: channelState.channel.id!);
-    } catch (e) {
-      // Handle error silently or show a toast
-      print('Failed to mark channel as read: ${e.toString()}');
-    }
-  }
+//   Future<void> markChannelRead() async {
+//     if (state is! ChatChannelLoaded) return;
 
-  void _listenToChannel(Channel channel) {
-    // Cancel previous subscription if any
-    _channelSubscription?.cancel();
+//     try {
+//       final channelState = state as ChatChannelLoaded;
+//       await _chatService.markChannelRead(channelId: channelState.channel.id!);
+//     } catch (e) {
+//       // Handle error silently or show a toast
+//       print('Failed to mark channel as read: ${e.toString()}');
+//     }
+//   }
 
-    // Listen for new messages
-    _channelSubscription = channel.state!.messagesStream.listen((event) {
-      if (state is ChatChannelLoaded) {
-        final currentState = state as ChatChannelLoaded;
-        emit(ChatChannelLoaded(
-          channel: channel,
-          messages: event,
-        ));
-      }
-    });
-  }
+//   void _listenToChannel(Channel channel) {
+//     // Cancel previous subscription if any
+//     _channelSubscription?.cancel();
 
-  Future<void> disconnect() async {
-    try {
-      await _chatService.disconnect();
-      _cleanUp();
-      emit(ChatInitial());
-    } catch (e) {
-      emit(ChatError('Failed to disconnect: ${e.toString()}'));
-    }
-  }
+//     // Listen for new messages
+//     _channelSubscription = channel.state!.messagesStream.listen((event) {
+//       if (state is ChatChannelLoaded) {
+//         final currentState = state as ChatChannelLoaded;
+//         emit(ChatChannelLoaded(
+//           channel: channel,
+//           messages: event,
+//         ));
+//       }
+//     });
+//   }
 
-  void _cleanUp() {
-    _channelSubscription?.cancel();
-    _channelSubscription = null;
-  }
+//   Future<void> disconnect() async {
+//     try {
+//       await _chatService.disconnect();
+//       _cleanUp();
+//       emit(ChatInitial());
+//     } catch (e) {
+//       emit(ChatError('Failed to disconnect: ${e.toString()}'));
+//     }
+//   }
 
-  @override
-  Future<void> close() {
-    _cleanUp();
-    return super.close();
-  }
-}
+//   void _cleanUp() {
+//     _channelSubscription?.cancel();
+//     _channelSubscription = null;
+//   }
+
+//   @override
+//   Future<void> close() {
+//     _cleanUp();
+//     return super.close();
+//   }
+// }
