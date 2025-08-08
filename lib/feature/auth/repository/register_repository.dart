@@ -57,6 +57,18 @@ class RegisterRepository {
     }
   }
 
+  Future<Either<Failure, SocialResponseModel?>>
+  registerOrLoginWithApple() async {
+    try {
+      final response = await _remoteDataSource.registerOrLoginWithApple();
+      return Right(response);
+    } on ServerFailure catch (e) {
+      return Left(ServerFailure(e.message));
+    } on Exception catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
+
   Future<Either<Failure, bool?>> checkSocialAuthPhoneStatus() async {
     try {
       final response = await _remoteDataSource.checkSocialAuthPhoneStatus();

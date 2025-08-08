@@ -8,6 +8,7 @@ import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
 import 'package:freedom/feature/auth/repository/register_repository.dart';
+import 'package:freedom/feature/auth/social_auth_cubit/cubit/apple_auth_cubit.dart';
 import 'package:freedom/feature/auth/social_auth_cubit/google_auth_cubit.dart';
 import 'package:freedom/feature/emergency/cubit/emergency_cubit.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
@@ -73,6 +74,9 @@ class _AppState extends State<App> {
           BlocProvider(create: (context) => WalletCubit(WalletRepository())),
           BlocProvider(
             create: (context) => GoogleAuthCubit(RegisterRepository()),
+          ),
+          BlocProvider(
+            create: (context) => AppleAuthCubit(RegisterRepository()),
           ),
           BlocProvider(create: (context) => getIt<DeliveryCubit>()),
           BlocProvider(create: (context) => getIt<InAppMessageCubit>()),

@@ -13,12 +13,13 @@ import 'package:freedom/core/config/api_constants.dart';
 import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
+import 'package:freedom/feature/auth/remote_data_source/helpers.dart';
 import 'package:freedom/feature/auth/remote_data_source/models/add_phone_to_social_model.dart';
 import 'package:freedom/feature/auth/remote_data_source/models/models.dart';
 import 'package:freedom/feature/auth/remote_data_source/models/social_response_model.dart';
-import 'package:freedom/shared/utils/utils.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 class RegisterDataSource {
   final client = getIt<BaseApiClients>();
@@ -71,89 +72,253 @@ class RegisterDataSource {
 
   Future<SocialResponseModel> registerOrLoginWithGoogle() async {
     try {
-      final googleSignIn = GoogleSignIn();
-      final googleUser = await googleSignIn.signIn();
-
-      final fcmToken = await FirebaseMessaging.instance.getToken();
-
-      if (googleUser != null) {
-        final googleAuth = await googleUser.authentication;
-        final credential = fb.GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-
-        final val = await _firebaseAuth.signInWithCredential(credential);
-
-        if (val.user == null) {
-          throw Exception('Google sign-in failed');
-        }
-
-        // Split the display name into first name and surname
-        var firstName = '';
-        var surname = '';
-
-        if (val.user!.displayName != null &&
-            val.user!.displayName!.trim().isNotEmpty) {
-          final nameParts = val.user!.displayName!.trim().split(' ');
-
-          if (nameParts.length > 1) {
-            firstName = nameParts.first;
-            surname = nameParts.last;
-            if (nameParts.length > 2) {}
-          } else if (nameParts.length == 1) {
-            firstName = nameParts.first;
-            surname = '';
-          }
-        }
-
-        try {
-          final jsonVal = json.encode({
-            'provider': 'google',
-            'providerUserId': val.user!.uid.trim(),
-            'email': val.user!.email?.trim(),
-            'firstName': firstName,
-            'surname': surname,
-            'otherName': '',
-            'photo': val.user!.photoURL?.trim(),
-            'fcmToken': fcmToken,
-            'platform': Utils.getPlatform(),
-          });
-          log('jsonVal: $jsonVal');
-          final response = await http.post(
-            Uri.parse(ApiConstants.baseUrl + Endpoints.addGoogleUser),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonVal,
-          );
-
-          log('Status: ${response.statusCode}');
-          log('Body: ${response.body}');
-          if (response.statusCode == 200 || response.statusCode == 201) {
-            final decoded = json.decode(response.body) as Map<String, dynamic>;
-            await AppPreferences.setToken(decoded['data']['token'].toString());
-
-            final socialResponse = SocialResponseModel.fromJson(decoded);
-            await RegisterLocalDataSource().saveUser(
-              User.fromRegistrationResponse(decoded),
-            );
-            return socialResponse;
-          } else {
-            final decoded = json.decode(response.body) as Map<String, dynamic>;
-            log('decoded: $decoded');
-            throw ServerException(decoded['message'].toString());
-          }
-        } on SocketException catch (e) {
-          throw NetworkException(e.message);
-        } on ServerException catch (e) {
-          throw ServerException(e.message);
-        } catch (e) {
-          rethrow;
-        }
-      } else {
+      final googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
         throw Exception('Google sign-in cancelled by user');
       }
+
+      final googleAuth = await googleUser.authentication;
+      final credential = fb.GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final val = await _firebaseAuth.signInWithCredential(credential);
+      final firebaseUser = val.user;
+      if (firebaseUser == null) {
+        throw Exception('Google sign-in failed');
+      }
+
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      final nameParts = splitName(firebaseUser.displayName);
+      final body = {
+        'provider': 'google',
+        'providerUserId': firebaseUser.uid.trim(),
+        'email': firebaseUser.email?.trim(),
+        'firstName': nameParts['firstName'],
+        'surname': nameParts['surname'],
+        'otherName': nameParts['otherName'],
+        'photo': firebaseUser.photoURL?.trim(),
+        'fcmToken': fcmToken,
+      };
+
+      final response = await postUserToBackend(body, client);
+      final decoded = decodeResponse(response);
+
+      await AppPreferences.setToken(decoded['data']['token'].toString());
+
+      final socialResponse = SocialResponseModel.fromJson(decoded);
+      await RegisterLocalDataSource().saveUser(
+        User.fromRegistrationResponse(decoded),
+      );
+
+      return socialResponse;
+    } on SocketException catch (e) {
+      throw NetworkException(e.message);
     } catch (e) {
       throw ServerException('An unexpected error occurred: $e');
+    }
+  }
+
+  Future<SocialResponseModel> registerOrLoginWithApple() async {
+    try {
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+
+      final oAuthProvider = fb.OAuthProvider('apple.com');
+      final authCredential = oAuthProvider.credential(
+        idToken: credential.identityToken,
+        accessToken: credential.authorizationCode,
+      );
+
+      final val = await _firebaseAuth.signInWithCredential(authCredential);
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (val.user == null) {
+        throw Exception('Apple sign-in failed');
+      }
+
+      final nameResult = _extractUserNames(
+        credential: credential,
+        firebaseUser: val.user!,
+        isNewUser: val.additionalUserInfo!.isNewUser,
+      );
+
+      if (val.additionalUserInfo!.isNewUser &&
+          nameResult.shouldUpdateDisplayName) {
+        await _updateFirebaseDisplayName(val.user!, nameResult);
+      }
+
+      final jsonVal = json.encode({
+        'provider': 'apple',
+        'providerUserId': val.user!.uid.trim(),
+        'email': val.user!.email?.trim(),
+        'firstName': nameResult.firstName,
+        'surname':
+            nameResult.surname.isEmpty
+                ? nameResult.firstName
+                : nameResult.surname,
+        'otherName': '',
+        'photo': val.user!.photoURL?.trim(),
+        'fcmToken': fcmToken,
+      });
+
+      log('jsonVal: $jsonVal');
+
+      return await _sendUserDataToServer(jsonVal);
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) {
+        throw Exception('Apple sign-in cancelled by user');
+      } else {
+        throw Exception('Apple sign-in authorization error: ${e.message}');
+      }
+    } on fb.FirebaseAuthException catch (e) {
+      log('Firebase Auth Error: ${e.code} - ${e.message}');
+      throw ServerException('Firebase Auth Error: ${e.message}');
+    } catch (e) {
+      log('Unexpected error in Apple sign-in: $e');
+      throw ServerException('An unexpected error occurred: $e');
+    }
+  }
+
+  UserNameResult _extractUserNames({
+    required AuthorizationCredentialAppleID credential,
+    required fb.User firebaseUser,
+    required bool isNewUser,
+  }) {
+    String firstName = '';
+    String surname = '';
+    bool shouldUpdateDisplayName = false;
+
+    if (credential.givenName != null &&
+        credential.givenName!.trim().isNotEmpty) {
+      firstName = credential.givenName!.trim();
+      shouldUpdateDisplayName = true;
+    }
+
+    if (credential.familyName != null &&
+        credential.familyName!.trim().isNotEmpty) {
+      surname = credential.familyName!.trim();
+      shouldUpdateDisplayName = true;
+    }
+
+    if (firstName.isEmpty &&
+        firebaseUser.displayName != null &&
+        firebaseUser.displayName!.trim().isNotEmpty) {
+      final nameParts = firebaseUser.displayName!.trim().split(' ');
+
+      if (nameParts.length > 1) {
+        firstName = nameParts.first;
+        surname = nameParts.sublist(1).join(' ');
+      } else if (nameParts.length == 1) {
+        firstName = nameParts.first;
+      }
+
+      log('Extracted names from Firebase displayName: $firstName $surname');
+    }
+
+    if (firstName.isEmpty && firebaseUser.email != null) {
+      final emailPrefix = _extractEmailPrefix(firebaseUser.email!);
+      firstName = emailPrefix;
+      log('Using email prefix as firstName: $firstName');
+
+      if (isNewUser && !shouldUpdateDisplayName) {
+        shouldUpdateDisplayName = true;
+      }
+    }
+
+    log('Final extracted names - firstName: "$firstName", surname: "$surname"');
+
+    return UserNameResult(
+      firstName: firstName,
+      surname: surname.isEmpty ? firstName : surname,
+      shouldUpdateDisplayName: shouldUpdateDisplayName,
+    );
+  }
+
+  String _extractEmailPrefix(String email) {
+    final prefix = email.split('@').first;
+
+    String cleanPrefix =
+        prefix
+            .replaceAll(RegExp(r'[._-]'), ' ')
+            .replaceAll(RegExp(r'\d+'), '')
+            .trim();
+
+    if (cleanPrefix.isNotEmpty) {
+      cleanPrefix = cleanPrefix
+          .split(' ')
+          .where((word) => word.isNotEmpty)
+          .map(
+            (word) => word[0].toUpperCase() + word.substring(1).toLowerCase(),
+          )
+          .join(' ');
+    }
+
+    if (cleanPrefix.isEmpty) {
+      cleanPrefix = prefix;
+    }
+
+    log('Email prefix transformation: "$prefix" -> "$cleanPrefix"');
+    return cleanPrefix;
+  }
+
+  Future<void> _updateFirebaseDisplayName(
+    fb.User user,
+    UserNameResult nameResult,
+  ) async {
+    try {
+      String displayName = nameResult.firstName;
+      if (nameResult.surname.isNotEmpty) {
+        displayName += ' ${nameResult.surname}';
+      }
+
+      if (displayName.isNotEmpty) {
+        await user.updateDisplayName(displayName);
+        await user.reload();
+        log('Updated Firebase display name to: "$displayName"');
+      }
+    } catch (e) {
+      log('Failed to update Firebase display name: $e');
+    }
+  }
+
+  Future<SocialResponseModel> _sendUserDataToServer(Object jsonVal) async {
+    try {
+      final response = await http.post(
+        Uri.parse(ApiConstants.baseUrl + Endpoints.addGoogleUser),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonVal,
+      );
+      log('API Response - Status: ${response.statusCode}');
+      log('API Response - Body: ${response.body}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final decoded = json.decode(response.body) as Map<String, dynamic>;
+        await AppPreferences.setToken(decoded['data']['token'].toString());
+
+        final socialResponse = SocialResponseModel.fromJson(decoded);
+        await RegisterLocalDataSource().saveUser(
+          User.fromRegistrationResponse(decoded),
+        );
+        return socialResponse;
+      } else {
+        final decoded = json.decode(response.body) as Map<String, dynamic>;
+        log('API Error Response: $decoded');
+        throw ServerException(
+          decoded['message']?.toString() ?? 'Server error occurred',
+        );
+      }
+    } on SocketException catch (e) {
+      throw NetworkException(e.message);
+    } on ServerException {
+      rethrow;
+    } catch (e) {
+      log('Unexpected error in API call: $e');
+      throw ServerException('Failed to communicate with server: $e');
     }
   }
 
@@ -326,4 +491,16 @@ class RegisterDataSource {
   Future<void> signOut() async {
     await _firebaseAuth.signOut();
   }
+}
+
+class UserNameResult {
+  final String firstName;
+  final String surname;
+  final bool shouldUpdateDisplayName;
+
+  UserNameResult({
+    required this.firstName,
+    required this.surname,
+    required this.shouldUpdateDisplayName,
+  });
 }

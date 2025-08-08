@@ -39,10 +39,10 @@
               "client_type": 3
             },
             {
-              "client_id": "868061640964-pl1mon3tb7kj5kpgp8ch7ihdfj7s0mg0.apps.googleusercontent.com",
+              "client_id": "868061640964-d4ujtub423fjl4i56gbeeugkgh333oj2.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.freedom.app.freedom"
+                "bundle_id": "com.freedomghana.app.driver"
               }
             }
           ]
@@ -75,10 +75,10 @@
               "client_type": 3
             },
             {
-              "client_id": "868061640964-pl1mon3tb7kj5kpgp8ch7ihdfj7s0mg0.apps.googleusercontent.com",
+              "client_id": "868061640964-d4ujtub423fjl4i56gbeeugkgh333oj2.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.freedom.app.freedom"
+                "bundle_id": "com.freedomghana.app.driver"
               }
             }
           ]
