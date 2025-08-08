@@ -7,9 +7,7 @@ import 'package:freedom/app_preference.dart';
 import 'package:freedom/core/config/api_constants.dart';
 import 'package:freedom/core/services/app_restoration_manager.dart';
 import 'package:freedom/core/services/delivery_persistence_service.dart';
-import 'package:freedom/core/services/life_cycle_manager.dart';
 import 'package:freedom/core/services/map_services.dart';
-import 'package:freedom/core/services/push_notification_service/push_nofication_service.dart';
 import 'package:freedom/core/services/ride_persistence_service.dart';
 import 'package:freedom/core/services/socket_service.dart';
 import 'package:freedom/di/locator.dart';
@@ -56,7 +54,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   bool _isRestorationInProgress = false;
   bool _hasAttemptedRestoration = false;
 
-  // Camera interaction tracking
   bool _isUserInteracting = false;
   Timer? _userInteractionTimer;
 
@@ -68,6 +65,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     context.read<ProfileCubit>().getUserProfile();
     rideCubit = context.read<RideCubit>();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      AppPreferences.getToken().then((token) {
+        log('token: $token');
+      });
       await _initializeServices();
     });
   }
@@ -150,7 +150,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       dev.log('🔄 Starting ride restoration process...');
 
-      // Show restoration indicator to user
       showRestorationSnackBar(context, 'Restoring your ride...');
 
       final restorationResult =
@@ -160,36 +159,40 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           restorationResult.restoredState != null) {
         dev.log('✅ Ride restoration successful');
 
-        // Execute post-restoration actions
         await _restorationManager.executePostRestorationActions(
           rideCubit,
           restorationResult.restoredState!,
         );
 
-        showRestorationSnackBar(
-          context,
-          restorationResult.restoredState!.message,
-          isSuccess: true,
-        );
+        if (mounted) {
+          showRestorationSnackBar(
+            context,
+            restorationResult.restoredState!.message,
+            isSuccess: true,
+          );
+        }
       } else {
         dev.log('❌ Ride restoration failed: ${restorationResult.error}');
-        showRestorationSnackBar(
-          context,
-          'Unable to restore previous ride',
-          isError: true,
-        );
+        if (mounted) {
+          showRestorationSnackBar(
+            context,
+            'Unable to restore previous ride',
+            isError: true,
+          );
 
-        // Fall back to normal flow
-        context.read<HomeCubit>().checkPermissionStatus();
+          context.read<HomeCubit>().checkPermissionStatus();
+        }
       }
     } catch (e, stack) {
       dev.log('❌ Critical error during ride restoration: $e\n$stack');
-      showRestorationSnackBar(
-        context,
-        'Restoration failed - starting fresh',
-        isError: true,
-      );
-      context.read<HomeCubit>().checkPermissionStatus();
+      if (mounted) {
+        showRestorationSnackBar(
+          context,
+          'Restoration failed - starting fresh',
+          isError: true,
+        );
+        context.read<HomeCubit>().checkPermissionStatus();
+      }
     } finally {
       setState(() {
         _isRestorationInProgress = false;
@@ -214,19 +217,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     dev.log('🔌 Socket connected: ${socketService.isConnected}');
   }
 
-  // ============================================================================
-  // CAMERA INTERACTION HANDLERS
-  // ============================================================================
-
-  // void _onCameraMoveStarted() {
-  //   dev.log('🎥 User started moving camera manually');
-  //   _isUserInteracting = true;
-  //   _userInteractionTimer?.cancel();
-
-  //   // Notify cubit about manual camera movement
-  //   rideCubit.handleManualCameraMove();
-  // }
-
   void _onCameraMove(CameraPosition position) {
     if (_isUserInteracting) {
       dev.log('🎥 User moving camera to: ${position.target}');
@@ -236,11 +226,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void _onCameraIdle() {
     dev.log('🎥 Camera stopped moving');
     if (_isUserInteracting) {
-      // Set timer to re-enable auto-following after user stops interacting
       _userInteractionTimer?.cancel();
       _userInteractionTimer = Timer(const Duration(seconds: 5), () {
         _isUserInteracting = false;
-        // Optionally re-enable auto-following
+
         if (rideCubit.state.isRealTimeTrackingActive &&
             !rideCubit.state.followDriverCamera) {
           dev.log('🎥 Re-enabling camera following after user interaction');
@@ -249,10 +238,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       });
     }
   }
-
-  // ============================================================================
-  // ENHANCED CAMERA ANIMATION METHODS
-  // ============================================================================
 
   Future<void> _handleCameraUpdates(RideState state) async {
     if (_mapController == null || !state.shouldUpdateCamera) return;
@@ -284,13 +269,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           break;
 
         case CameraFollowingMode.none:
-          // No automatic camera updates
-          break;
-
-        default:
-          dev.log(
-            '🎥 Unknown camera following mode: ${state.cameraFollowingMode}',
-          );
           break;
       }
     } catch (e) {
@@ -299,8 +277,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   double _calculateDriverBearing(RideState state) {
-    // You can implement bearing calculation based on driver movement
-    // For now, return 0 (north-facing)
     return 0.0;
   }
 
@@ -308,7 +284,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     LatLng target, {
     double zoom = 16.0,
     double bearing = 0.0,
-    Duration duration = const Duration(milliseconds: 1000),
   }) async {
     if (_mapController == null) {
       dev.log('🎥 Cannot animate: no map controller');
@@ -398,8 +373,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       maxLng = math.max(maxLng, point.longitude);
     }
 
-    // Add some padding to the bounds
-    const padding = 0.001; // Adjust as needed
+    const padding = 0.001;
     return LatLngBounds(
       southwest: LatLng(minLat - padding, minLng - padding),
       northeast: LatLng(maxLat + padding, maxLng + padding),
@@ -442,7 +416,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           builder: (context, state) {
             return BlocConsumer<RideCubit, RideState>(
               listenWhen: (previous, current) {
-                // Enhanced listener conditions for camera following
                 final cameraUpdateNeeded =
                     previous.shouldUpdateCamera != current.shouldUpdateCamera &&
                     current.shouldUpdateCamera;
@@ -493,17 +466,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                 return shouldListen;
               },
               listener: (context, rideState) async {
-                // Handle camera updates with new system
                 if (rideState.shouldUpdateCamera) {
                   await _handleCameraUpdates(rideState);
                 } else if (rideState.routeDisplayed &&
                     rideState.routePolylines.isNotEmpty &&
                     !rideState.followDriverCamera) {
-                  // Only show route if not following driver
                   _animateToShowRoute(rideState.routePolylines.first.points);
                 }
 
-                // Show status messages
                 if (rideState.trackingStatusMessage != null) {
                   dev.log(
                     '📱 Tracking status: ${rideState.trackingStatusMessage}',
@@ -564,7 +534,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   listener: (context, deliveryState) {
                     dev.log('🎥 Enhanced DeliveryCubit listener triggered');
 
-                    // Handle delivery route display
                     if (deliveryState.deliveryRouteDisplayed &&
                         deliveryState.deliveryRoutePolylines.isNotEmpty) {
                       dev.log(
@@ -637,7 +606,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           state: state,
                         ),
 
-                        // Main stacked bottom sheet (for initial ride/delivery search)
                         Visibility(
                           visible: sheetVisibility.showStackedBottomSheet,
                           child: StackedBottomSheetComponent(
@@ -647,7 +615,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                         ),
 
-                        // Ride found bottom sheet
                         Visibility(
                           visible: sheetVisibility.showRideFound,
                           child: Positioned(
@@ -666,7 +633,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                         ),
 
-                        // Delivery found bottom sheet
                         Visibility(
                           visible: sheetVisibility.showDeliveryFound,
                           child: Positioned(
@@ -694,7 +660,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                         ),
 
-                        // Ride search sheet
                         Visibility(
                           visible: sheetVisibility.showRideSearch,
                           child: const Positioned(
@@ -705,7 +670,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                         ),
 
-                        // Delivery search sheet
                         Visibility(
                           visible: sheetVisibility.showDeliverySearch,
                           child: Positioned(
@@ -733,7 +697,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                         ),
 
-                        // Enhanced camera control buttons
                         if (rideState.isRealTimeTrackingActive ||
                             deliveryState.isRealTimeDeliveryTrackingActive)
                           _buildEnhancedCameraControls(
@@ -751,10 +714,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
   }
-
-  // ============================================================================
-  // ENHANCED CAMERA CONTROL BUTTONS
-  // ============================================================================
 
   Widget _buildEnhancedCameraControls(
     RideState rideState,
@@ -776,7 +735,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       top: 100,
       child: Column(
         children: [
-          // Follow driver button (GPS tracking)
           if (hasActiveRideTracking) ...[
             Container(
               margin: const EdgeInsets.only(bottom: 8),
@@ -812,7 +770,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
 
-            // Show full route button
             Container(
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
@@ -835,7 +792,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
 
-            // Center on driver button
             Container(
               margin: const EdgeInsets.only(bottom: 8),
               decoration: BoxDecoration(
@@ -859,7 +815,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ],
 
-          // Delivery driver controls
           if (hasActiveDeliveryTracking) ...[
             Container(
               margin: const EdgeInsets.only(bottom: 8),
@@ -884,7 +839,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             ),
           ],
 
-          // Debug controls (only in debug mode)
           if (kDebugMode && hasActiveRideTracking) ...[
             Container(
               margin: const EdgeInsets.only(bottom: 8),
@@ -908,7 +862,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
 
-            // Show tracking metrics
             Container(
               decoration: BoxDecoration(
                 color: Colors.purple,
@@ -934,10 +887,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
     );
   }
-
-  // ============================================================================
-  // DEBUG METHODS
-  // ============================================================================
 
   void _showTrackingMetrics(BuildContext context, RideState rideState) {
     final metrics = rideCubit.getEnhancedTrackingMetrics();
@@ -988,26 +937,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     );
   }
 
-  // ============================================================================
-  // EXISTING METHODS (keeping unchanged)
-  // ============================================================================
-
-  // FIXED: Simplified sheet visibility calculation
   _BottomSheetVisibility _calculateSheetVisibility(
     RideState rideState,
     DeliveryState deliveryState,
   ) {
-    // Check if any driver/delivery person has been found
     final rideFound = rideState.riderAvailable;
     final deliveryFound = deliveryState.riderFound;
 
-    // Check if currently searching
     final rideSearching =
         rideState.status == RideRequestStatus.loading ||
         rideState.status == RideRequestStatus.searching;
     final deliverySearching = deliveryState.showDeliverySearchSheet;
 
-    // If any driver/delivery person is found, show only the relevant found sheet
     if (rideFound) {
       return _BottomSheetVisibility(
         showStackedBottomSheet: false,
@@ -1028,7 +969,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
-    // If searching, show only the relevant search sheet
     if (deliverySearching) {
       return _BottomSheetVisibility(
         showStackedBottomSheet: false,
@@ -1049,7 +989,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       );
     }
 
-    // Default state: show main stacked bottom sheet
     return _BottomSheetVisibility(
       showStackedBottomSheet: true,
       showRideFound: false,
@@ -1064,14 +1003,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     DeliveryState state,
     bool isMultiStop,
   ) {
-    // Build content specific to delivery state
     final deliveryData = state.deliveryData;
     if (deliveryData == null) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Delivery information header
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -1151,7 +1088,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         const SizedBox(height: 12),
 
-        // Route information
         Text(
           'Delivery Route',
           style: TextStyle(
@@ -1170,7 +1106,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         const SizedBox(height: 8),
 
-        // Destination location(s)
         if (deliveryData.isMultiStop &&
             state.deliveryControllers.length > 1) ...[
           for (int i = 1; i < state.deliveryControllers.length; i++)
@@ -1198,7 +1133,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
         const SizedBox(height: 12),
 
-        // Payment method
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(

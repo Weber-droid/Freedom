@@ -176,7 +176,7 @@ class SocketService {
           final modeled = DriverArrived.fromJson(mapData);
           getIt<PushNotificationService>().showDriverArrivedNotification(
             driverName: '',
-            vehicleInfo: modeled.status ?? '',
+            vehicleInfo: modeled.status,
           );
           _driverArrivedController.add(modeled);
         }

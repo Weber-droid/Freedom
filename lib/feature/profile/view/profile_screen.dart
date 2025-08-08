@@ -164,7 +164,6 @@ class ProfileCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _buildBackgroundPattern(),
           Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -178,15 +177,6 @@ class ProfileCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBackgroundPattern() {
-    return Positioned.fill(
-      child: Container(
-        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
-        child: CustomPaint(painter: PatternPainter()),
       ),
     );
   }
@@ -297,40 +287,6 @@ class ProfileCard extends StatelessWidget {
     );
   }
 
-  Widget _buildBusinessSuiteSection() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-        ),
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF667eea).withValues(alpha: 0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.business_center, color: Colors.white, size: 16),
-          const SizedBox(width: 8),
-          Text(
-            'Business Suite',
-            style: GoogleFonts.poppins(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildProfileImage(BuildContext context) {
     return BlocBuilder<ProfileCubit, ProfileState>(
       builder: (context, state) {
@@ -354,7 +310,7 @@ class ProfileCard extends StatelessWidget {
         if (state is ProfileLoaded || state is ImageUploaded) {
           final profileData =
               state is ProfileLoaded
-                  ? (state as ProfileLoaded).user?.data
+                  ? (state).user?.data
                   : (state as ImageUploaded).user?.data;
 
           return GestureDetector(
@@ -526,7 +482,6 @@ class ProfileCard extends StatelessWidget {
   }
 }
 
-// Custom painter for background pattern
 class PatternPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
