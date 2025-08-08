@@ -63,9 +63,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    context.read<HomeCubit>().checkPermissionStatus();
     WidgetsBinding.instance.addObserver(this);
     context.read<ProfileCubit>().getUserProfile();
-    PushNotificationService.askPermissions();
     rideCubit = context.read<RideCubit>();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _initializeServices();

@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:awesome_notifications/awesome_notifications.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
-import 'package:freedom/firebase_options.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 
 class PushNotificationService {
@@ -122,13 +121,59 @@ class PushNotificationService {
 
   Future<void> _getAndSaveFCMToken() async {
     try {
+      if (Platform.isIOS) {
+        String? apnsToken;
+        int attempts = 0;
+        const maxAttempts = 10;
+
+        while (apnsToken == null && attempts < maxAttempts) {
+          try {
+            apnsToken = await _messaging.getAPNSToken();
+            if (apnsToken == null) {
+              await Future.delayed(const Duration(milliseconds: 500));
+              attempts++;
+              log('Waiting for APNs token... attempt $attempts');
+            }
+          } catch (e) {
+            log('Error getting APNs token on attempt $attempts: $e');
+            await Future.delayed(const Duration(milliseconds: 500));
+            attempts++;
+          }
+        }
+
+        if (apnsToken != null) {
+          log('APNs token obtained: ${apnsToken.substring(0, 20)}...');
+        } else {
+          log('Could not get APNs token after $maxAttempts attempts');
+        }
+      }
+
       _fcmToken = await _messaging.getToken();
       if (_fcmToken != null) {
         log('FCM Token: $_fcmToken');
         _tokenStreamController.add(_fcmToken!);
+      } else {
+        log('FCM Token is null');
       }
     } catch (e) {
       log('Error getting FCM token: $e');
+
+      Timer(const Duration(seconds: 2), () {
+        _retryGetFCMToken();
+      });
+    }
+  }
+
+  Future<void> _retryGetFCMToken() async {
+    try {
+      log('Retrying FCM token fetch...');
+      _fcmToken = await _messaging.getToken();
+      if (_fcmToken != null) {
+        log('FCM Token (retry): $_fcmToken');
+        _tokenStreamController.add(_fcmToken!);
+      }
+    } catch (e) {
+      log('Retry failed for FCM token: $e');
     }
   }
 
@@ -184,7 +229,6 @@ class PushNotificationService {
         break;
 
       default:
-        // Show generic notification
         _showGenericNotification(title: title, body: body, data: data);
         break;
     }

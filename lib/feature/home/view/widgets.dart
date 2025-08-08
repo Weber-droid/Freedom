@@ -1089,12 +1089,7 @@ class UserFloatingAccessBar extends StatelessWidget {
                         Stack(
                           children: [
                             GestureDetector(
-                              onTap: () {
-                                log('Requesting permission');
-                                context.read<HomeCubit>().checkPermissionStatus(
-                                  requestPermissions: true,
-                                );
-                              },
+                              onTap: () {},
                               child: SvgPicture.asset(
                                 'assets/images/map_location_icon.svg',
                               ),
@@ -1102,27 +1097,37 @@ class UserFloatingAccessBar extends StatelessWidget {
                             Positioned(
                               top: 0,
                               right: 0,
-                              child: Container(
-                                height: 10,
-                                width: 10,
-                                decoration: const ShapeDecoration(
-                                  color: Colors.red,
-                                  shape: OvalBorder(
-                                    side: BorderSide(
-                                      strokeAlign:
-                                          BorderSide.strokeAlignOutside,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                child: SvgPicture.asset(
-                                  'assets/images/error_line.svg',
-                                  colorFilter: const ColorFilter.mode(
-                                    Colors.white,
-                                    BlendMode.srcIn,
-                                  ),
+                              child: GestureDetector(
+                                onTap: () {
+                                  log('Requesting permission');
+                                  context
+                                      .read<HomeCubit>()
+                                      .checkPermissionStatus(
+                                        requestPermissions: true,
+                                      );
+                                },
+                                child: Container(
                                   height: 10,
                                   width: 10,
+                                  decoration: const ShapeDecoration(
+                                    color: Colors.red,
+                                    shape: OvalBorder(
+                                      side: BorderSide(
+                                        strokeAlign:
+                                            BorderSide.strokeAlignOutside,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ),
+                                  child: SvgPicture.asset(
+                                    'assets/images/error_line.svg',
+                                    colorFilter: const ColorFilter.mode(
+                                      Colors.white,
+                                      BlendMode.srcIn,
+                                    ),
+                                    height: 10,
+                                    width: 10,
+                                  ),
                                 ),
                               ),
                             ),

@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
+import 'package:freedom/feature/auth/social_auth_cubit/cubit/apple_auth_cubit.dart';
 import 'package:freedom/feature/auth/social_auth_cubit/google_auth_cubit.dart';
 import 'package:freedom/feature/auth/view/personal_detail_screen.dart';
 import 'package:freedom/feature/main_activity/main_activity_screen.dart';
@@ -38,7 +41,8 @@ class _LoginViewState extends State<LoginView> {
       ..addListener(() {
         if (!phoneController.text.startsWith(countryCode)) {
           phoneController
-            ..text = countryCode +
+            ..text =
+                countryCode +
                 phoneController.text.replaceAll(RegExp(r'^\+\d+'), '')
             ..selection = TextSelection.fromPosition(
               TextPosition(offset: phoneController.text.length),
@@ -65,16 +69,18 @@ class _LoginViewState extends State<LoginView> {
         listener: (context, state) {
           if (state.formStatus == FormStatus.success) {
             context.showToast(
-                message: state.message,
-                position: ToastPosition.top,
-                type: ToastType.success);
+              message: state.message,
+              position: ToastPosition.top,
+              type: ToastType.success,
+            );
             Navigator.of(context).pushNamed(VerifyLoginScreen.routeName);
           } else if (state.formStatus == FormStatus.failure) {
             if (state.message.contains('Complete registration first.')) {
               context.showToast(
-                  message: 'Please verify your phone number',
-                  position: ToastPosition.top,
-                  type: ToastType.warning);
+                message: 'Please verify your phone number',
+                position: ToastPosition.top,
+                type: ToastType.warning,
+              );
               Future.delayed(const Duration(milliseconds: 1000), () {
                 Navigator.of(context).pushNamed(CompleteRegistration.routeName);
               });
@@ -90,9 +96,7 @@ class _LoginViewState extends State<LoginView> {
                 const VSpace(67),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 17),
-                  child: SvgPicture.asset(
-                    'assets/images/login_logo.svg',
-                  ),
+                  child: SvgPicture.asset('assets/images/login_logo.svg'),
                 ),
                 const VSpace(20.37),
                 Padding(
@@ -100,7 +104,9 @@ class _LoginViewState extends State<LoginView> {
                   child: Text(
                     'Enter your phone number',
                     style: GoogleFonts.poppins(
-                        fontSize: 15.6, fontWeight: FontWeight.w500),
+                      fontSize: 15.6,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
                 const VSpace(7),
@@ -133,9 +139,13 @@ class _LoginViewState extends State<LoginView> {
                               children: [
                                 CountryCodePicker(
                                   textStyle: GoogleFonts.poppins(
-                                      fontSize: 12, color: Colors.black),
+                                    fontSize: 12,
+                                    color: Colors.black,
+                                  ),
                                   dialogTextStyle: GoogleFonts.poppins(
-                                      fontSize: 12, color: Colors.black),
+                                    fontSize: 12,
+                                    color: Colors.black,
+                                  ),
                                   countryFilter: const ['GH', 'NG'],
                                   dialogSize: const Size(300, 200),
                                   hideSearch: true,
@@ -150,12 +160,14 @@ class _LoginViewState extends State<LoginView> {
                                   hideMainText: true,
                                 ),
                                 Positioned(
-                                  top: MediaQuery.of(context).size.height *
+                                  top:
+                                      MediaQuery.of(context).size.height *
                                       0.014,
                                   left:
                                       MediaQuery.of(context).size.width * 0.11,
                                   child: SvgPicture.asset(
-                                      'assets/images/drop_down.svg'),
+                                    'assets/images/drop_down.svg',
+                                  ),
                                 ),
                               ],
                             ),
@@ -198,61 +210,60 @@ class _LoginViewState extends State<LoginView> {
                     Text(
                       'Or',
                       style: GoogleFonts.poppins(
-                          fontSize: 15.36, color: Colors.black),
+                        fontSize: 15.36,
+                        color: Colors.black,
+                      ),
                     ),
                     const Spacer(),
                     Container(
                       height: 7,
                       width: 167,
                       decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(100),
-                          color: colorGrey),
+                        borderRadius: BorderRadius.circular(100),
+                        color: colorGrey,
+                      ),
                     ),
                   ],
                 ),
                 const VSpace(28),
-                _buildAppleLoginButton(),
-                const VSpace(20),
-                _buildGoogleLoginButton(),
+                if (Platform.isIOS) ...[_buildAppleLoginButton()],
+                if (Platform.isAndroid) ...[
+                  const VSpace(20),
+                  _buildGoogleLoginButton(),
+                ],
                 const VSpace(17),
-                Center(
-                  child: Text(
-                    'Or',
-                    style: GoogleFonts.poppins(
-                        fontSize: 15.36,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.black),
-                  ),
-                ),
-                const VSpace(7),
                 Center(
                   child: ShaderMask(
                     blendMode: BlendMode.srcIn,
-                    shaderCallback: (bounds) => gradient.createShader(
-                      Rect.fromLTWH(0, 0, bounds.width, bounds.height),
-                    ),
+                    shaderCallback:
+                        (bounds) => gradient.createShader(
+                          Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+                        ),
                     child: InkWell(
                       onTap: () {
-                        Navigator.of(context)
-                            .pushNamed(PersonalDetailScreen.routeName);
+                        Navigator.of(
+                          context,
+                        ).pushNamed(PersonalDetailScreen.routeName);
                       },
                       child: Text(
                         "Don't have an account? Sign up",
                         style: GoogleFonts.poppins(
-                            fontSize: 17.41,
-                            fontWeight: FontWeight.w500,
-                            decoration: TextDecoration.underline),
+                          fontSize: 17.41,
+                          fontWeight: FontWeight.w500,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
                   ),
-                )
+                ),
               ],
             ),
           );
           if (state.formStatus == FormStatus.submitting) {
             return BlurredLoadingOverlay(
-                isLoading: state.formStatus == FormStatus.submitting,
-                child: mainContent);
+              isLoading: state.formStatus == FormStatus.submitting,
+              child: mainContent,
+            );
           }
           return mainContent;
         },
@@ -268,12 +279,14 @@ class _LoginViewState extends State<LoginView> {
         borderRadius: BorderRadius.circular(7),
         width: double.infinity,
         title: 'Continue',
-        buttonTitle: Text('Continue',
-            style: GoogleFonts.poppins(
-              fontSize: 17.4,
-              color: Colors.white,
-              fontWeight: FontWeight.w500,
-            )),
+        buttonTitle: Text(
+          'Continue',
+          style: GoogleFonts.poppins(
+            fontSize: 17.4,
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         onPressed: () {
           if (fromKey.currentState!.validate()) {
             final phoneNumber = getFullPhoneNumber();
@@ -289,75 +302,124 @@ class _LoginViewState extends State<LoginView> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 17),
       child: BlocConsumer<GoogleAuthCubit, GoogleAuthState>(
-          listener: (context, state) {
-            if (state.formStatus == FormStatus.failure) {
-              context.showToast(
-                  message: state.message,
-                  type: ToastType.error,
-                  position: ToastPosition.top);
-            }
-
-            if (state.phoneStatus == PhoneStatus.failure) {
-              context.showToast(
-                  message: state.message,
-                  type: ToastType.error,
-                  position: ToastPosition.top);
-            }
-
-            if (state.formStatus == FormStatus.success) {
-              context.showToast(
-                  message: state.message,
-                  type: ToastType.success,
-                  position: ToastPosition.top);
-              Future.delayed(const Duration(milliseconds: 300), () {
-                Navigator.pushReplacementNamed(
-                    context, MainActivityScreen.routeName);
-              });
-            }
-          },
-          builder: (context, state) {
-            if (state.formStatus == FormStatus.submitting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            return FreedomButton(
-              backGroundColor: socialLoginColor,
-              leadingIcon: 'google_icon',
-              borderRadius: BorderRadius.circular(7),
-              buttonTitle: Text('Login with Google',
-                  style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black)),
-              titleColor: Colors.black,
-              fontSize: 16,
-              width: double.infinity,
-              onPressed: () {
-                context.read<GoogleAuthCubit>().registerOrLoginWithGoogle();
-              },
+        listener: (context, state) {
+          if (state.formStatus == FormStatus.failure) {
+            context.showToast(
+              message: state.message,
+              type: ToastType.error,
+              position: ToastPosition.top,
             );
-          }),
+          }
+
+          if (state.phoneStatus == PhoneStatus.failure) {
+            context.showToast(
+              message: state.message,
+              type: ToastType.error,
+              position: ToastPosition.top,
+            );
+          }
+
+          if (state.formStatus == FormStatus.success) {
+            context.showToast(
+              message: state.message,
+              type: ToastType.success,
+              position: ToastPosition.top,
+            );
+            Future.delayed(const Duration(milliseconds: 300), () {
+              Navigator.pushReplacementNamed(
+                context,
+                MainActivityScreen.routeName,
+              );
+            });
+          }
+        },
+        builder: (context, state) {
+          if (state.formStatus == FormStatus.submitting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return FreedomButton(
+            backGroundColor: socialLoginColor,
+            leadingIcon: 'google_icon',
+            borderRadius: BorderRadius.circular(7),
+            buttonTitle: Text(
+              'Login with Google',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: Colors.black,
+              ),
+            ),
+            titleColor: Colors.black,
+            fontSize: 16,
+            width: double.infinity,
+            onPressed: () {
+              context.read<GoogleAuthCubit>().registerOrLoginWithGoogle();
+            },
+          );
+        },
+      ),
     );
   }
 
   Widget _buildAppleLoginButton() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 17),
-      child: FreedomButton(
-        backGroundColor: socialLoginColor,
-        leadingIcon: 'apple_icon',
-        borderRadius: BorderRadius.circular(7),
-        title: 'Login with Apple',
-        buttonTitle: Text('Login with Apple',
-            style: GoogleFonts.poppins(
+    return BlocConsumer<AppleAuthCubit, AppleAuthState>(
+      listener: (context, state) {
+        if (state.formStatus == FormStatus.failure) {
+          context.showToast(
+            message: state.message,
+            type: ToastType.error,
+            position: ToastPosition.top,
+          );
+        }
+
+        if (state.phoneStatus == PhoneStatus.failure) {
+          context.showToast(
+            message: state.message,
+            type: ToastType.error,
+            position: ToastPosition.top,
+          );
+        }
+
+        if (state.formStatus == FormStatus.success) {
+          context.showToast(
+            message: state.message,
+            type: ToastType.success,
+            position: ToastPosition.top,
+          );
+          Future.delayed(const Duration(milliseconds: 300), () {
+            Navigator.pushReplacementNamed(
+              context,
+              MainActivityScreen.routeName,
+            );
+          });
+        }
+      },
+      builder: (context, state) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 17),
+          child: FreedomButton(
+            backGroundColor: socialLoginColor,
+            leadingIcon: 'apple_icon',
+            borderRadius: BorderRadius.circular(7),
+            title: 'Login with Apple',
+            buttonTitle: Text(
+              'Login with Apple',
+              style: GoogleFonts.poppins(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: Colors.black)),
-        titleColor: Colors.black,
-        width: double.infinity,
-        fontSize: 16,
-        onPressed: () {},
-      ),
+                color: Colors.black,
+              ),
+            ),
+            titleColor: Colors.black,
+            width: double.infinity,
+            fontSize: 16,
+            onPressed: () {
+              context.read<AppleAuthCubit>().registerOrLoginWithApple();
+            },
+          ),
+        );
+      },
     );
   }
 }
