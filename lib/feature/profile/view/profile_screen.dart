@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:freedom/app_preference.dart';
 import 'package:freedom/feature/auth/local_data_source/local_user.dart';
 import 'package:freedom/feature/auth/view/login_view.dart';
 import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
@@ -110,6 +111,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                             onTapLogout: () async {
                               context.read<ProfileCubit>().logout();
+                              Future.delayed(Duration(milliseconds: 100), () {
+                                AppPreferences.clearAll();
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => LoginView(),
+                                  ),
+                                );
+                              });
                             },
                             onTapSecurity: () {
                               Navigator.pushNamed(

@@ -120,6 +120,10 @@ class AppPreferences {
   static Future<void> clearAll() async {
     try {
       _cachedToken = null;
+      _cachedIsFirstTimer = null;
+      _cachedOnboardingCompleted = null;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
       log('All preferences cleared');
     } catch (e) {
       log('Error clearing preferences: $e');

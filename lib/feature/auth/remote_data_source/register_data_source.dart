@@ -17,6 +17,7 @@ import 'package:freedom/feature/auth/remote_data_source/helpers.dart';
 import 'package:freedom/feature/auth/remote_data_source/models/add_phone_to_social_model.dart';
 import 'package:freedom/feature/auth/remote_data_source/models/models.dart';
 import 'package:freedom/feature/auth/remote_data_source/models/social_response_model.dart';
+import 'package:freedom/feature/auth/repository/repository_exceptions.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -372,16 +373,16 @@ class RegisterDataSource {
       );
 
       final decoded = json.decode(response.body) as Map<String, dynamic>;
-
+      log('loginUser(): $decoded');
       if (decoded.containsKey('msg')) {
-        throw ServerException(decoded['msg'].toString());
+        throw ServerFailure(decoded['msg'].toString());
       }
 
       return LoginResponse.fromJson(decoded);
     } on SocketException catch (e) {
       throw NetworkException(e.message);
-    } on ServerException catch (e) {
-      throw ServerException(e.message);
+    } on ServerFailure catch (e) {
+      throw ServerFailure(e.message);
     } catch (e) {
       throw ServerException(e.toString());
     }
