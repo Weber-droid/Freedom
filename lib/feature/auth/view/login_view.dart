@@ -32,23 +32,9 @@ class _LoginViewState extends State<LoginView> {
   final fromKey = GlobalKey<FormState>();
   TextEditingController phoneController = TextEditingController();
 
-  String countryCode = '+233';
   @override
   void initState() {
     super.initState();
-    phoneController
-      ..text = countryCode
-      ..addListener(() {
-        if (!phoneController.text.startsWith(countryCode)) {
-          phoneController
-            ..text =
-                countryCode +
-                phoneController.text.replaceAll(RegExp(r'^\+\d+'), '')
-            ..selection = TextSelection.fromPosition(
-              TextPosition(offset: phoneController.text.length),
-            );
-        }
-      });
   }
 
   String getFullPhoneNumber() {
@@ -84,6 +70,12 @@ class _LoginViewState extends State<LoginView> {
               Future.delayed(const Duration(milliseconds: 1000), () {
                 Navigator.of(context).pushNamed(CompleteRegistration.routeName);
               });
+            } else {
+              context.showToast(
+                message: state.message,
+                position: ToastPosition.top,
+                type: ToastType.error,
+              );
             }
           }
         },
@@ -146,15 +138,8 @@ class _LoginViewState extends State<LoginView> {
                                     fontSize: 12,
                                     color: Colors.black,
                                   ),
-                                  countryFilter: const ['GH', 'NG'],
                                   dialogSize: const Size(300, 200),
-                                  hideSearch: true,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      countryCode = value.dialCode ?? '+233';
-                                      phoneController.text = countryCode;
-                                    });
-                                  },
+                                  onChanged: (value) {},
                                   padding: EdgeInsets.zero,
                                   initialSelection: 'GH',
                                   hideMainText: true,

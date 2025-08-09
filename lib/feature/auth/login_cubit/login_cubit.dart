@@ -11,8 +11,8 @@ part 'login_state.dart';
 
 class LoginCubit extends Cubit<LoginState> {
   LoginCubit({RegisterRepository? registerRepository})
-      : _registerRepository = registerRepository ?? RegisterRepository(),
-        super(const LoginState());
+    : _registerRepository = registerRepository ?? RegisterRepository(),
+      super(const LoginState());
   final RegisterRepository _registerRepository;
 
   void setPhoneNumber(String phoneNumber) {
@@ -24,46 +24,59 @@ class LoginCubit extends Cubit<LoginState> {
     final phoneNumber = state.phone;
 
     if (phoneNumber.isEmpty) {
-      emit(state.copyWith(
-        message: 'Phone number is required',
-        formStatus: FormStatus.failure,
-      ));
+      emit(
+        state.copyWith(
+          message: 'Phone number is required',
+          formStatus: FormStatus.failure,
+        ),
+      );
       return;
     }
 
     try {
       emit(state.copyWith(formStatus: FormStatus.submitting));
       final response = await _registerRepository.loginUser(phoneNumber);
-      response.fold((fail) {
-        final message = json.decode(fail.message);
-        log('message $message');
-        final transformedMessage = message['msg'] as String;
-        emit(state.copyWith(
-            message: transformedMessage, formStatus: FormStatus.failure));
-      }, (r) {
-        emit(
-          state.copyWith(message: r.message, formStatus: FormStatus.success),
-        );
-      });
+      response.fold(
+        (fail) {
+          emit(
+            state.copyWith(
+              message: fail.message,
+              formStatus: FormStatus.failure,
+            ),
+          );
+        },
+        (r) {
+          emit(
+            state.copyWith(message: r.message, formStatus: FormStatus.success),
+          );
+        },
+      );
     } on Exception catch (e) {
-      emit(state.copyWith(
-        message: e.toString(),
-        formStatus: FormStatus.failure,
-      ));
+      emit(
+        state.copyWith(message: e.toString(), formStatus: FormStatus.failure),
+      );
     }
   }
 
   Future<void> addPhoneToSocial(String phoneNumber) async {
     final response = await _registerRepository.addPhoneToSocial(phoneNumber);
-    response.fold((fail) {
-      emit(state.copyWith(
-          message: fail.message, formStatus: FormStatus.failure));
-    }, (r) {
-      emit(
-        state.copyWith(message: r.success == true
-            ? 'Check your phone for a verification code'
-            : '', formStatus: FormStatus.success),
-      );
-    });
+    response.fold(
+      (fail) {
+        emit(
+          state.copyWith(message: fail.message, formStatus: FormStatus.failure),
+        );
+      },
+      (r) {
+        emit(
+          state.copyWith(
+            message:
+                r.success == true
+                    ? 'Check your phone for a verification code'
+                    : '',
+            formStatus: FormStatus.success,
+          ),
+        );
+      },
+    );
   }
 }
