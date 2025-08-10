@@ -5,7 +5,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:freedom/app/app.dart';
 import 'package:freedom/bootstrap.dart';
 import 'package:freedom/core/config/environment_config.dart';
-import 'package:freedom/core/services/audio_call_service/audio_call_service.dart';
 import 'package:freedom/core/services/background_service.dart';
 import 'package:freedom/core/services/push_notification_service/push_nofication_service.dart';
 import 'package:freedom/core/services/socket_service.dart';
