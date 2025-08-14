@@ -13,10 +13,19 @@ import GoogleMaps
      print("my key \(dartDefinesString)")
 var dartDefinesDictionary = [String:String]()
 for definedValue in dartDefinesString.components(separatedBy: ",") {
-    let decoded = String(data: Data(base64Encoded: definedValue)!, encoding: .utf8)!
+    guard let decodedData = Data(base64Encoded: definedValue),
+          let decoded = String(data: decodedData, encoding: .utf8) else { continue }
     let values = decoded.components(separatedBy: "=")
-    dartDefinesDictionary[values[0]] = values[1]
+    if values.count == 2 {
+        dartDefinesDictionary[values[0]] = values[1]
+    }
 }
+if let apiKey = dartDefinesDictionary["MAPS_API_KEY"] {
+    GMSServices.provideAPIKey(apiKey)
+} else {
+    print("MAPS_API_KEY not found in dart defines!")
+}
+
 GMSServices.provideAPIKey(dartDefinesDictionary["MAPS_API_KEY"]!)
     GeneratedPluginRegistrant.register(with: self)
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
