@@ -59,6 +59,7 @@ class _AppState extends State<App> {
           BlocProvider(create: (context) => EmergencyCubit()),
           BlocProvider(create: (context) => getIt<HomeCubit>()),
           BlocProvider(create: (context) => getIt<RideCubit>()),
+          BlocProvider(create: (context) => getIt<WalletCubit>()),
           BlocProvider(
             create: (context) => HistoryCubit(rideRequestRepository: getIt()),
           ),
@@ -71,7 +72,6 @@ class _AppState extends State<App> {
           BlocProvider(
             create: (context) => VerifyLoginCubit(RegisterRepository()),
           ),
-          BlocProvider(create: (context) => WalletCubit(WalletRepository())),
           BlocProvider(
             create: (context) => GoogleAuthCubit(RegisterRepository()),
           ),
