@@ -71,9 +71,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       } else {
         await Permission.location.request();
       }
-      AppPreferences.getToken().then((token) {
-        log('token: $token');
-      });
       await _initializeServices();
     });
   }
@@ -87,7 +84,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _initializeServices() async {
     try {
-      dev.log('🚀 Initializing HomeScreen services...');
       _persistenceService = getIt<RidePersistenceService>();
       _restorationManager = getIt<RideRestorationManager>();
       await _connectToSocket();
@@ -110,15 +106,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final hasPersistedRide = await _persistenceService.hasActiveRide();
 
       if (hasPersistedRide) {
-        dev.log('📱 Found persisted ride data - attempting restoration...');
         await _attemptRideRestoration();
       } else {
-        dev.log('📭 No persisted ride found');
         await _checkPersistedDeliveryStates();
         context.read<HomeCubit>().checkPermissionStatus();
       }
     } catch (e) {
-      dev.log('❌ Error checking persisted states: $e');
+      dev.log('Error checking persisted states: $e');
       context.read<HomeCubit>().checkPermissionStatus();
     }
   }
