@@ -346,8 +346,6 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
           ),
 
           const VSpace(20),
-
-          // Phone Number Field with status badges
           Row(
             children: [
               Text(
@@ -483,10 +481,7 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
               hintTextStyle: GoogleFonts.poppins(),
             ),
           ),
-
           const VSpace(30),
-
-          // Action buttons
           Center(
             child: ElevatedButton(
               onPressed:
@@ -519,7 +514,6 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
             Center(
               child: TextButton(
                 onPressed: () {
-                  // Reset field to original value and cancel edit mode
                   if (state.activeField == 'email') {
                     emailController.text =
                         state.originalEmail ?? state.user?.data.email ?? '';
@@ -538,8 +532,6 @@ class _ProfileDetailsScreenState extends State<ProfileDetailsScreen> {
                 ),
               ),
             ),
-
-          // Add padding at bottom for better scrolling
           const SizedBox(height: 50),
         ],
       ),
