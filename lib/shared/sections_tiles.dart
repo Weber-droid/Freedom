@@ -174,7 +174,7 @@ class PersonalDataSection extends SectionFactory {
     SectionItem(
       title: 'Wallet',
       iconPath: 'assets/images/gradient_wallet_icon.svg',
-      subtitle: 'Coming Soon',
+      subtitle: '',
       onTap: () => onWalletTap!(),
     ),
   ];
@@ -192,27 +192,29 @@ class MoreSection extends SectionFactory {
     this.onTapAddress,
     this.onTapLogout,
     this.onTapSecurity,
+    this.onDeleteAccount,
+    this.title = 'Delete Account',
   });
   final VoidCallback? onTapAddress;
   final VoidCallback? onTapSecurity;
   final VoidCallback? onTapLogout;
+  final VoidCallback? onDeleteAccount;
+  final String title;
   @override
   String get sectionTitle => 'More';
 
   @override
   List<SectionItem> get sectionItems => [
-    // SectionItem(
-    //     title: 'Address',
-    //     iconPath: 'assets/images/address_icon.svg',
-    //     onTap: onTapAddress),
-    // SectionItem(
-    //     title: 'Security and Privacy',
-    //     iconPath: 'assets/images/security_icon.svg',
-    //     onTap: onTapSecurity),
     SectionItem(
       title: 'Logout',
       iconPath: 'assets/images/free_logout.svg',
       onTap: onTapLogout,
+    ),
+
+    SectionItem(
+      title: title,
+      iconPath: 'assets/images/delete_account.svg',
+      onTap: onDeleteAccount,
     ),
   ];
 }

@@ -1,4 +1,5 @@
 import 'dart:developer' as dev;
+import 'dart:io';
 import 'dart:math' as math;
 import 'dart:async';
 import 'package:flutter/foundation.dart';
@@ -11,7 +12,6 @@ import 'package:freedom/core/services/map_services.dart';
 import 'package:freedom/core/services/ride_persistence_service.dart';
 import 'package:freedom/core/services/socket_service.dart';
 import 'package:freedom/di/locator.dart';
-import 'package:freedom/feature/auth/local_data_source/register_local_data_source.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/delivery_cubit/delivery_cubit.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
@@ -26,6 +26,7 @@ import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:freedom/feature/wallet/cubit/wallet_cubit.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:freedom/feature/home/view/widget/rider_search.dart' as dlv;
+import 'package:permission_handler/permission_handler.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -60,11 +61,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    context.read<HomeCubit>().checkPermissionStatus();
+
     WidgetsBinding.instance.addObserver(this);
     context.read<ProfileCubit>().getUserProfile();
     rideCubit = context.read<RideCubit>();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (Platform.isIOS) {
+        await Permission.locationWhenInUse.request();
+      } else {
+        await Permission.location.request();
+      }
       AppPreferences.getToken().then((token) {
         log('token: $token');
       });

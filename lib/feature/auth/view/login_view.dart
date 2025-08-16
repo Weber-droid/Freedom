@@ -2,23 +2,15 @@ import 'dart:io';
 
 import 'package:country_code_picker/country_code_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:freedom/feature/auth/login_cubit/login_cubit.dart';
 import 'package:freedom/feature/auth/social_auth_cubit/cubit/apple_auth_cubit.dart';
 import 'package:freedom/feature/auth/social_auth_cubit/google_auth_cubit.dart';
+import 'package:freedom/feature/auth/view/helpers.dart';
 import 'package:freedom/feature/auth/view/personal_detail_screen.dart';
-import 'package:freedom/feature/main_activity/main_activity_screen.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/complete_registration.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/verify_login_view.dart';
-import 'package:freedom/shared/enums/enums.dart';
-import 'package:freedom/shared/theme/app_colors.dart';
-import 'package:freedom/shared/utilities.dart';
-import 'package:freedom/shared/widgets/buttons.dart';
-import 'package:freedom/shared/widgets/loading_overlay.dart';
+import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:freedom/shared/widgets/text_field_factory.dart';
-import 'package:freedom/shared/widgets/toasts.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -31,14 +23,18 @@ class LoginView extends StatefulWidget {
 class _LoginViewState extends State<LoginView> {
   final fromKey = GlobalKey<FormState>();
   TextEditingController phoneController = TextEditingController();
+  String selectedCountryCode = '+233';
+
+  String getFullPhoneNumber() {
+    return PhoneFormatter.formatPhoneNumber(
+      phoneController.text,
+      selectedCountryCode,
+    );
+  }
 
   @override
   void initState() {
     super.initState();
-  }
-
-  String getFullPhoneNumber() {
-    return phoneController.text;
   }
 
   @override
@@ -109,6 +105,7 @@ class _LoginViewState extends State<LoginView> {
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     child: TextFieldFactory.phone(
                       controller: phoneController,
+                      hintText: 'Enter a phone number',
                       fontStyle: const TextStyle(
                         fontSize: 19.58,
                         color: Colors.black,
@@ -139,7 +136,10 @@ class _LoginViewState extends State<LoginView> {
                                     color: Colors.black,
                                   ),
                                   dialogSize: const Size(300, 200),
-                                  onChanged: (value) {},
+                                  onChanged: (value) {
+                                    selectedCountryCode =
+                                        value.dialCode ?? '+233';
+                                  },
                                   padding: EdgeInsets.zero,
                                   initialSelection: 'GH',
                                   hideMainText: true,
@@ -159,22 +159,7 @@ class _LoginViewState extends State<LoginView> {
                           ),
                         ),
                       ),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) {
-                          return 'Phone number is required';
-                        }
-                        final cleanedNumber = val.replaceAll(RegExp(r'\D'), '');
-
-                        if (cleanedNumber.isEmpty) {
-                          return 'Please enter digits only';
-                        }
-
-                        if (cleanedNumber.length < 10) {
-                          return 'Phone number must be at least 10 digits long';
-                        }
-
-                        return null;
-                      },
+                      validator: BaseValidator.validatePhone,
                     ),
                   ),
                 ),
@@ -275,6 +260,7 @@ class _LoginViewState extends State<LoginView> {
         onPressed: () {
           if (fromKey.currentState!.validate()) {
             final phoneNumber = getFullPhoneNumber();
+            log('phoneNumber: $phoneNumber');
             context.read<LoginCubit>().setPhoneNumber(phoneNumber);
             context.read<LoginCubit>().loginUserWithPhoneNumber();
           }

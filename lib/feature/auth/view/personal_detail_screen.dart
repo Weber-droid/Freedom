@@ -12,6 +12,7 @@ import 'package:freedom/shared/widgets/loading_overlay.dart';
 import 'package:freedom/shared/widgets/text_field_factory.dart';
 import 'package:freedom/shared/widgets/toasts.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PersonalDetailScreen extends StatefulWidget {
   const PersonalDetailScreen({super.key});
@@ -44,7 +45,8 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
       ..addListener(() {
         if (!phoneNumberController.text.startsWith(countryCode)) {
           phoneNumberController
-            ..text = countryCode +
+            ..text =
+                countryCode +
                 phoneNumberController.text.replaceAll(RegExp(r'^\+\d+'), '')
             ..selection = TextSelection.fromPosition(
               TextPosition(offset: phoneNumberController.text.length),
@@ -61,15 +63,17 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
         listener: (context, state) {
           if (state.formStatus == FormStatus.failure) {
             context.showToast(
-                type: ToastType.error,
-                position: ToastPosition.top,
-                message: state.message);
+              type: ToastType.error,
+              position: ToastPosition.top,
+              message: state.message,
+            );
           } else if (state.formStatus == FormStatus.success) {
             context.showToast(
-                type: ToastType.success,
-                message: state.message,
-                position: ToastPosition.top);
-           Navigator.of(context).pushNamed(VerifyOtpScreen.routeName);
+              type: ToastType.success,
+              message: state.message,
+              position: ToastPosition.top,
+            );
+            Navigator.of(context).pushNamed(VerifyOtpScreen.routeName);
           }
         },
         builder: (context, state) {
@@ -93,9 +97,10 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                           Text(
                             'Personal Details',
                             style: GoogleFonts.poppins(
-                                fontSize: 20.59,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.black),
+                              fontSize: 20.59,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black,
+                            ),
                           ),
                         ],
                       ),
@@ -146,11 +151,16 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                           controller: firstNameController,
                           prefixText: Padding(
                             padding: const EdgeInsets.only(
-                                top: 21, left: 8.06, bottom: 21),
+                              top: 21,
+                              left: 8.06,
+                              bottom: 21,
+                            ),
                             child: SvgPicture.asset(
                               'assets/images/user_icon.svg',
                               colorFilter: ColorFilter.mode(
-                                  thickFillColor, BlendMode.srcIn),
+                                thickFillColor,
+                                BlendMode.srcIn,
+                              ),
                             ),
                           ),
                           validator: (val) {
@@ -197,11 +207,16 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                           controller: surNameController,
                           prefixText: Padding(
                             padding: const EdgeInsets.only(
-                                top: 21, left: 8.06, bottom: 21),
+                              top: 21,
+                              left: 8.06,
+                              bottom: 21,
+                            ),
                             child: SvgPicture.asset(
                               'assets/images/user_icon.svg',
                               colorFilter: ColorFilter.mode(
-                                  thickFillColor, BlendMode.srcIn),
+                                thickFillColor,
+                                BlendMode.srcIn,
+                              ),
                             ),
                           ),
                           validator: (val) {
@@ -242,9 +257,13 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                           ),
                           prefixText: Padding(
                             padding: const EdgeInsets.only(
-                                top: 21, left: 8.06, bottom: 21),
+                              top: 21,
+                              left: 8.06,
+                              bottom: 21,
+                            ),
                             child: SvgPicture.asset(
-                                'assets/images/email_icon.svg'),
+                              'assets/images/email_icon.svg',
+                            ),
                           ),
                           hinText: 'Your email',
                           validator: (email) {
@@ -252,7 +271,8 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                               return 'Please enter your email';
                             }
                             final regX = RegExp(
-                                r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+                              r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+                            );
                             if (!regX.hasMatch(email)) {
                               return 'Please enter a valid email';
                             }
@@ -298,12 +318,14 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                                   children: [
                                     CountryCodePicker(
                                       textStyle: GoogleFonts.poppins(
-                                          fontSize: 12, color: Colors.black),
+                                        fontSize: 12,
+                                        color: Colors.black,
+                                      ),
                                       dialogTextStyle: GoogleFonts.poppins(
-                                          fontSize: 12, color: Colors.black),
-                                      countryFilter: const ['GH', 'NG'],
+                                        fontSize: 12,
+                                        color: Colors.black,
+                                      ),
                                       dialogSize: const Size(300, 200),
-                                      hideSearch: true,
                                       onChanged: (value) {
                                         setState(() {
                                           countryCode =
@@ -317,12 +339,15 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                                       hideMainText: true,
                                     ),
                                     Positioned(
-                                      top: MediaQuery.of(context).size.height *
+                                      top:
+                                          MediaQuery.of(context).size.height *
                                           0.014,
-                                      left: MediaQuery.of(context).size.width *
+                                      left:
+                                          MediaQuery.of(context).size.width *
                                           0.11,
                                       child: SvgPicture.asset(
-                                          'assets/images/drop_down.svg'),
+                                        'assets/images/drop_down.svg',
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -333,8 +358,10 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                             if (val == null || val.trim().isEmpty) {
                               return 'Phone number is required';
                             }
-                            final cleanedNumber =
-                                val.replaceAll(RegExp(r'\D'), '');
+                            final cleanedNumber = val.replaceAll(
+                              RegExp(r'\D'),
+                              '',
+                            );
 
                             if (cleanedNumber.isEmpty) {
                               return 'Please enter digits only';
@@ -361,56 +388,71 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
                               });
                             },
                           ),
-                          Text(
-                            'Read Terms and Condition',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11.49,
-                              color: thickFillColor,
+                          GestureDetector(
+                            onTap: () {
+                              openUrlInApp(
+                                'https://www.freedomghana.com/terms',
+                              );
+                            },
+                            child: Text(
+                              'Read Terms and Condition',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11.49,
+                                color: thickFillColor,
+                                decoration: TextDecoration.underline,
+                                decorationColor: thickFillColor,
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const VSpace(16.03),
                       FreedomButton(
-                        // ignore: use_if_null_to_convert_nulls_to_bools
-                        onPressed: termAccepted == true
-                            ? () {
-                                if (firstNameKey.currentState!.validate() &&
-                                    surnameKey.currentState!.validate() &&
-                                    emailKey.currentState!.validate() &&
-                                    phoneNumberKey.currentState!.validate()) {
-                                  context.read<RegisterCubit>().setUserDetails(
-                                        firstName: firstNameController.text,
-                                        surName: surNameController.text,
-                                        password: passwordController.text,
-                                        email: emailController.text,
-                                        phone: phoneNumberController.text,
-                                      );
-                                  Future.delayed(
+                        onPressed:
+                            termAccepted == true
+                                ? () {
+                                  if (firstNameKey.currentState!.validate() &&
+                                      surnameKey.currentState!.validate() &&
+                                      emailKey.currentState!.validate() &&
+                                      phoneNumberKey.currentState!.validate()) {
+                                    context
+                                        .read<RegisterCubit>()
+                                        .setUserDetails(
+                                          firstName: firstNameController.text,
+                                          surName: surNameController.text,
+                                          password: passwordController.text,
+                                          email: emailController.text,
+                                          phone: phoneNumberController.text,
+                                        );
+                                    Future.delayed(
                                       const Duration(milliseconds: 500),
                                       () async {
-                                    if (context.mounted) {
-                                      await context
-                                          .read<RegisterCubit>()
-                                          .registerUser(
-                                            firstNameController.text.trim(),
-                                            surNameController.text.trim(),
-                                            emailController.text.trim(),
-                                            phoneNumberController.text.trim(),
-                                          );
-                                    }
-                                  });
+                                        if (context.mounted) {
+                                          await context
+                                              .read<RegisterCubit>()
+                                              .registerUser(
+                                                firstNameController.text.trim(),
+                                                surNameController.text.trim(),
+                                                emailController.text.trim(),
+                                                phoneNumberController.text
+                                                    .trim(),
+                                              );
+                                        }
+                                      },
+                                    );
+                                  }
                                 }
-                              }
-                            : null,
+                                : null,
                         backGroundColor: Colors.black,
                         title: 'Complete Registration',
-                        buttonTitle: Text('Complete Registration',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 17.92,
-                              fontWeight: FontWeight.w500,
-                            )),
+                        buttonTitle: Text(
+                          'Complete Registration',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontSize: 17.92,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
                         fontSize: 17.92,
                       ),
                     ],
@@ -429,5 +471,19 @@ class _PersonalDetailScreenState extends State<PersonalDetailScreen> {
         },
       ),
     );
+  }
+
+  Future<void> openUrlInApp(String url) async {
+    final Uri uri = Uri.parse(url);
+
+    if (!await launchUrl(
+      uri,
+      mode: LaunchMode.inAppWebView, // Opens inside app
+      webViewConfiguration: const WebViewConfiguration(
+        enableJavaScript: true, // Optional: allow JS
+      ),
+    )) {
+      throw 'Could not launch $url';
+    }
   }
 }

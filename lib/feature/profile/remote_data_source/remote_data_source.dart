@@ -54,7 +54,6 @@ class ProfileRemoteDataSource {
     }
 
     try {
-      // Check if file exists and has content
       if (!file.existsSync()) {
         throw Exception('File does not exist: ${file.path}');
       }
@@ -67,27 +66,17 @@ class ProfileRemoteDataSource {
 
       final url = Uri.parse('${ApiConstants.baseUrl}upload-profile-picture');
       final imageFormat = _getImageFormat(file.path);
-      log('Image format: $imageFormat');
-
       final request = http.MultipartRequest('POST', url);
-
-      // Add headers
       request.headers['Authorization'] = 'Bearer $token';
-      // Sometimes servers also require Content-Type header
       request.headers['Content-Type'] = 'multipart/form-data';
-
-      // Add file
       request.files.add(
         await http.MultipartFile.fromPath(
-          'profileImage', // This must match exactly what the server expects
+          'profileImage',
           file.path,
           contentType: MediaType('image', imageFormat),
         ),
       );
 
-      log('Request prepared with file: ${request.files[0].filename}');
-
-      // Send request
       final streamedResponse = await request.send();
       final responseData = await streamedResponse.stream.toBytes();
       final responseString = String.fromCharCodes(responseData);
@@ -95,7 +84,7 @@ class ProfileRemoteDataSource {
       if (streamedResponse.statusCode == 200 ||
           streamedResponse.statusCode == 201) {
         jsonDecode(responseString);
-        return; // Successfully uploaded
+        return;
       } else {
         Map<String, dynamic> errorResponse;
         try {
@@ -261,6 +250,30 @@ class ProfileRemoteDataSource {
       final response = await client.post(
         Endpoints.logout,
         body: {},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+      final decoded = json.decode(response.body) as Map<String, dynamic>;
+      if (decoded.containsKey('msg')) {
+        throw ServerException(decoded['msg'].toString());
+      }
+      return decoded['success'] == true;
+    } on SocketException catch (e) {
+      throw NetworkException(e.message);
+    } on ServerException catch (e) {
+      throw ServerException(e.message);
+    } catch (e) {
+      throw ServerException(e.toString());
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    try {
+      final token = await AppPreferences.getToken();
+      final response = await client.delete(
+        Endpoints.deleteAccount,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

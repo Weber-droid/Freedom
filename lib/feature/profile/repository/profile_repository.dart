@@ -123,4 +123,17 @@ class ProfileRepository {
       return Left(ServerFailure('An unexpected error occurred: $e'));
     }
   }
+
+  Future<Either<Failure, bool>> deleteAccount() async {
+    try {
+      final response = await _remoteDataSource.deleteAccount();
+      return Right(response);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message));
+    } on NetworkException catch (e) {
+      return Left(NetworkFailure(e.message));
+    } catch (e) {
+      return Left(ServerFailure('An unexpected error occurred: $e'));
+    }
+  }
 }
