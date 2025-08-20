@@ -20,10 +20,9 @@ class ProfileCubit extends Cubit<ProfileState> {
       super(ProfileInitial());
 
   final ProfileRepository _profileRepository;
-  // Add a class variable to store the phone number
+
   String _phoneNumber = '';
 
-  // Getter for the phone number
   String get phoneNumber => _phoneNumber;
 
   Future<void> getUserProfile() async {
@@ -101,7 +100,6 @@ class ProfileCubit extends Cubit<ProfileState> {
           }
         }
       } else {
-        // User canceled - revert to previous state instead of initial
         final currentState = state;
         if (currentState is ProfileLoaded) {
           emit(ProfileLoaded(user: currentState.user));
@@ -114,11 +112,9 @@ class ProfileCubit extends Cubit<ProfileState> {
     }
   }
 
-  // Updated to persist phone number
   void setPhoneNumber(String phoneNumber) {
-    // Store the phone number in the class variable
     _phoneNumber = phoneNumber;
-    // Emit state with the phone number
+
     emit(UpdatingNumber(phoneNumber: phoneNumber));
   }
 
@@ -239,7 +235,7 @@ class ProfileCubit extends Cubit<ProfileState> {
   void updateCountryCode(String newCode) {
     if (state is ProfileLoaded) {
       final currentState = state as ProfileLoaded;
-      // When country code is changed, also set active field to phone
+
       emit(currentState.copyWith(countryCode: newCode, activeField: 'phone'));
       log('Updated country code to: $newCode');
     }
@@ -252,15 +248,25 @@ class ProfileCubit extends Cubit<ProfileState> {
       if (success == true) {
         getIt.unregister<User>();
         getIt.unregister<RegisterLocalDataSource>();
-        // Invalidate the cache
+
         RegisterLocalDataSource.invalidateCache();
-        RegisterLocalDataSource.closeBoxes();
-        // Clear all preferences
         AppPreferences.clearAll();
         emit(LogoutSuccess());
       } else {
         emit(LogoutError('Logout failed'));
       }
+    });
+  }
+
+  void delete() async {
+    emit(DeleteInProgress());
+    final response = await _profileRepository.deleteAccount();
+    response.fold((l) => emit(LogoutError(l.message)), (success) {
+      getIt.unregister<User>();
+      getIt.unregister<RegisterLocalDataSource>();
+      RegisterLocalDataSource.invalidateCache();
+      AppPreferences.clearAll();
+      emit(DeleteSuccess());
     });
   }
 }

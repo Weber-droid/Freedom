@@ -36,4 +36,5 @@ class Endpoints {
   static const String earningsReport = '/earnings/report';
   static const String uploadDocs = '/upload-docs';
   static const String verifyDocs = '/verify-docs/:driverId';
+  static const String deleteAccount = 'delete-my-account';
 }

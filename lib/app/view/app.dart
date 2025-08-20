@@ -23,7 +23,6 @@ import 'package:freedom/feature/profile/cubit/profile_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_login_cubit.dart';
 import 'package:freedom/feature/user_verification/verify_otp/cubit/verify_otp_cubit.dart';
 import 'package:freedom/feature/wallet/cubit/wallet_cubit.dart';
-import 'package:freedom/feature/wallet/repository/repository.dart';
 import 'package:freedom/router/router.dart';
 import 'package:freedom/shared/theme/dark_theme.dart';
 import 'package:freedom/shared/theme/light_theme.dart';
@@ -59,6 +58,7 @@ class _AppState extends State<App> {
           BlocProvider(create: (context) => EmergencyCubit()),
           BlocProvider(create: (context) => getIt<HomeCubit>()),
           BlocProvider(create: (context) => getIt<RideCubit>()),
+          BlocProvider(create: (context) => getIt<WalletCubit>()),
           BlocProvider(
             create: (context) => HistoryCubit(rideRequestRepository: getIt()),
           ),
@@ -71,7 +71,6 @@ class _AppState extends State<App> {
           BlocProvider(
             create: (context) => VerifyLoginCubit(RegisterRepository()),
           ),
-          BlocProvider(create: (context) => WalletCubit(WalletRepository())),
           BlocProvider(
             create: (context) => GoogleAuthCubit(RegisterRepository()),
           ),

@@ -103,31 +103,64 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             paddingSection: const EdgeInsets.all(5),
                           ),
                           const VSpace(10.49),
-                          MoreSection(
-                            onTapAddress:
-                                () => Navigator.pushNamed(
-                                  context,
-                                  AddressScreen.routeName,
-                                ),
-                            onTapLogout: () async {
-                              context.read<ProfileCubit>().logout();
-                              Future.delayed(Duration(milliseconds: 100), () {
-                                AppPreferences.clearAll();
-                                Navigator.pushReplacement(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => LoginView(),
-                                  ),
+                          BlocConsumer<ProfileCubit, ProfileState>(
+                            listener: (context, state) {
+                              if (state is DeleteError) {
+                                context.showToast(
+                                  message: state.message,
+                                  type: ToastType.error,
+                                  position: ToastPosition.top,
                                 );
-                              });
+                              }
+
+                              if (state is DeleteSuccess) {
+                                context.showToast(
+                                  message: 'Account deleted successfully',
+                                  type: ToastType.success,
+                                  position: ToastPosition.top,
+                                );
+                                Future.delayed(Duration(milliseconds: 100), () {
+                                  Navigator.pushReplacement(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => LoginView(),
+                                    ),
+                                  );
+                                });
+                              }
                             },
-                            onTapSecurity: () {
-                              Navigator.pushNamed(
-                                context,
-                                SecurityScreen.routeName,
+                            builder: (context, state) {
+                              return MoreSection(
+                                onTapAddress:
+                                    () => Navigator.pushNamed(
+                                      context,
+                                      AddressScreen.routeName,
+                                    ),
+                                onTapLogout: () async {
+                                  context.read<ProfileCubit>().logout();
+                                  Future.delayed(
+                                    Duration(milliseconds: 100),
+                                    () {
+                                      AppPreferences.clearAll();
+                                      Navigator.pushReplacement(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => LoginView(),
+                                        ),
+                                      );
+                                    },
+                                  );
+                                },
+                                title:
+                                    state is DeleteInProgress
+                                        ? 'Deleting ...'
+                                        : 'Delete Account',
+                                onDeleteAccount: () {
+                                  context.read<ProfileCubit>().delete();
+                                },
+                                paddingSection: const EdgeInsets.all(5),
                               );
                             },
-                            paddingSection: const EdgeInsets.all(5),
                           ),
                         ],
                       ),

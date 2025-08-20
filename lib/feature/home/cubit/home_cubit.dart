@@ -1,4 +1,5 @@
 import 'dart:developer' as dev;
+import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:equatable/equatable.dart';
@@ -237,7 +238,10 @@ class HomeCubit extends Cubit<HomeState> {
 
   Future<void> checkPermissionStatus({bool requestPermissions = false}) async {
     try {
-      final permissionStatus = await Permission.location.status;
+      final Permission permission =
+          Platform.isIOS ? Permission.locationWhenInUse : Permission.location;
+
+      final permissionStatus = await permission.status;
 
       if (permissionStatus.isDenied || permissionStatus.isPermanentlyDenied) {
         emit(
@@ -251,7 +255,7 @@ class HomeCubit extends Cubit<HomeState> {
         await getUserAddressFromLatLng(HomeState.defaultInitialPosition);
 
         if (requestPermissions && permissionStatus.isDenied) {
-          final requestResult = await Permission.location.request();
+          final requestResult = await permission.request();
           if (requestResult.isGranted) {
             await getCurrentLocation();
             await getUserAddressFromLatLng(state.currentLocation);

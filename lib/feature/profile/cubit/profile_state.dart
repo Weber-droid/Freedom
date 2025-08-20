@@ -157,3 +157,12 @@ class LogoutError extends ProfileState {
   const LogoutError(this.message);
   final String message;
 }
+
+class DeleteInProgress extends ProfileState {}
+
+class DeleteSuccess extends ProfileState {}
+
+class DeleteError extends ProfileState {
+  const DeleteError(this.message);
+  final String message;
+}

@@ -36,7 +36,7 @@
 	</array>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
-    <string>tel</string>
+		<string>tel</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
@@ -47,15 +47,25 @@
 	</array>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Location permission is required.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs location access to provide location-based features even when not actively using the app.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>We need to access your camera to take profile pictures.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>We need to access your photo library to upload profile pictures.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>We need permission to save profile pictures.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>DART_DEFINES</key>
 	<string>$(DART_DEFINES)</string>
+	<key>App Uses Non-Exempt Encryption</key>
+	<false/>
 </dict>
 </plist>
