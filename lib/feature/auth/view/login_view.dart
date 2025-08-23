@@ -97,6 +97,7 @@ class _LoginViewState extends State<LoginView> {
                       'Freedom',
                       style: GoogleFonts.poppins(
                         fontSize: 16,
+                        color: Colors.black,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
