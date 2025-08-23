@@ -84,6 +84,45 @@
           ]
         }
       }
+<<<<<<< HEAD
+=======
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:868061640964:android:d81d9e584d9725642cb851",
+        "android_client_info": {
+          "package_name": "com.freedomghana.app.user"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "868061640964-mqptavp4utb6n8fhsdlta9da4644f4fn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCgYScf1giacL_9wAzFL0ZaLClvzOi3rRo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "868061640964-mqptavp4utb6n8fhsdlta9da4644f4fn.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "868061640964-d4ujtub423fjl4i56gbeeugkgh333oj2.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.freedomghana.app.driver"
+              }
+            }
+          ]
+        }
+      }
+>>>>>>> 90f343de8a2d72d00783f57216fa5722b07547b8
     }
   ],
   "configuration_version": "1"

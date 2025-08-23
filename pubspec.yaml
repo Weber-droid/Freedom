@@ -1,9 +1,8 @@
 name: freedom
 description: "User end for freedom"
-
 publish_to: "none"
 
-version: 1.0.0+20
+version: 1.0.0+19
 environment:
   sdk: ^3.7.2
 
@@ -76,6 +75,8 @@ dev_dependencies:
   mocktail: ^1.0.4
   very_good_analysis: ^6.0.0
   flutter_lints: ^5.0.0
+  rename: ^3.1.0
+
 flutter_launcher_icons:
   # Default configuration
   android: "launcher_icon"
@@ -96,5 +97,4 @@ flutter:
     - assets/images/
     - assets/images/nav_icon/active/
     - assets/images/nav_icon/inactive/
-    - .env
     - assets/images/bike_marker.png
