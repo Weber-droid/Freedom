@@ -98,3 +98,4 @@ flutter:
     - assets/images/nav_icon/active/
     - assets/images/nav_icon/inactive/
     - assets/images/bike_marker.png
+    - .env

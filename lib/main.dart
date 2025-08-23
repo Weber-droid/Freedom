@@ -20,7 +20,7 @@ void main() async {
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
   EnvironmentConfig.setEnvironment(Environment.development);
   await PushNotificationService.initialize();
-  await dotenv.load();
+  await dotenv.load(fileName: ".env");
   await locator();
   await initializeStorage();
   final service = getIt<SocketService>();

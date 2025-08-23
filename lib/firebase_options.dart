@@ -63,10 +63,9 @@ class DefaultFirebaseOptions {
     messagingSenderId: '868061640964',
     projectId: 'freedom-main-app',
     storageBucket: 'freedom-main-app.firebasestorage.app',
-    androidClientId:
-        '868061640964-ikrmbkeq8jorovt3rvo1hkssfb5rh5ig.apps.googleusercontent.com',
-    iosClientId:
-        '868061640964-pl1mon3tb7kj5kpgp8ch7ihdfj7s0mg0.apps.googleusercontent.com',
+    androidClientId: '868061640964-ikrmbkeq8jorovt3rvo1hkssfb5rh5ig.apps.googleusercontent.com',
+    iosClientId: '868061640964-pl1mon3tb7kj5kpgp8ch7ihdfj7s0mg0.apps.googleusercontent.com',
     iosBundleId: 'com.freedom.app.freedom',
   );
+
 }
