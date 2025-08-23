@@ -84,8 +84,10 @@ class _CarouselViewerState extends State<CarouselViewer> {
                 title: 'Next',
                 buttonTitle: Text(
                   'Next',
-                  style:
-                      GoogleFonts.poppins(color: Colors.white, fontSize: 17.41),
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 17.41,
+                  ),
                 ),
               ),
             ),
@@ -100,9 +102,7 @@ class _CarouselViewerState extends State<CarouselViewer> {
                     backGroundColor: Colors.black,
                     height: 57.76.h,
                     onPressed: () {
-                     AppPreferences
-                          .setOnboardingCompleted(true)
-                          .then((_) {
+                      AppPreferences.setOnboardingCompleted(true).then((_) {
                         Navigator.pushNamed(context, LoginView.routeName);
                       });
                     },
@@ -113,29 +113,6 @@ class _CarouselViewerState extends State<CarouselViewer> {
                         fontSize: 17.41,
                       ),
                     ),
-                  ),
-                ),
-                const VSpace(8.24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 35),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      FreedomButton(
-                        height: 57.76.h,
-                        useGradient: true,
-                        gradient: gradient,
-                        borderRadius: BorderRadius.circular(13),
-                        onPressed: () {},
-                        buttonTitle: Text(
-                          'Continue',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 17.41,
-                          ),
-                        ),
-                      ),
-                    ],
                   ),
                 ),
               ],

@@ -3,7 +3,7 @@ description: "User end for freedom"
 
 publish_to: "none"
 
-version: 1.0.0+19
+version: 1.0.0+20
 environment:
   sdk: ^3.7.2
 

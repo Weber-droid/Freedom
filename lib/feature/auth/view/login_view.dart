@@ -82,9 +82,25 @@ class _LoginViewState extends State<LoginView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const VSpace(67),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 17),
-                  child: SvgPicture.asset('assets/images/login_logo.svg'),
+                Row(
+                  children: [
+                    Container(
+                      height: 40,
+                      width: 40,
+                      margin: const EdgeInsets.only(left: 16),
+                      child: Image(
+                        image: AssetImage('assets/images/freedom_icon.png'),
+                      ),
+                    ),
+                    const HSpace(8),
+                    Text(
+                      'Freedom',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
                 ),
                 const VSpace(20.37),
                 Padding(

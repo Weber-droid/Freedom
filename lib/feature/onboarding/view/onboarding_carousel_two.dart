@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:freedom/feature/auth/view/login_view.dart';
 import 'package:freedom/feature/onboarding/view/onboarding_carousel_one.dart';
 import 'package:freedom/shared/utilities.dart';
 
@@ -43,7 +44,12 @@ class _OnboardingCarouselTwoState extends State<OnboardingCarouselTwo> {
                           vertical: 4,
                         ),
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.pushReplacementNamed(
+                          context,
+                          LoginView.routeName,
+                        );
+                      },
                       child: const Text(
                         'Skip',
                         style: TextStyle(color: Colors.white, fontSize: 13.7),
