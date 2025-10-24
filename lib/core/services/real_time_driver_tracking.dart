@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:google_maps_flutter/google_maps_flutter.dart' as gmaps;
 import 'package:freedom/core/services/route_services.dart';
 import 'package:freedom/di/locator.dart';
-import 'package:geodesy/geodesy.dart' as geo;
 import 'package:latlong2/latlong.dart' as ll;
 
 class RealTimeDriverTrackingService {
@@ -135,19 +134,25 @@ class RealTimeDriverTrackingService {
         dev.log('❌ Invalid location data: missing or invalid coordinates');
         return null;
       }
-
-      final serverLatitude = (coordinates[0] as num).toDouble();
-      final serverLongitude = (coordinates[1] as num).toDouble();
+      final serverLongitude = (coordinates[0] as num).toDouble();
+      final serverLatitude = (coordinates[1] as num).toDouble();
 
       dev.log(
-        '🔍 Server coordinates: [lng=$serverLongitude, lat=$serverLatitude]',
+        '🔍 Server coordinates (GeoJSON format): [lng=$serverLongitude, lat=$serverLatitude]',
       );
 
+      // Create LatLng with CORRECT order: latitude first, longitude second
       final position = gmaps.LatLng(serverLatitude, serverLongitude);
 
       dev.log(
-        '✅ Corrected driver position: LatLng($serverLatitude, $serverLongitude)',
+        '✅ Corrected driver position: LatLng(lat=$serverLatitude, lng=$serverLongitude)',
       );
+
+      // Validate coordinates are in valid ranges
+      if (!_isValidCoordinateRange(serverLatitude, serverLongitude)) {
+        dev.log('❌ Coordinates out of valid range');
+        return null;
+      }
 
       final driverId = data['driverId'] as String?;
       final rideId = data['rideId'] as String?;
@@ -194,6 +199,18 @@ class RealTimeDriverTrackingService {
       dev.log('❌ Error parsing location data: $e');
       return null;
     }
+  }
+
+  bool _isValidCoordinateRange(double latitude, double longitude) {
+    if (latitude < -90 || latitude > 90) {
+      dev.log('❌ Invalid latitude: $latitude (must be between -90 and 90)');
+      return false;
+    }
+    if (longitude < -180 || longitude > 180) {
+      dev.log('❌ Invalid longitude: $longitude (must be between -180 and 180)');
+      return false;
+    }
+    return true;
   }
 
   bool _isValidPosition(DriverLocationData data) {
@@ -256,29 +273,24 @@ class RealTimeDriverTrackingService {
       weightedLng += history.position.longitude * weight;
     }
 
-    final newWeight = recentPositions.length + 1.0;
-    totalWeight += newWeight;
-    weightedLat += newData.position.latitude * newWeight;
-    weightedLng += newData.position.longitude * newWeight;
+    final smoothedLat = weightedLat / totalWeight;
+    final smoothedLng = weightedLng / totalWeight;
 
-    final smoothedPosition = gmaps.LatLng(
-      weightedLat / totalWeight,
-      weightedLng / totalWeight,
+    final smoothedPosition = gmaps.LatLng(smoothedLat, smoothedLng);
+
+    final distanceFromNew = _calculateDistanceInMeters(
+      smoothedPosition,
+      newData.position,
     );
 
-    return DriverLocationData(
-      driverId: newData.driverId,
-      rideId: newData.rideId,
-      position: smoothedPosition,
-      status: newData.status,
-      isMultiStop: newData.isMultiStop,
-      eta: newData.eta,
-      speed: newData.speed,
-      heading: newData.heading,
-      accuracy: newData.accuracy,
-      lastUpdate: newData.lastUpdate,
-      isSignificantMovement: newData.isSignificantMovement,
-    );
+    if (distanceFromNew > 100.0) {
+      dev.log(
+        '⚠️ Smoothed position too far from new data: ${distanceFromNew.toStringAsFixed(1)}m',
+      );
+      return newData;
+    }
+
+    return newData.copyWith(position: smoothedPosition);
   }
 
   void _updateLocationHistory(DriverLocationData data) {
@@ -287,6 +299,7 @@ class RealTimeDriverTrackingService {
         position: data.position,
         timestamp: data.lastUpdate,
         speed: data.speed,
+        heading: data.heading ?? 0.0,
         accuracy: data.accuracy,
       ),
     );
@@ -295,71 +308,148 @@ class RealTimeDriverTrackingService {
       _locationHistory.removeAt(0);
     }
 
-    final cutoffTime = DateTime.now().subtract(Duration(minutes: 2));
-    _locationHistory.removeWhere((h) => h.timestamp.isBefore(cutoffTime));
+    dev.log(
+      '📊 Location history updated: ${_locationHistory.length} points (avg accuracy: ${_calculateAverageAccuracy().toStringAsFixed(1)}m)',
+    );
   }
 
-  Future<void> _updateDriverPosition(DriverLocationData locationData) async {
-    final position = locationData.position;
-    final bearing = _calculateEnhancedBearing(position, locationData);
+  Future<void> _updateDriverPosition(DriverLocationData data) async {
+    _lastKnownDriverPosition = data.position;
+    _lastPositionUpdate = data.lastUpdate;
 
-    _lastKnownDriverPosition = position;
-    _lastPositionUpdate = locationData.lastUpdate;
-
-    final progressInfo = _calculateRouteProgress(position);
-
-    onDriverPositionUpdate?.call(position, bearing, locationData);
+    final bearing = _calculateBearingFromHistory();
 
     dev.log(
-      '📍 Driver position updated: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)} '
-      '(bearing: ${bearing.toStringAsFixed(1)}°, speed: ${locationData.speed.toStringAsFixed(1)} km/h, '
-      'accuracy: ${locationData.accuracy.toStringAsFixed(1)}m)',
+      '📍 Driver position updated: ${data.position.latitude.toStringAsFixed(6)}, '
+      '${data.position.longitude.toStringAsFixed(6)} '
+      '(speed: ${data.speed.toStringAsFixed(1)}km/h, bearing: ${bearing.toStringAsFixed(1)}°, '
+      'accuracy: ${data.accuracy.toStringAsFixed(1)}m)',
     );
 
-    if (progressInfo != null) {
-      dev.log(
-        '📊 Route progress: ${(progressInfo.progress * 100).toStringAsFixed(1)}% '
-        '(${progressInfo.formattedRemainingDistance} remaining)',
-      );
-    }
+    onDriverPositionUpdate?.call(data.position, bearing, data);
   }
 
-  double _calculateEnhancedBearing(
-    gmaps.LatLng currentPosition,
-    DriverLocationData data,
-  ) {
-    if (data.heading != null && data.heading! > 0 && data.speed > 5.0) {
-      return data.heading!;
+  Future<void> _checkForRouteRecalculation(gmaps.LatLng currentPosition) async {
+    if (_currentDestination == null) return;
+
+    if (_currentRoutePoints.isEmpty) {
+      dev.log('📍 No route exists, calculating initial route');
+      await _calculateNewRoute(currentPosition, _currentDestination!);
+      return;
     }
 
-    if (_locationHistory.length >= 2) {
-      final recentPositions =
-          _locationHistory
-              .where(
-                (h) => DateTime.now().difference(h.timestamp).inSeconds < 30,
-              )
-              .toList();
+    final distanceFromRoute = _calculateDistanceFromRoute(currentPosition);
 
-      if (recentPositions.length >= 2) {
-        final oldPosition = recentPositions[0].position;
-        return _calculateBearingBetweenPoints(oldPosition, currentPosition);
+    if (distanceFromRoute > _routeDeviationThresholdMeters) {
+      final now = DateTime.now();
+      final canRecalculate =
+          _lastRouteRecalculation == null ||
+          now.difference(_lastRouteRecalculation!).inSeconds >=
+              _routeRecalculationCooldownSeconds;
+
+      if (canRecalculate) {
+        dev.log(
+          '🔄 Route deviation detected: ${distanceFromRoute.toStringAsFixed(1)}m - Recalculating route',
+        );
+        await _calculateNewRoute(currentPosition, _currentDestination!);
+      } else {
+        dev.log(
+          '⚠️ Route deviation detected but cooldown active: ${distanceFromRoute.toStringAsFixed(1)}m',
+        );
       }
     }
-
-    if (_lastKnownDriverPosition != null) {
-      return _calculateBearingBetweenPoints(
-        _lastKnownDriverPosition!,
-        currentPosition,
-      );
-    }
-
-    return 0.0;
   }
 
-  double _calculateBearingBetweenPoints(gmaps.LatLng start, gmaps.LatLng end) {
-    final lat1 = start.latitude * math.pi / 180;
-    final lat2 = end.latitude * math.pi / 180;
-    final dLng = (end.longitude - start.longitude) * math.pi / 180;
+  Future<void> _calculateNewRoute(gmaps.LatLng start, gmaps.LatLng end) async {
+    try {
+      dev.log('🗺️ Calculating new route from $start to $end');
+
+      final routeResult = await _routeService.getRoute(start, end);
+
+      if (routeResult.isSuccess && routeResult.routePoints != null) {
+        _currentRoutePoints = routeResult.routePoints!;
+        _lastRouteRecalculation = DateTime.now();
+
+        dev.log(
+          '✅ New route calculated: ${_currentRoutePoints.length} points, '
+          '${_routeService.calculateRouteDistance(_currentRoutePoints).toStringAsFixed(0)}m',
+        );
+
+        onRouteUpdate?.call(_currentRoutePoints);
+        _notifyStatus('Route updated');
+      } else {
+        dev.log('❌ Route calculation failed: ${routeResult.errorMessage}');
+        _notifyStatus('Route calculation failed');
+      }
+    } catch (e) {
+      dev.log('❌ Error calculating route: $e');
+      _notifyStatus('Route calculation error');
+    }
+  }
+
+  double _calculateDistanceFromRoute(gmaps.LatLng point) {
+    if (_currentRoutePoints.isEmpty) return double.infinity;
+
+    double minDistance = double.infinity;
+
+    for (int i = 0; i < _currentRoutePoints.length - 1; i++) {
+      final distance = _distanceToLineSegment(
+        point,
+        _currentRoutePoints[i],
+        _currentRoutePoints[i + 1],
+      );
+      minDistance = math.min(minDistance, distance);
+    }
+
+    return minDistance;
+  }
+
+  double _distanceToLineSegment(
+    gmaps.LatLng point,
+    gmaps.LatLng lineStart,
+    gmaps.LatLng lineEnd,
+  ) {
+    final x0 = point.latitude;
+    final y0 = point.longitude;
+    final x1 = lineStart.latitude;
+    final y1 = lineStart.longitude;
+    final x2 = lineEnd.latitude;
+    final y2 = lineEnd.longitude;
+
+    final dx = x2 - x1;
+    final dy = y2 - y1;
+
+    if (dx == 0 && dy == 0) {
+      return _calculateDistanceInMeters(point, lineStart);
+    }
+
+    final t = math.max(
+      0,
+      math.min(1, ((x0 - x1) * dx + (y0 - y1) * dy) / (dx * dx + dy * dy)),
+    );
+
+    final nearestPoint = gmaps.LatLng(x1 + t * dx, y1 + t * dy);
+    return _calculateDistanceInMeters(point, nearestPoint);
+  }
+
+  double _calculateBearingFromHistory() {
+    if (_locationHistory.length < 2) {
+      return _locationHistory.lastOrNull?.heading ?? 0.0;
+    }
+
+    final recent = _locationHistory.last;
+    final previous = _locationHistory[_locationHistory.length - 2];
+
+    if (recent.position == previous.position) {
+      return recent.heading;
+    }
+
+    final lat1 = previous.position.latitude * math.pi / 180;
+    final lat2 = recent.position.latitude * math.pi / 180;
+    final dLng =
+        (recent.position.longitude - previous.position.longitude) *
+        math.pi /
+        180;
 
     final y = math.sin(dLng) * math.cos(lat2);
     final x =
@@ -370,89 +460,114 @@ class RealTimeDriverTrackingService {
     return (bearing + 360) % 360;
   }
 
-  Future<void> _checkForRouteRecalculation(gmaps.LatLng driverPosition) async {
-    if (_currentDestination == null) return;
+  double _calculateAverageAccuracy() {
+    if (_locationHistory.isEmpty) return 0.0;
 
-    if (_currentRoutePoints.isEmpty) {
-      await _calculateNewRoute(driverPosition, _currentDestination!);
-      return;
-    }
+    final totalAccuracy = _locationHistory.fold<double>(
+      0.0,
+      (sum, item) => sum + item.accuracy,
+    );
+    return totalAccuracy / _locationHistory.length;
+  }
 
-    final distanceFromRoute = _calculateDistanceFromRoute(driverPosition);
+  void _notifyStatus(String message) {
+    onTrackingStatusUpdate?.call(message);
+  }
 
-    if (distanceFromRoute > _routeDeviationThresholdMeters) {
+  // ============================================================================
+  // PUBLIC GETTERS AND UTILITY METHODS
+  // ============================================================================
+
+  /// Gets current route points for the active tracking
+  List<gmaps.LatLng> get currentRoutePoints => _currentRoutePoints;
+
+  /// Gets location history
+  List<LocationHistory> get locationHistory => _locationHistory;
+
+  /// Checks if tracking is active
+  bool get isTracking => _isTracking;
+
+  /// Gets current driver position
+  gmaps.LatLng? get currentDriverPosition => _lastKnownDriverPosition;
+
+  /// Gets last known driver position (alias for backward compatibility)
+  gmaps.LatLng? get lastKnownDriverPosition => _lastKnownDriverPosition;
+
+  /// Gets current destination
+  gmaps.LatLng? get destination => _currentDestination;
+
+  /// Gets current destination (alias for backward compatibility)
+  gmaps.LatLng? get currentDestination => _currentDestination;
+
+  /// Checks if driver has reached destination
+  bool hasReachedDestination(gmaps.LatLng currentPosition) {
+    if (_currentDestination == null) return false;
+
+    final distance = _calculateDistanceInMeters(
+      currentPosition,
+      _currentDestination!,
+    );
+
+    // Consider arrived if within 50 meters
+    const arrivalThreshold = 50.0;
+    final hasArrived = distance <= arrivalThreshold;
+
+    if (hasArrived) {
       dev.log(
-        '🔄 Driver deviated ${distanceFromRoute.toStringAsFixed(1)}m from route '
-        '(threshold: ${_routeDeviationThresholdMeters}m)',
+        '🎯 Driver has reached destination (${distance.toStringAsFixed(1)}m away)',
       );
-
-      if (_shouldRecalculateRoute()) {
-        await _calculateNewRoute(driverPosition, _currentDestination!);
-      }
     }
+
+    return hasArrived;
   }
 
-  double _calculateDistanceFromRoute(gmaps.LatLng driverPosition) {
-    if (_currentRoutePoints.isEmpty) return double.infinity;
-
-    double minDistance = double.infinity;
-
-    for (int i = 0; i < _currentRoutePoints.length - 1; i++) {
-      final segmentDistance = distanceToLineSegment(
-        driverPosition,
-        _currentRoutePoints[i],
-        _currentRoutePoints[i + 1],
-      );
-
-      if (segmentDistance < minDistance) {
-        minDistance = segmentDistance;
-      }
-    }
-
-    return minDistance;
+  /// Gets distance to destination from current position
+  double? getDistanceToDestination(gmaps.LatLng? currentPosition) {
+    if (currentPosition == null || _currentDestination == null) return null;
+    return _calculateDistanceInMeters(currentPosition, _currentDestination!);
   }
 
-  double distanceToLineSegment(
-    gmaps.LatLng point,
-    gmaps.LatLng lineStart,
-    gmaps.LatLng lineEnd,
-  ) {
-    final geodesy = geo.Geodesy();
+  void stopTracking() {
+    dev.log('🛑 Stopping real-time driver tracking');
 
-    final projectedPoint = geodesy.projectPointOntoGeodesicLine(
-      LatLngExtensions(point).toLatLong2(),
-      LatLngExtensions(lineStart).toLatLong2(),
-      LatLngExtensions(lineEnd).toLatLong2(),
+    _isTracking = false;
+    _updateTimer?.cancel();
+    _updateTimer = null;
+    _currentRideId = null;
+    _currentDriverId = null;
+    _currentDestination = null;
+    _lastKnownDriverPosition = null;
+    _currentRoutePoints.clear();
+    _locationHistory.clear();
+    _lastPositionUpdate = null;
+    _lastRouteRecalculation = null;
+
+    onDriverPositionUpdate = null;
+    onRouteUpdate = null;
+    onTrackingStatusUpdate = null;
+    onDriverMarkerUpdate = null;
+
+    _notifyStatus('Tracking stopped');
+  }
+
+  void dispose() {
+    stopTracking();
+    dev.log('🗑️ RealTimeDriverTrackingService disposed');
+  }
+
+  TrackingStatus getTrackingStatus() {
+    return TrackingStatus(
+      isTracking: _isTracking,
+      rideId: _currentRideId,
+      driverId: _currentDriverId,
+      lastKnownPosition: _lastKnownDriverPosition,
+      destination: _currentDestination,
+      routePointsCount: _currentRoutePoints.length,
+      locationHistoryCount: _locationHistory.length,
+      lastPositionUpdate: _lastPositionUpdate,
+      averageAccuracy: _calculateAverageAccuracy(),
+      currentRoutePoints: _currentRoutePoints,
     );
-
-    final distance = geodesy.distanceBetweenTwoGeoPoints(
-      LatLngExtensions(point).toLatLong2(),
-      projectedPoint,
-    );
-
-    final segmentLength = geodesy.distanceBetweenTwoGeoPoints(
-      LatLngExtensions(lineStart).toLatLong2(),
-      LatLngExtensions(lineEnd).toLatLong2(),
-    );
-
-    final distanceToProjection = geodesy.distanceBetweenTwoGeoPoints(
-      LatLngExtensions(lineStart).toLatLong2(),
-      projectedPoint,
-    );
-
-    if (distanceToProjection < 0 || distanceToProjection > segmentLength) {
-      final distanceToStart = geodesy.distanceBetweenTwoGeoPoints(
-        LatLngExtensions(point).toLatLong2(),
-        LatLngExtensions(lineStart).toLatLong2(),
-      );
-      final distanceToEnd = geodesy.distanceBetweenTwoGeoPoints(
-        LatLngExtensions(point).toLatLong2(),
-        LatLngExtensions(lineEnd).toLatLong2(),
-      );
-      return math.min(distanceToStart.toDouble(), distanceToEnd.toDouble());
-    }
-
-    return distance.toDouble();
   }
 
   double _calculateDistanceInMeters(gmaps.LatLng point1, gmaps.LatLng point2) {
@@ -472,216 +587,6 @@ class RealTimeDriverTrackingService {
     final c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a));
 
     return earthRadius * c;
-  }
-
-  bool _shouldRecalculateRoute() {
-    if (_lastRouteRecalculation == null) return true;
-
-    final timeSinceLastRecalculation = DateTime.now().difference(
-      _lastRouteRecalculation!,
-    );
-    return timeSinceLastRecalculation.inSeconds >=
-        _routeRecalculationCooldownSeconds;
-  }
-
-  Future<void> _calculateNewRoute(gmaps.LatLng from, gmaps.LatLng to) async {
-    try {
-      dev.log(
-        '🛣️ Calculating new route from ${from.latitude.toStringAsFixed(6)}, ${from.longitude.toStringAsFixed(6)} to ${to.latitude.toStringAsFixed(6)}, ${to.longitude.toStringAsFixed(6)}',
-      );
-      _lastRouteRecalculation = DateTime.now();
-
-      final routeResult = await _routeService.getRoute(from, to);
-
-      if (routeResult.isSuccess && routeResult.polyline != null) {
-        _currentRoutePoints =
-            routeResult.polyline!.points
-                .map((point) => gmaps.LatLng(point.latitude, point.longitude))
-                .toList();
-
-        dev.log(
-          '✅ New route calculated with ${_currentRoutePoints.length} points',
-        );
-        _notifyStatus('Route updated - ${_currentRoutePoints.length} points');
-
-        onRouteUpdate?.call(_currentRoutePoints);
-      } else {
-        dev.log('❌ Failed to calculate route: ${routeResult.errorMessage}');
-        _notifyStatus('Route calculation failed: ${routeResult.errorMessage}');
-      }
-    } catch (e) {
-      dev.log('❌ Error calculating route: $e');
-      _notifyStatus('Route calculation error: $e');
-    }
-  }
-
-  RouteProgress? _calculateRouteProgress(gmaps.LatLng driverPosition) {
-    if (_currentRoutePoints.isEmpty) return null;
-
-    double minDistance = double.infinity;
-    int closestSegmentIndex = 0;
-
-    for (int i = 0; i < _currentRoutePoints.length - 1; i++) {
-      final distance = distanceToLineSegment(
-        driverPosition,
-        _currentRoutePoints[i],
-        _currentRoutePoints[i + 1],
-      );
-
-      if (distance < minDistance) {
-        minDistance = distance;
-        closestSegmentIndex = i;
-      }
-    }
-
-    double totalDistance = 0;
-    double distanceCovered = 0;
-
-    for (int i = 0; i < _currentRoutePoints.length - 1; i++) {
-      final segmentDistance = _calculateDistanceInMeters(
-        _currentRoutePoints[i],
-        _currentRoutePoints[i + 1],
-      );
-
-      totalDistance += segmentDistance;
-
-      if (i < closestSegmentIndex) {
-        distanceCovered += segmentDistance;
-      }
-    }
-
-    final progress = totalDistance > 0 ? distanceCovered / totalDistance : 0.0;
-    final remainingDistance = totalDistance - distanceCovered;
-
-    return RouteProgress(
-      progress: progress,
-      distanceCovered: distanceCovered,
-      remainingDistance: remainingDistance,
-      totalDistance: totalDistance,
-      estimatedTimeRemaining: _calculateETA(remainingDistance),
-    );
-  }
-
-  Duration _calculateETA(double remainingDistanceMeters) {
-    const double averageSpeedMps = 8.33;
-    final etaSeconds = remainingDistanceMeters / averageSpeedMps;
-    return Duration(seconds: etaSeconds.round());
-  }
-
-  TrackingStatus getTrackingStatus() {
-    return TrackingStatus(
-      isTracking: _isTracking,
-      rideId: _currentRideId,
-      driverId: _currentDriverId,
-      lastKnownPosition: _lastKnownDriverPosition,
-      destination: _currentDestination,
-      routePointsCount: _currentRoutePoints.length,
-      lastUpdateTime: _lastPositionUpdate,
-      timeSinceLastUpdate:
-          _lastPositionUpdate != null
-              ? DateTime.now().difference(_lastPositionUpdate!)
-              : null,
-      locationHistoryCount: _locationHistory.length,
-      averageAccuracy: _calculateAverageAccuracy(),
-      isReceivingRegularUpdates: _isReceivingRegularUpdates(),
-    );
-  }
-
-  double _calculateAverageAccuracy() {
-    if (_locationHistory.isEmpty) return 0.0;
-
-    final recentHistory =
-        _locationHistory
-            .where((h) => DateTime.now().difference(h.timestamp).inSeconds < 30)
-            .toList();
-
-    if (recentHistory.isEmpty) return 0.0;
-
-    final totalAccuracy = recentHistory.fold(0.0, (sum, h) => sum + h.accuracy);
-    return totalAccuracy / recentHistory.length;
-  }
-
-  bool _isReceivingRegularUpdates() {
-    if (_lastPositionUpdate == null) return false;
-
-    final timeSinceLastUpdate = DateTime.now().difference(_lastPositionUpdate!);
-    return timeSinceLastUpdate < Duration(seconds: 6);
-  }
-
-  void stopTracking() {
-    dev.log('🛑 Stopping enhanced real-time driver tracking');
-
-    _isTracking = false;
-    _currentRideId = null;
-    _currentDriverId = null;
-    _lastKnownDriverPosition = null;
-    _currentDestination = null;
-    _currentRoutePoints.clear();
-    _lastPositionUpdate = null;
-    _lastRouteRecalculation = null;
-    _locationHistory.clear();
-
-    _updateTimer?.cancel();
-    _updateTimer = null;
-
-    onDriverPositionUpdate = null;
-    onRouteUpdate = null;
-    onTrackingStatusUpdate = null;
-    onDriverMarkerUpdate = null;
-
-    _notifyStatus('Enhanced tracking stopped');
-  }
-
-  void _notifyStatus(String message) {
-    onTrackingStatusUpdate?.call(message);
-    dev.log('📊 Tracking status: $message');
-  }
-
-  bool hasReachedDestination(gmaps.LatLng driverPosition) {
-    if (_currentDestination == null) return false;
-
-    final distanceToDestination = _calculateDistanceInMeters(
-      driverPosition,
-      _currentDestination!,
-    );
-
-    const double arrivalThresholdMeters = 100.0;
-    return distanceToDestination <= arrivalThresholdMeters;
-  }
-
-  List<gmaps.LatLng> get currentRoutePoints =>
-      List.unmodifiable(_currentRoutePoints);
-
-  bool get isTracking => _isTracking;
-
-  gmaps.LatLng? get lastKnownDriverPosition => _lastKnownDriverPosition;
-
-  gmaps.LatLng? get currentDestination => _currentDestination;
-
-  String? get currentRideId => _currentRideId;
-
-  String? get currentDriverId => _currentDriverId;
-
-  List<LocationHistory> get locationHistory =>
-      List.unmodifiable(_locationHistory);
-}
-
-class LocationHistory {
-  final gmaps.LatLng position;
-  final DateTime timestamp;
-  final double speed;
-  final double accuracy;
-
-  const LocationHistory({
-    required this.position,
-    required this.timestamp,
-    required this.speed,
-    required this.accuracy,
-  });
-
-  @override
-  String toString() {
-    return 'LocationHistory(position: $position, timestamp: $timestamp, speed: $speed, accuracy: $accuracy)';
   }
 }
 
@@ -712,68 +617,57 @@ class DriverLocationData {
     required this.isSignificantMovement,
   });
 
-  @override
-  String toString() {
-    return 'DriverLocationData(driverId: $driverId, rideId: $rideId, '
-        'position: ${position.latitude.toStringAsFixed(6)}, ${position.longitude.toStringAsFixed(6)}, '
-        'status: $status, speed: ${speed.toStringAsFixed(1)}, heading: $heading, '
-        'accuracy: ${accuracy.toStringAsFixed(1)})';
+  DriverLocationData copyWith({
+    String? driverId,
+    String? rideId,
+    gmaps.LatLng? position,
+    String? status,
+    bool? isMultiStop,
+    EtaData? eta,
+    double? speed,
+    double? heading,
+    double? accuracy,
+    DateTime? lastUpdate,
+    bool? isSignificantMovement,
+  }) {
+    return DriverLocationData(
+      driverId: driverId ?? this.driverId,
+      rideId: rideId ?? this.rideId,
+      position: position ?? this.position,
+      status: status ?? this.status,
+      isMultiStop: isMultiStop ?? this.isMultiStop,
+      eta: eta ?? this.eta,
+      speed: speed ?? this.speed,
+      heading: heading ?? this.heading,
+      accuracy: accuracy ?? this.accuracy,
+      lastUpdate: lastUpdate ?? this.lastUpdate,
+      isSignificantMovement:
+          isSignificantMovement ?? this.isSignificantMovement,
+    );
   }
 }
 
 class EtaData {
   final double value;
   final String text;
-  const EtaData({required this.value, required this.text});
 
-  @override
-  String toString() => 'EtaData(value: $value, text: $text)';
+  const EtaData({required this.value, required this.text});
 }
 
-class RouteProgress {
-  final double progress;
-  final double distanceCovered;
-  final double remainingDistance;
-  final double totalDistance;
-  final Duration estimatedTimeRemaining;
+class LocationHistory {
+  final gmaps.LatLng position;
+  final DateTime timestamp;
+  final double speed;
+  final double heading;
+  final double accuracy;
 
-  const RouteProgress({
-    required this.progress,
-    required this.distanceCovered,
-    required this.remainingDistance,
-    required this.totalDistance,
-    required this.estimatedTimeRemaining,
+  const LocationHistory({
+    required this.position,
+    required this.timestamp,
+    required this.speed,
+    required this.heading,
+    required this.accuracy,
   });
-
-  String get formattedProgress => '${(progress * 100).toStringAsFixed(1)}%';
-
-  String get formattedRemainingDistance {
-    if (remainingDistance < 1000) {
-      return '${remainingDistance.toStringAsFixed(0)}m';
-    } else {
-      return '${(remainingDistance / 1000).toStringAsFixed(1)}km';
-    }
-  }
-
-  String get formattedETA {
-    final hours = estimatedTimeRemaining.inHours;
-    final minutes = estimatedTimeRemaining.inMinutes % 60;
-
-    if (hours > 0) {
-      return '${hours}h ${minutes}m';
-    } else {
-      return '${minutes}m';
-    }
-  }
-
-  @override
-  String toString() {
-    return 'RouteProgress(progress: $formattedProgress, '
-        'distanceCovered: ${(distanceCovered / 1000).toStringAsFixed(1)}km, '
-        'remainingDistance: $formattedRemainingDistance, '
-        'totalDistance: ${(totalDistance / 1000).toStringAsFixed(1)}km, '
-        'eta: $formattedETA)';
-  }
 }
 
 class TrackingStatus {
@@ -783,11 +677,10 @@ class TrackingStatus {
   final gmaps.LatLng? lastKnownPosition;
   final gmaps.LatLng? destination;
   final int routePointsCount;
-  final DateTime? lastUpdateTime;
-  final Duration? timeSinceLastUpdate;
   final int locationHistoryCount;
+  final DateTime? lastPositionUpdate;
   final double averageAccuracy;
-  final bool isReceivingRegularUpdates;
+  final List<gmaps.LatLng> currentRoutePoints;
 
   const TrackingStatus({
     required this.isTracking,
@@ -796,41 +689,37 @@ class TrackingStatus {
     this.lastKnownPosition,
     this.destination,
     required this.routePointsCount,
-    this.lastUpdateTime,
-    this.timeSinceLastUpdate,
     required this.locationHistoryCount,
+    this.lastPositionUpdate,
     required this.averageAccuracy,
-    required this.isReceivingRegularUpdates,
+    required this.currentRoutePoints,
   });
 
   bool get isStale {
-    if (timeSinceLastUpdate == null) return false;
-    return timeSinceLastUpdate!.inSeconds > 10;
+    if (lastPositionUpdate == null) return true;
+    return DateTime.now().difference(lastPositionUpdate!) >
+        RealTimeDriverTrackingService._staleUpdateThreshold;
   }
 
-  bool get hasGoodAccuracy {
-    return averageAccuracy > 0 && averageAccuracy <= 20.0;
+  bool get hasGoodAccuracy => averageAccuracy < 20.0;
+
+  bool get isReceivingRegularUpdates {
+    if (lastPositionUpdate == null) return false;
+    return DateTime.now().difference(lastPositionUpdate!) <
+        RealTimeDriverTrackingService._expectedUpdateInterval * 2;
+  }
+
+  Duration? get timeSinceLastUpdate {
+    if (lastPositionUpdate == null) return null;
+    return DateTime.now().difference(lastPositionUpdate!);
   }
 
   String get statusSummary {
     if (!isTracking) return 'Not tracking';
-    if (isStale) return 'Stale updates';
+    if (isStale) return 'Stale data';
+    if (!hasGoodAccuracy) return 'Poor accuracy';
     if (!isReceivingRegularUpdates) return 'Irregular updates';
-    if (!hasGoodAccuracy) return 'Poor GPS accuracy';
     return 'Tracking active';
-  }
-
-  String get formattedLastUpdate {
-    if (lastUpdateTime == null) return 'Never';
-    if (timeSinceLastUpdate == null) return 'Unknown';
-
-    final seconds = timeSinceLastUpdate!.inSeconds;
-    if (seconds < 60) {
-      return '${seconds}s ago';
-    } else {
-      final minutes = timeSinceLastUpdate!.inMinutes;
-      return '${minutes}m ${seconds % 60}s ago';
-    }
   }
 
   String get formattedPosition {
@@ -838,10 +727,19 @@ class TrackingStatus {
     return '${lastKnownPosition!.latitude.toStringAsFixed(6)}, ${lastKnownPosition!.longitude.toStringAsFixed(6)}';
   }
 
+  String get formattedLastUpdate {
+    if (lastPositionUpdate == null) return 'Never';
+    final duration = DateTime.now().difference(lastPositionUpdate!);
+    if (duration.inSeconds < 60) return '${duration.inSeconds}s ago';
+    if (duration.inMinutes < 60) return '${duration.inMinutes}m ago';
+    return '${duration.inHours}h ago';
+  }
+
   double? get distanceToDestination {
     if (lastKnownPosition == null || destination == null) return null;
 
     const double earthRadius = 6371000;
+
     final lat1Rad = lastKnownPosition!.latitude * math.pi / 180;
     final lat2Rad = destination!.latitude * math.pi / 180;
     final dLat =

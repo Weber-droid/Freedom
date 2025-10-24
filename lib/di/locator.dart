@@ -4,6 +4,7 @@ import 'package:freedom/core/client/base_api_client.dart';
 import 'package:freedom/core/config/environment_config.dart';
 import 'package:freedom/core/services/app_restoration_manager.dart';
 import 'package:freedom/core/services/life_cycle_manager.dart';
+import 'package:freedom/core/services/places_service/google_places_api_service.dart';
 import 'package:freedom/core/services/real_time_driver_tracking.dart';
 import 'package:freedom/core/services/map_services.dart';
 import 'package:freedom/core/services/push_notification_service/push_nofication_service.dart';
@@ -87,7 +88,9 @@ Future<void> locator() async {
       () => RideRequestRepositoryImpl(remoteDataSource: getIt()),
     )
     ..registerLazySingleton<LocationRemoteDataSource>(
-      () => LocationRemoteDataSourceImpl(placesApi: getIt()),
+      () => LocationRemoteDataSourceImpl(
+        placesService: getIt<GooglePlacesService>(),
+      ),
     )
     ..registerLazySingleton<RideRemoteDataSource>(
       () => RideRemoteDataSourceImpl(client: getIt()),
@@ -125,8 +128,9 @@ Future<void> locator() async {
         restorationManager: getIt(),
       ),
     )
-    ..registerLazySingleton(
-      () => GoogleMapsPlaces(apiKey: dotenv.env['GOOGLE_MAPS_API_KEY']),
+    ..registerLazySingleton<GooglePlacesService>(
+      () =>
+          GooglePlacesService(apiKey: dotenv.env['GOOGLE_MAPS_API_KEY'] ?? ''),
     )
     ..registerLazySingleton<RouteService>(RouteService.new)
     ..registerLazySingleton<RouteAnimationService>(RouteAnimationService.new);

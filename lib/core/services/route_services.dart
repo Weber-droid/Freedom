@@ -25,7 +25,6 @@ class RouteService {
       final polylineIdValue = polylineId ?? 'route';
       final polylineIdObj = PolylineId(polylineIdValue);
       final polylinePoints = PolylinePoints();
-      log('Directions key: ${dotenv.env['DIRECTIONS_API_KEY']}');
       final result = await polylinePoints.getRouteBetweenCoordinates(
         googleApiKey: dotenv.env['DIRECTIONS_API_KEY'],
         request: PolylineRequest(

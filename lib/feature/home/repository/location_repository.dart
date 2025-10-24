@@ -19,7 +19,6 @@ class LocationRepositoryImpl implements LocationRepository {
     try {
       final models = await remoteDataSource.getPlacePredictions(query);
       log('Place predictions: ${models[0].mainText}');
-      ;
       return models
           .map(
             (model) => PlacePrediction(
