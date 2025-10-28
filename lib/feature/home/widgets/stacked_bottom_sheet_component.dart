@@ -4,6 +4,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
+import 'package:freedom/feature/home/view/widget/choose_payment_method.dart';
+import 'package:freedom/feature/home/view/widget/choose_servicetext_detailui.dart';
 import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/feature/user_verification/verify_otp/view/view.dart';
 import 'package:freedom/shared/widgets/custom_dropdown_button.dart';
@@ -94,61 +96,65 @@ class StackedBottomSheetComponentState
                         ),
                         const VSpace(8),
                         Container(
-                            decoration: BoxDecoration(
-                              color: const Color(0xfffffaf0),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: Colors.white,
-                              ),
-                            ),
-                            padding: const EdgeInsets.only(
-                                left: 5, right: 5, top: 5, bottom: 5),
-                            child: Row(
-                              children: [
-                                Text(
-                                  context.select<HomeCubit, String>((cubit) {
-                                    final state = cubit.state;
-                                    if (state.destinationLocation?.address !=
-                                            null &&
-                                        state.destinationLocation!.address
-                                            .isNotEmpty) {
-                                      return state.destinationLocation!.address;
-                                    } else if (state
-                                        .destinationLocations.isNotEmpty) {
-                                      for (final location
-                                          in state.destinationLocations) {
-                                        if (location.address.isNotEmpty) {
-                                          return location.address;
-                                        }
+                          decoration: BoxDecoration(
+                            color: const Color(0xfffffaf0),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.white),
+                          ),
+                          padding: const EdgeInsets.only(
+                            left: 5,
+                            right: 5,
+                            top: 5,
+                            bottom: 5,
+                          ),
+                          child: Row(
+                            children: [
+                              Text(
+                                context.select<HomeCubit, String>((cubit) {
+                                  final state = cubit.state;
+                                  if (state.destinationLocation?.address !=
+                                          null &&
+                                      state
+                                          .destinationLocation!
+                                          .address
+                                          .isNotEmpty) {
+                                    return state.destinationLocation!.address;
+                                  } else if (state
+                                      .destinationLocations
+                                      .isNotEmpty) {
+                                    for (final location
+                                        in state.destinationLocations) {
+                                      if (location.address.isNotEmpty) {
+                                        return location.address;
                                       }
                                     }
-
-                                    // Default fallback
-                                    return 'Your destination';
-                                  }),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.black,
-                                    fontSize: 10.89,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  }
+                                  return 'Your destination';
+                                }),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
+                                style: GoogleFonts.poppins(
+                                  color: Colors.black,
+                                  fontSize: 10.89,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                const Spacer(),
-                                CustomDropDown(
-                                  items: dropdownItems,
-                                  initialValue: defaultValue,
-                                  onChanged: (value) {
-                                    setState(() {
-                                      defaultValue = value;
-                                    });
-                                    if (value == 'Later') {
-                                      _showCalenderPicker(context);
-                                    }
-                                  },
-                                ),
-                              ],
-                            )),
+                              ),
+                              const Spacer(),
+                              CustomDropDown(
+                                items: dropdownItems,
+                                initialValue: defaultValue,
+                                onChanged: (value) {
+                                  setState(() {
+                                    defaultValue = value;
+                                  });
+                                  if (value == 'Later') {
+                                    _showCalenderPicker(context);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 500),
                           height: _spacing,
@@ -203,9 +209,10 @@ class StackedBottomSheetComponentState
                                   setState(() {
                                     trackSelectedIndex =
                                         (trackSelectedIndex == 1) ? 1 : 1;
-                                    _containerHeight = trackSelectedIndex == 1
-                                        ? 0
-                                        : _containerHeight;
+                                    _containerHeight =
+                                        trackSelectedIndex == 1
+                                            ? 0
+                                            : _containerHeight;
                                     _spacing =
                                         trackSelectedIndex == 1 ? 4.0 : 13.0;
                                   });
@@ -285,9 +292,10 @@ class StackedBottomSheetComponentState
                                 useGradient: true,
                                 gradient: gradient,
                                 useLoader: true,
-                                child: state.status == RideRequestStatus.loading
-                                    ? const CircularProgressIndicator.adaptive()
-                                    : null,
+                                child:
+                                    state.status == RideRequestStatus.loading
+                                        ? const CircularProgressIndicator.adaptive()
+                                        : null,
                               );
                             },
                           ),

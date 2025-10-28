@@ -8,6 +8,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:freedom/feature/home/delivery_cubit/delivery_cubit.dart';
 import 'package:freedom/feature/home/models/delivery_model.dart';
 import 'package:freedom/feature/home/repository/models/place_prediction.dart';
+import 'package:freedom/feature/home/view/widget/choose_payment_method.dart';
 import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/shared/theme/app_colors.dart';
 import 'package:freedom/shared/utilities.dart';

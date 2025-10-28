@@ -16,6 +16,7 @@ import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/delivery_cubit/delivery_cubit.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
 import 'package:freedom/feature/home/view/widget/restoration_snack_bar.dart';
+import 'package:freedom/feature/home/view/widget/rider_found_bottomsheet.dart';
 import 'package:freedom/feature/home/view/widget/show_rider_search.dart';
 import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:freedom/feature/home/view/widget/rider_found_sheet.dart' as rfd;
@@ -1229,7 +1230,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const RiderFoundBottomSheet(),
+          const RiderFoundBottomSheet2(),
           if (rideState.rideInProgress && rideState.isRealTimeTrackingActive)
             _buildRealTimeTrackingSection(rideState),
         ],

@@ -17,7 +17,7 @@ class _MomoBottomSheetState extends State<MomoBottomSheet> {
   final _phoneController = TextEditingController();
   bool _isDefault = true;
 
-  final List<String> _providers = ['mtn'];
+  final List<String> _providers = ['mtn', 'vodafone', 'airtelTigo'];
 
   @override
   void dispose() {
@@ -25,7 +25,7 @@ class _MomoBottomSheetState extends State<MomoBottomSheet> {
     super.dispose();
   }
 
-  Future<void> _submitForm(BuildContext context) async{
+  Future<void> _submitForm(BuildContext context) async {
     if (_formKey.currentState!.validate()) {
       final momoDetails = AddMomoCardModel(
         type: 'momo',
@@ -34,10 +34,9 @@ class _MomoBottomSheetState extends State<MomoBottomSheet> {
         isDefault: _isDefault,
       );
       await context.read<WalletCubit>().addMomoCard(momoDetails);
-      if(context.mounted){
+      if (context.mounted) {
         Navigator.pop(context);
       }
-
     }
   }
 
@@ -106,19 +105,21 @@ class _MomoBottomSheetState extends State<MomoBottomSheet> {
                     child: DropdownButton<String>(
                       value: _selectedProvider,
                       isExpanded: true,
-                      dropdownColor: const Color(0xff8F5C06),
-                      icon: const Icon(Icons.arrow_drop_down,
-                          color: Colors.black),
+                      icon: const Icon(
+                        Icons.arrow_drop_down,
+                        color: Colors.black,
+                      ),
                       style: GoogleFonts.poppins(
                         fontSize: 13,
                         color: Colors.black,
                       ),
-                      items: _providers.map((String provider) {
-                        return DropdownMenuItem<String>(
-                          value: provider,
-                          child: Text(provider),
-                        );
-                      }).toList(),
+                      items:
+                          _providers.map((String provider) {
+                            return DropdownMenuItem<String>(
+                              value: provider,
+                              child: Text(provider),
+                            );
+                          }).toList(),
                       onChanged: (String? newValue) {
                         if (newValue != null) {
                           setState(() {
@@ -171,14 +172,14 @@ class _MomoBottomSheetState extends State<MomoBottomSheet> {
                             _isDefault = value ?? false;
                           });
                         },
-                        fillColor: MaterialStateProperty.resolveWith<Color>(
-                          (Set<MaterialState> states) {
-                            if (states.contains(MaterialState.selected)) {
-                              return const Color(0xfff8c060);
-                            }
-                            return Colors.white.withOpacity(0.3);
-                          },
-                        ),
+                        fillColor: WidgetStateProperty.resolveWith<Color>((
+                          Set<WidgetState> states,
+                        ) {
+                          if (states.contains(WidgetState.selected)) {
+                            return const Color(0xfff8c060);
+                          }
+                          return Colors.white.withOpacity(0.3);
+                        }),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(4),
                         ),
@@ -195,19 +196,19 @@ class _MomoBottomSheetState extends State<MomoBottomSheet> {
                   ],
                 ),
                 const SizedBox(height: 32),
-                  FreedomButton(
-                      onPressed: ()=>_submitForm(context),
-                    gradient: redLinearGradient,
-                    useGradient: true,
-                    buttonTitle: Text(
-                      'Add Mobile Money',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ) ,
+                FreedomButton(
+                  onPressed: () => _submitForm(context),
+                  gradient: redLinearGradient,
+                  useGradient: true,
+                  buttonTitle: Text(
+                    'Add Mobile Money',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
                   ),
+                ),
               ],
             ),
           ],
