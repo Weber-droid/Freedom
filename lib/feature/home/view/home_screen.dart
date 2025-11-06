@@ -1518,17 +1518,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return;
     }
 
-    final additionalDestinations =
-        state.destinationLocations
-            .where(
-              (loc) =>
-                  loc.latitude != 0 &&
-                  loc.longitude != 0 &&
-                  (loc.latitude != state.destinationLocation!.latitude ||
-                      loc.longitude != state.destinationLocation!.longitude),
-            )
-            .toList();
-
     final rideRequest = rideCubit.createRideRequestFromHomeState(
       pickupLocation: state.pickUpLocation!,
       mainDestination: state.destinationLocation!,

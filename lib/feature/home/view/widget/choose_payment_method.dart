@@ -77,7 +77,7 @@ class ChoosePayMentMethodState extends State<ChoosePayMentMethod> {
               ) => '${cardType.toUpperCase()} •••• $last4',
           momo:
               (_, __, ___, momoProvider, momoNumber, ____, _____) =>
-                  '$momoProvider ${momoNumber.substring(momoNumber.length - 4)}',
+                  'Mobile Money (${momoNumber.substring(6)})',
         );
       }
     }
@@ -235,7 +235,7 @@ class PaymentMethodBottomSheet extends StatelessWidget {
               ) {
                 return _PaymentMethodTile(
                   icon: Icons.phone_android,
-                  title: momoProvider,
+                  title: momoProvider.toUpperCase(),
                   subtitle: momoNumber,
                   isSelected: selectedPaymentMethodId == id,
                   isDefault: isDefault,
