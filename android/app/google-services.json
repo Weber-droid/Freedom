@@ -7,50 +7,6 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:868061640964:android:7da9ce2b4cfefa262cb851",
-        "android_client_info": {
-          "package_name": "com.freedom.app.freedom"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "868061640964-ikrmbkeq8jorovt3rvo1hkssfb5rh5ig.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.freedom.app.freedom",
-            "certificate_hash": "82beeab66f4da84bd811834bd0464cbe16ab41e6"
-          }
-        },
-        {
-          "client_id": "868061640964-mqptavp4utb6n8fhsdlta9da4644f4fn.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCgYScf1giacL_9wAzFL0ZaLClvzOi3rRo"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "868061640964-mqptavp4utb6n8fhsdlta9da4644f4fn.apps.googleusercontent.com",
-              "client_type": 3
-            },
-            {
-              "client_id": "868061640964-d4ujtub423fjl4i56gbeeugkgh333oj2.apps.googleusercontent.com",
-              "client_type": 2,
-              "ios_info": {
-                "bundle_id": "com.freedomghana.app.driver"
-              }
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
         "mobilesdk_app_id": "1:868061640964:android:52626d38f408b24f2cb851",
         "android_client_info": {
           "package_name": "com.freedomghana.app.rider"
@@ -93,6 +49,14 @@
         }
       },
       "oauth_client": [
+        {
+          "client_id": "868061640964-pk1mhu64hanch2e59qn2080kf3lgr0h1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.freedomghana.app.user",
+            "certificate_hash": "82beeab66f4da84bd811834bd0464cbe16ab41e6"
+          }
+        },
         {
           "client_id": "868061640964-mqptavp4utb6n8fhsdlta9da4644f4fn.apps.googleusercontent.com",
           "client_type": 3

@@ -2,7 +2,7 @@ name: freedom
 description: "User end for freedom"
 publish_to: "none"
 
-version: 1.0.1+1
+version: 1.0.2
 environment:
   sdk: ^3.7.2
 
@@ -76,15 +76,10 @@ dev_dependencies:
   rename: ^3.1.0
 
 flutter_launcher_icons:
-  # Default configuration
-  android: "launcher_icon"
+  android: true
   ios: true
-  remove_alpha_ios: true
-  image_path: "assets/images/bold_bcg.jpg"
-  image_path_ios: "assets/images/ios_icon.png"
-  min_sdk_android: 21
-  adaptive_icon_background: "#de4a0a"
-  adaptive_icon_foreground: "assets/images/bold_bcg.jpg"
+  image_path_android: assets/images/bold_bcg.jpg
+  image_path_ios: assets/images/luncher_icon.jpg
 
 dependency_overrides:
   intl: ^0.20.0
