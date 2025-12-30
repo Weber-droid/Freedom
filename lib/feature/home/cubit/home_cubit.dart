@@ -230,7 +230,20 @@ class HomeCubit extends Cubit<HomeState> {
         country,
       ].where((element) => element.isNotEmpty).join(', ');
 
-      emit(state.copyWith(userAddress: formattedAddress));
+      final currentMarkerId = const MarkerId('current_location');
+      final marker = Marker(
+        markerId: currentMarkerId,
+        position: LatLng(latitude, longitude),
+        infoWindow: InfoWindow(title: formattedAddress),
+        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+      );
+
+      final currentMarkers = Map<MarkerId, Marker>.from(state.markers);
+      currentMarkers[currentMarkerId] = marker;
+
+      emit(
+        state.copyWith(userAddress: formattedAddress, markers: currentMarkers),
+      );
     } catch (e) {
       emit(state.copyWith(errorMessage: 'Failed to get user address: $e'));
     }

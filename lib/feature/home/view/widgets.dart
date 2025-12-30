@@ -22,7 +22,7 @@ class ChooseServiceBox extends StatelessWidget {
       width: 159,
       height: MediaQuery.of(context).size.height * 0.15,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         border:
             isSelected
                 ? GradientBoxBorder(gradient: redLinearGradient)
@@ -44,25 +44,37 @@ class LogisticsDetailContainer extends StatelessWidget {
       padding: const EdgeInsets.only(left: 15, right: 13),
       width: double.infinity,
       decoration: BoxDecoration(
-        color: fillColor2,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.white),
+        border: Border.all(color: Theme.of(context).colorScheme.surface),
       ),
       child: Row(
         children: [
-          SvgPicture.asset('assets/images/logistics_filter_icon.svg'),
+          SvgPicture.asset(
+            'assets/images/logistics_filter_icon.svg',
+            colorFilter: ColorFilter.mode(
+              Theme.of(context).iconTheme.color!,
+              BlendMode.srcIn,
+            ),
+          ),
           const HSpace(8),
           Text(
             'Delivery Details',
             style: GoogleFonts.poppins(
-              color: hintTextColor,
+              color: Theme.of(context).hintColor,
               fontSize: 10.89,
               fontWeight: FontWeight.w500,
               height: 0,
             ),
           ),
           const Spacer(),
-          SvgPicture.asset('assets/images/right-triangle_icon.svg'),
+          SvgPicture.asset(
+            'assets/images/right-triangle_icon.svg',
+            colorFilter: ColorFilter.mode(
+              Theme.of(context).iconTheme.color!,
+              BlendMode.srcIn,
+            ),
+          ),
         ],
       ),
     );
@@ -80,7 +92,7 @@ class LogisticsPrefixIcon extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(9, 8, 9, 9),
       margin: const EdgeInsets.only(top: 10, left: 4, bottom: 10, right: 5),
       decoration: ShapeDecoration(
-        color: Colors.white,
+        color: Theme.of(context).cardColor,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
       child: SvgPicture.asset('assets/images/$imageName.svg'),
@@ -124,9 +136,11 @@ class LoadingWidget extends StatelessWidget {
       width: 24,
       height: 24,
       padding: const EdgeInsets.all(12),
-      child: const CircularProgressIndicator(
+      child: CircularProgressIndicator(
         strokeWidth: 2,
-        valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+        valueColor: AlwaysStoppedAnimation<Color>(
+          Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }
@@ -160,22 +174,24 @@ Future<void> showMotorCycleBottomSheet(
 }
 
 // Build section header widget
-Widget buildSectionHeader(String title) {
+// Build section header widget
+Widget buildSectionHeader(BuildContext context, String title) {
   return Padding(
-    padding: const EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
+    padding: EdgeInsets.only(left: 16.0, top: 8.0, bottom: 4.0),
     child: Text(
       title,
       style: TextStyle(
         fontSize: 11.68,
         fontWeight: FontWeight.w600,
-        color: Colors.grey[700],
+        color: Theme.of(context).textTheme.bodyMedium?.color,
       ),
     ),
   );
 }
 
 // Build location item widget
-Widget buildLocationItem({
+Widget buildLocationItem(
+  BuildContext context, {
   required IconData iconData,
   required String title,
   required String subtitle,
@@ -190,10 +206,14 @@ Widget buildLocationItem({
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: Icon(iconData, color: Colors.orange, size: 18),
+            child: Icon(
+              iconData,
+              color: Theme.of(context).colorScheme.primary,
+              size: 18,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -213,7 +233,10 @@ Widget buildLocationItem({
                 if (subtitle.isNotEmpty)
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 10.13, color: Colors.grey[600]),
+                    style: TextStyle(
+                      fontSize: 10.13,
+                      color: Theme.of(context).hintColor,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -257,7 +280,7 @@ Future<void> showAlertDialog(
     barrierDismissible: false,
     builder: (builder) {
       return AlertDialog(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).dialogBackgroundColor,
         contentPadding: const EdgeInsets.fromLTRB(13.8, 19.23, 12.26, 50.9),
         content: ConstrainedBox(
           constraints: const BoxConstraints(minWidth: 200, maxWidth: 400),
@@ -269,7 +292,7 @@ Future<void> showAlertDialog(
               Text(
                 title,
                 style: GoogleFonts.poppins(
-                  color: Colors.black,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
                 ),
@@ -281,7 +304,9 @@ Future<void> showAlertDialog(
                   message,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.black.withOpacity(0.460),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.46),
                     fontSize: 15.44,
                     fontWeight: FontWeight.w300,
                   ),
@@ -299,7 +324,7 @@ Future<void> showAlertDialog(
                   decoration: const BoxDecoration(color: Colors.black),
                   child: TextButton(
                     style: TextButton.styleFrom(
-                      backgroundColor: Colors.black,
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(2),
                       ),
@@ -364,9 +389,9 @@ class _RiderContainerAndRideActionsState
           child: Container(
             padding: const EdgeInsets.fromLTRB(7, 8, 7, 8),
             decoration: BoxDecoration(
-              color: fillColor2,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.white),
+              border: Border.all(color: Theme.of(context).colorScheme.surface),
             ),
             child: Row(
               children: [
@@ -377,7 +402,9 @@ class _RiderContainerAndRideActionsState
                       height: 37,
                       padding: const EdgeInsets.only(left: 7),
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.surface,
+                        ),
                         borderRadius: BorderRadius.circular(7),
                         image: const DecorationImage(
                           image: AssetImage('assets/images/rider_image.png'),
@@ -391,7 +418,7 @@ class _RiderContainerAndRideActionsState
                         Text(
                           state.driverAccepted?.driverName ?? '',
                           style: GoogleFonts.poppins(
-                            color: Colors.black,
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 10.89,
                             fontWeight: FontWeight.w600,
                           ),
@@ -399,7 +426,7 @@ class _RiderContainerAndRideActionsState
                         Text(
                           'Logistic',
                           style: GoogleFonts.poppins(
-                            color: const Color(0xFF939393),
+                            color: Theme.of(context).hintColor,
                             fontSize: 10.89,
                             fontWeight: FontWeight.w400,
                           ),
@@ -427,7 +454,7 @@ class _RiderContainerAndRideActionsState
                           5.46,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black,
+                          color: Theme.of(context).colorScheme.secondary,
                           borderRadius: BorderRadius.circular(7.28),
                         ),
                         child: SvgPicture.asset(
@@ -457,7 +484,7 @@ class _RiderContainerAndRideActionsState
                           7.74,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black,
+                          color: Theme.of(context).colorScheme.secondary,
                           borderRadius: BorderRadius.circular(7.28),
                         ),
                         child: SvgPicture.asset('assets/images/call_icon.svg'),
@@ -496,7 +523,7 @@ class UserFloatingAccessBar extends StatelessWidget {
                 _scaffoldKey.currentState?.openDrawer();
               },
               style: IconButton.styleFrom(
-                backgroundColor: Colors.black,
+                backgroundColor: Theme.of(context).colorScheme.secondary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(50),
                 ),
@@ -508,11 +535,11 @@ class UserFloatingAccessBar extends StatelessWidget {
               width: 206,
               padding: const EdgeInsets.only(top: 5, left: 5, bottom: 5),
               decoration: ShapeDecoration(
-                color: Colors.white,
+                color: Theme.of(context).cardColor,
                 shape: RoundedRectangleBorder(
-                  side: const BorderSide(
+                  side: BorderSide(
                     strokeAlign: BorderSide.strokeAlignOutside,
-                    color: Color(0x23B0B0B0),
+                    color: Theme.of(context).dividerColor,
                   ),
                   borderRadius: BorderRadius.circular(18),
                 ),
@@ -589,7 +616,7 @@ class UserFloatingAccessBar extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.center,
                       style: GoogleFonts.poppins(
-                        color: Colors.black,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 10.89,
                         fontWeight: FontWeight.w500,
                       ),
@@ -603,12 +630,12 @@ class UserFloatingAccessBar extends StatelessWidget {
               width: 47,
               height: 47,
               padding: const EdgeInsets.fromLTRB(12, 13, 12, 10),
-              decoration: const ShapeDecoration(
-                color: Color(0xFFEBECEB),
+              decoration: ShapeDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest,
                 shape: OvalBorder(
                   side: BorderSide(
                     strokeAlign: BorderSide.strokeAlignOutside,
-                    color: Colors.white,
+                    color: Theme.of(context).cardColor,
                   ),
                 ),
               ),
@@ -639,7 +666,7 @@ class BuildProfileImage extends StatelessWidget {
             }
             switch (state) {
               case ProfileError():
-                return _buildEmptyImage();
+                return _buildEmptyImage(context);
               case ProfileLoaded():
                 final profilePicture = state.user?.data.profilePicture;
 
@@ -660,7 +687,7 @@ class BuildProfileImage extends StatelessWidget {
                     ),
                     child: CircleAvatar(
                       radius: 10,
-                      backgroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).cardColor,
                       child: SvgPicture.asset(
                         'assets/images/user.svg',
                         height: 15,
@@ -671,9 +698,9 @@ class BuildProfileImage extends StatelessWidget {
                   ),
                 );
               case ProfileLoading():
-                return _buildEmptyImage();
+                return _buildEmptyImage(context);
               default:
-                return _buildEmptyImage();
+                return _buildEmptyImage(context);
             }
           },
         ),
@@ -681,7 +708,7 @@ class BuildProfileImage extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyImage() {
+  Widget _buildEmptyImage(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         border: Border.all(color: thickFillColor),
@@ -689,7 +716,7 @@ class BuildProfileImage extends StatelessWidget {
       ),
       child: CircleAvatar(
         radius: 10,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).cardColor,
         child: SvgPicture.asset(
           'assets/images/user.svg',
           height: 15,

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:freedom/shared/theme/app_colors.dart';
+
 import 'package:google_fonts/google_fonts.dart';
 
 abstract class SectionFactory extends StatelessWidget {
@@ -8,14 +8,14 @@ abstract class SectionFactory extends StatelessWidget {
     super.key,
     this.onItemTap,
     this.padding = const EdgeInsets.symmetric(horizontal: 22),
-    this.backgroundColor = const Color(0xFFFBFAFA),
+    this.backgroundColor,
     this.titleStyle,
     this.sectionTextStyle,
     this.paddingSection,
   });
   final VoidCallback? onItemTap;
   final EdgeInsets? padding;
-  final Color backgroundColor;
+  final Color? backgroundColor;
   final TextStyle? titleStyle;
   final TextStyle? sectionTextStyle;
   final EdgeInsetsGeometry? paddingSection;
@@ -23,7 +23,7 @@ abstract class SectionFactory extends StatelessWidget {
   String get sectionTitle;
   List<SectionItem> get sectionItems;
 
-  Widget _buildSectionItem(SectionItem item) {
+  Widget _buildSectionItem(BuildContext context, SectionItem item) {
     return InkWell(
       onTap: item.onTap ?? onItemTap,
       child: Row(
@@ -34,19 +34,29 @@ abstract class SectionFactory extends StatelessWidget {
             padding: paddingSection,
             margin: const EdgeInsets.only(left: 16),
             decoration: ShapeDecoration(
-              color: Colors.white,
+              color: Theme.of(context).cardColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(7),
               ),
             ),
-            child: SvgPicture.asset(item.iconPath ?? ''),
+            child: SvgPicture.asset(
+              item.iconPath ?? '',
+              colorFilter: ColorFilter.mode(
+                Theme.of(context).colorScheme.primary,
+                BlendMode.srcIn,
+              ),
+            ),
           ),
           const SizedBox(width: 16),
           Text(
             item.title,
             style:
                 sectionTextStyle ??
-                GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+                GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
           ),
           const Spacer(),
           if (item.subtitle != null)
@@ -56,6 +66,9 @@ abstract class SectionFactory extends StatelessWidget {
                 fontSize: 8.27,
                 fontStyle: FontStyle.italic,
                 fontWeight: FontWeight.w200,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           const SizedBox(width: 22),
@@ -64,8 +77,8 @@ abstract class SectionFactory extends StatelessWidget {
               padding: const EdgeInsets.only(right: 22),
               child: SvgPicture.asset(
                 'assets/images/arrow_right_icon.svg',
-                colorFilter: const ColorFilter.mode(
-                  Colors.black,
+                colorFilter: ColorFilter.mode(
+                  Theme.of(context).colorScheme.onSurface,
                   BlendMode.srcIn,
                 ),
               ),
@@ -90,7 +103,7 @@ abstract class SectionFactory extends StatelessWidget {
               style:
                   titleStyle ??
                   GoogleFonts.poppins(
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 10.94,
                     fontWeight: FontWeight.w500,
                   ),
@@ -98,7 +111,7 @@ abstract class SectionFactory extends StatelessWidget {
             const SizedBox(height: 6.5),
             Container(
               decoration: ShapeDecoration(
-                color: backgroundColor,
+                color: backgroundColor ?? Theme.of(context).cardColor,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(6),
                 ),
@@ -108,12 +121,12 @@ abstract class SectionFactory extends StatelessWidget {
                 children: [
                   for (var i = 0; i < sectionItems.length; i++) ...[
                     if (i == 0) const SizedBox(height: 20),
-                    _buildSectionItem(sectionItems[i]),
+                    _buildSectionItem(context, sectionItems[i]),
                     if (i < sectionItems.length - 1) ...[
                       const SizedBox(height: 19),
                       Container(
                         height: 1,
-                        color: greyColor,
+                        color: Theme.of(context).dividerColor,
                         width: double.infinity,
                       ),
                       const SizedBox(height: 19),

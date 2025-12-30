@@ -32,8 +32,8 @@ class _MainActivityScreen extends StatelessWidget {
         return Scaffold(
           body: _pages[currentIndex],
           bottomNavigationBar: Container(
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black12,
@@ -52,29 +52,41 @@ class _MainActivityScreen extends StatelessWidget {
               onTap: (value) {
                 context.read<MainActivityCubit>().changeIndex(value);
               },
-              backgroundColor: Colors.white,
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               selectedItemColor: const Color(0xfffc7013),
               selectedLabelStyle: const TextStyle(color: Color(0xfffc7013)),
-              items: List.generate(
-                _itemDetailsActive.length,
-                (index) {
-                  final activeIconData = _itemDetailsActive[index];
-                  final inActiveIconData = _itemDetailsInactive[index];
-                  return BottomNavigationBarItem(
-                    backgroundColor: Colors.white,
-                    icon: state.currentIndex == index
-                        ? SvgPicture.asset(
+              unselectedItemColor: Theme.of(context).colorScheme.onSurface,
+              type: BottomNavigationBarType.fixed,
+              showUnselectedLabels: true,
+              items: List.generate(_itemDetailsActive.length, (index) {
+                final activeIconData = _itemDetailsActive[index];
+                final inActiveIconData = _itemDetailsInactive[index];
+                return BottomNavigationBarItem(
+                  backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                  icon:
+                      state.currentIndex == index
+                          ? SvgPicture.asset(
                             'assets/images/nav_icon/active/${activeIconData['icon']}',
+                            colorFilter: const ColorFilter.mode(
+                              Color(0xfffc7013),
+                              BlendMode.srcIn,
+                            ),
                           )
-                        : SvgPicture.asset(
+                          : SvgPicture.asset(
                             'assets/images/nav_icon/inactive/${inActiveIconData['icon']}',
+                            colorFilter: ColorFilter.mode(
+                              Theme.of(
+                                context,
+                              ).colorScheme.onSurface.withValues(alpha: 0.6),
+                              BlendMode.srcIn,
+                            ),
                           ),
-                    label: state.currentIndex == index
-                        ? activeIconData['label']
-                        : inActiveIconData['label'],
-                  );
-                },
-              ),
+                  label:
+                      state.currentIndex == index
+                          ? activeIconData['label']
+                          : inActiveIconData['label'],
+                );
+              }),
             ),
           ),
         );

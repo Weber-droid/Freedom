@@ -10,6 +10,7 @@ import 'package:freedom/di/locator.dart';
 import 'package:freedom/shared/enums/enums.dart';
 import 'package:freedom/shared/utils/marker_converter.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:freedom/core/config/api_constants.dart';
 
 class RideRestorationManager {
   final RidePersistenceService _persistenceService;
@@ -704,7 +705,7 @@ class RideRestorationManager {
         dev.log('🔌 Reconnecting to socket...');
 
         final authToken = await AppPreferences.getToken();
-        socketService.connect('wss:', authToken: authToken);
+        socketService.connect(ApiConstants.baseUrl2, authToken: authToken);
 
         await Future.delayed(const Duration(seconds: 2));
       }

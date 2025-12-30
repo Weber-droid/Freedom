@@ -39,7 +39,9 @@ class OnboardingCarouselOne extends StatelessWidget {
                           vertical: 4,
                         ),
                       ),
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/login');
+                      },
                       child: const Text(
                         'Skip',
                         style: TextStyle(color: Colors.white, fontSize: 13.7),
@@ -63,8 +65,11 @@ class OnboardingCarouselOne extends StatelessWidget {
 }
 
 class CarouselDescription extends StatelessWidget {
-  const CarouselDescription(
-      {super.key, required this.description, required this.title});
+  const CarouselDescription({
+    super.key,
+    required this.description,
+    required this.title,
+  });
   final String title;
   final String description;
 
@@ -89,7 +94,7 @@ class CarouselDescription extends StatelessWidget {
             description,
             style: GoogleFonts.poppins(fontSize: 16.25, color: colorBlack),
           ),
-        )
+        ),
       ],
     );
   }

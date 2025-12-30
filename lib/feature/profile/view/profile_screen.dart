@@ -13,6 +13,7 @@ import 'package:freedom/shared/sections_tiles.dart';
 import 'package:freedom/shared/utilities.dart';
 import 'package:freedom/shared/widgets/toasts.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:freedom/feature/home/view/widgets.dart';
 import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -59,7 +60,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           },
           builder: (context, state) {
             return Scaffold(
-              backgroundColor: Colors.white,
               body: SafeArea(
                 child: BlocConsumer<ProfileCubit, ProfileState>(
                   listener: (context, state) {
@@ -79,13 +79,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Center(
                             child: Text(
                               'Profile',
-                              style: GoogleFonts.poppins(),
+                              style: GoogleFonts.poppins(
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 18,
+                              ),
                             ),
                           ),
                           const VSpace(35),
                           ProfileCard(userData: User(), state: state),
                           const VSpace(10),
-                          const Divider(thickness: 5, color: Color(0xFFF1F1F1)),
+                          Divider(
+                            thickness: 5,
+                            color: Theme.of(context).dividerColor,
+                          ),
                           const VSpace(22.49),
                           PersonalDataSection(
                             onProfileTap: () {
@@ -136,18 +143,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       context,
                                       AddressScreen.routeName,
                                     ),
-                                onTapLogout: () async {
-                                  context.read<ProfileCubit>().logout();
-                                  Future.delayed(
-                                    Duration(milliseconds: 100),
-                                    () {
-                                      AppPreferences.clearAll();
-                                      Navigator.pushReplacement(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => LoginView(),
-                                        ),
+                                onTapLogout: () {
+                                  showAlertDialog(
+                                    context,
+                                    title: 'Logout',
+                                    message: 'Are you sure you want to logout?',
+                                    confirmText: 'Logout',
+                                    cancelText: 'Cancel',
+                                    confirm: () {
+                                      Navigator.pop(context);
+                                      context.read<ProfileCubit>().logout();
+                                      Future.delayed(
+                                        Duration(milliseconds: 100),
+                                        () {
+                                          AppPreferences.clearAll();
+                                          Navigator.pushReplacement(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) => LoginView(),
+                                            ),
+                                          );
+                                        },
                                       );
+                                    },
+                                    cancel: () {
+                                      Navigator.pop(context);
                                     },
                                   );
                                 },
@@ -156,7 +176,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         ? 'Deleting ...'
                                         : 'Delete Account',
                                 onDeleteAccount: () {
-                                  context.read<ProfileCubit>().delete();
+                                  showAlertDialog(
+                                    context,
+                                    title: 'Delete Account',
+                                    message:
+                                        'Are you sure you want to delete your account?',
+                                    confirmText: 'Delete',
+                                    cancelText: 'Cancel',
+                                    confirm: () {
+                                      Navigator.pop(
+                                        context,
+                                      ); // Close the dialog
+                                      context.read<ProfileCubit>().delete();
+                                    },
+                                    cancel: () {
+                                      Navigator.pop(
+                                        context,
+                                      ); // Close the dialog
+                                    },
+                                  );
                                 },
                                 paddingSection: const EdgeInsets.all(5),
                               );

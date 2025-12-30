@@ -50,7 +50,7 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCgYScf1giacL_9wAzFL0ZaLClvzOi3rRo',
+    apiKey: 'AIzaSyAAwq1WevUYeig0hGHaaGe9M5lYIegUypo',
     appId: '1:868061640964:android:d81d9e584d9725642cb851',
     messagingSenderId: '868061640964',
     projectId: 'freedom-main-app',
@@ -58,14 +58,15 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyAv4QMxAWTzxiT7ufdEUvTdRYSpAcGtZDU',
+    apiKey: 'AIzaSyAAwq1WevUYeig0hGHaaGe9M5lYIegUypo',
     appId: '1:868061640964:ios:3f0503162b96fe372cb851',
     messagingSenderId: '868061640964',
     projectId: 'freedom-main-app',
     storageBucket: 'freedom-main-app.firebasestorage.app',
-    androidClientId: '868061640964-ikrmbkeq8jorovt3rvo1hkssfb5rh5ig.apps.googleusercontent.com',
-    iosClientId: '868061640964-pl1mon3tb7kj5kpgp8ch7ihdfj7s0mg0.apps.googleusercontent.com',
+    androidClientId:
+        '868061640964-ikrmbkeq8jorovt3rvo1hkssfb5rh5ig.apps.googleusercontent.com',
+    iosClientId:
+        '868061640964-pl1mon3tb7kj5kpgp8ch7ihdfj7s0mg0.apps.googleusercontent.com',
     iosBundleId: 'com.freedom.app.freedom',
   );
-
 }

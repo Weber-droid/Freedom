@@ -3,6 +3,7 @@ import 'dart:developer' as dev;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:freedom/app_preference.dart';
+import 'package:freedom/core/config/api_constants.dart';
 import 'package:freedom/core/services/app_restoration_manager.dart';
 import 'package:freedom/core/services/ride_persistence_service.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
@@ -285,7 +286,7 @@ class AppLifecycleManager extends WidgetsBindingObserver {
 
         final authToken = await AppPreferences.getToken();
 
-        socketService.connect('https://api-freedom.com', authToken: authToken);
+        socketService.connect(ApiConstants.baseUrl2, authToken: authToken);
 
         await Future.delayed(const Duration(seconds: 3));
 

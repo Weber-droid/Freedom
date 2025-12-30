@@ -83,6 +83,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    _setMapStyle();
+    super.didChangeDependencies();
+  }
+
+  Future<void> _setMapStyle() async {
+    if (_mapController == null) return;
+
+    try {
+      await Future.delayed(Duration.zero);
+      if (!mounted) return;
+
+      if (Theme.of(context).brightness == Brightness.dark) {
+        final style = await DefaultAssetBundle.of(
+          context,
+        ).loadString('assets/map_styles/dark_map_style.json');
+        await _mapController!.setMapStyle(style);
+      } else {
+        await _mapController!.setMapStyle(null);
+      }
+    } catch (e) {
+      dev.log('❌ Error setting map style: $e');
+    }
+  }
+
   Future<void> _initializeServices() async {
     try {
       _persistenceService = getIt<RidePersistenceService>();
@@ -208,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _connectToSocket() async {
     dev.log('🔌 Connecting to socket...');
     getIt<SocketService>().connect(
-      'https://api-freedom.com',
+      'https://freedom-api-production.up.railway.app',
       authToken: await AppPreferences.getToken(),
     );
 
@@ -589,6 +615,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                           ),
                           onMapCreated: (GoogleMapController controller) {
                             _mapController = controller;
+                            // Set initial map style
+                            _setMapStyle();
+
                             final registered =
                                 getIt.isRegistered<GoogleMapController>();
                             if (!registered) {

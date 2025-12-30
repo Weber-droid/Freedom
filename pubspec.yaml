@@ -4,7 +4,7 @@ publish_to: "none"
 
 version: 1.0.2
 environment:
-  sdk: ^3.7.2
+  sdk: ^3.7.0
 
 dependencies:
   flutter:
@@ -59,7 +59,7 @@ dependencies:
   latlong2: ^0.9.1
   async: ^2.12.0
   sign_in_with_apple: ^7.0.1
-  freezed: ^3.2.3
+  freezed: ^2.5.2
   collection: ^1.19.1
 
 dev_dependencies:
@@ -91,4 +91,5 @@ flutter:
     - assets/images/nav_icon/active/
     - assets/images/nav_icon/inactive/
     - assets/images/bike_marker.png
+    - assets/map_styles/
     - .env

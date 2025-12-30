@@ -81,7 +81,7 @@ class ChooseServiceTextDetailsUi extends StatelessWidget {
             'Deliver your goods and services nationwide',
             style: GoogleFonts.poppins(
               color: Colors.black,
-              fontSize: 10.89,
+              fontSize: 9.78,
               fontWeight: FontWeight.w300,
             ),
           ),

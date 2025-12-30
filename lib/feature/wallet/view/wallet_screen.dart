@@ -138,7 +138,7 @@ class _WalletScreenState extends State<WalletScreen> {
                               (context, state) => Text(
                                 'Payment Method: $state',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 16,
+                                  fontSize: 15,
                                   color: Colors.white,
                                 ),
                               ),
@@ -208,7 +208,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                     (context, paymentNumber) => Text(
                                       ' $paymentNumber',
                                       style: GoogleFonts.poppins(
-                                        fontSize: 16,
+                                        fontSize: 15,
                                         color: Colors.white,
                                       ),
                                     ),
