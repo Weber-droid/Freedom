@@ -15,6 +15,7 @@ import 'package:freedom/di/locator.dart';
 import 'package:freedom/feature/home/cubit/home_cubit.dart';
 import 'package:freedom/feature/home/delivery_cubit/delivery_cubit.dart';
 import 'package:freedom/feature/home/ride_cubit/ride_cubit.dart';
+import 'package:freedom/feature/home/repository/models/location.dart';
 import 'package:freedom/feature/home/view/widget/restoration_snack_bar.dart';
 import 'package:freedom/feature/home/view/widget/rider_found_bottomsheet.dart';
 import 'package:freedom/feature/home/view/widget/show_rider_search.dart';
@@ -625,6 +626,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                                 controller,
                               );
                               getIt<MapService>().setController(controller);
+                            }
+
+                            // If we already have a location, move to it immediately
+                            if (state.currentLocation != null) {
+                              controller.animateCamera(
+                                CameraUpdate.newCameraPosition(
+                                  CameraPosition(
+                                    target: state.currentLocation!,
+                                    zoom: 15.5,
+                                  ),
+                                ),
+                              );
                             }
                           },
                           onCameraMove: _onCameraMove,
@@ -1531,7 +1544,24 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   }
 
   Future<void> _handleFindRiderPressed(HomeState state) async {
-    if (state.pickUpLocation == null) {
+    // Use pickUpLocation if set, otherwise use current location
+    FreedomLocation? pickupLocation = state.pickUpLocation;
+
+    if (pickupLocation == null && state.currentLocation != null) {
+      // Use current location as pickup for delivery requests
+      pickupLocation = FreedomLocation(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        placeId: 'current_location',
+        name: state.userAddress ?? 'Current Location',
+        address: state.userAddress ?? 'Current Location',
+        latitude: state.currentLocation!.latitude,
+        longitude: state.currentLocation!.longitude,
+        iconType: 'location_on',
+        isFavorite: false,
+      );
+    }
+
+    if (pickupLocation == null) {
       context.showToast(
         message: 'Please select a pickup location',
         position: ToastPosition.top,
@@ -1548,7 +1578,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
 
     final rideRequest = rideCubit.createRideRequestFromHomeState(
-      pickupLocation: state.pickUpLocation!,
+      pickupLocation: pickupLocation,
       mainDestination: state.destinationLocation!,
       additionalDestinations: [],
       paymentMethod: rideCubit.state.paymentMethod ?? 'cash',

@@ -81,7 +81,8 @@ class _SearchSheetState extends State<SearchSheet>
     _loadLocations();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _updateDestinationFocusNodes(
-          context.read<HomeCubit>().state.locations.length);
+        context.read<HomeCubit>().state.locations.length,
+      );
 
       // Set up listeners for additional destination controllers
       _setupAdditionalDestinationListeners();
@@ -111,7 +112,8 @@ class _SearchSheetState extends State<SearchSheet>
     // Set up listeners for each destination controller
     for (var i = 0; i < widget.destinationControllers.length; i++) {
       final controller = widget.destinationControllers[i];
-      final index = i +
+      final index =
+          i +
           1; // Index offset by 1 because first destination uses destinationController
 
       void listener() {
@@ -124,7 +126,9 @@ class _SearchSheetState extends State<SearchSheet>
   }
 
   void _onSearchChangedAdditionalDestination(
-      TextEditingController controller, int index) {
+    TextEditingController controller,
+    int index,
+  ) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
     final cubit = context.read<HomeCubit>();
@@ -133,7 +137,6 @@ class _SearchSheetState extends State<SearchSheet>
     _activeDestinationIndex = index;
     cubit
       ..setActiveDestinationIndex(index)
-
       // Update destination location state
       ..isDestinationLocation(isDestinationLocation: true)
       ..isPickUpLocation(isPickUpLocation: false);
@@ -240,8 +243,8 @@ class _SearchSheetState extends State<SearchSheet>
   void _onSearchChangedPickup() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
-    final cubit = context.read<HomeCubit>()
-      ..isPickUpLocation(isPickUpLocation: true);
+    final cubit =
+        context.read<HomeCubit>()..isPickUpLocation(isPickUpLocation: true);
 
     if (widget.pickUpLocationController.text.isEmpty) {
       cubit
@@ -267,8 +270,9 @@ class _SearchSheetState extends State<SearchSheet>
   void _onSearchChangedDestination() {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
-    final cubit = context.read<HomeCubit>()
-      ..isDestinationLocation(isDestinationLocation: true);
+    final cubit =
+        context.read<HomeCubit>()
+          ..isDestinationLocation(isDestinationLocation: true);
 
     if (widget.destinationController.text.isEmpty) {
       cubit
@@ -316,7 +320,9 @@ class _SearchSheetState extends State<SearchSheet>
   }
 
   List<Widget> _buildDestinationFields(
-      BuildContext context, List<String> destinations) {
+    BuildContext context,
+    List<String> destinations,
+  ) {
     final widgets = <Widget>[];
     while (widget.destinationControllers.length < destinations.length) {
       widget.destinationControllers.add(TextEditingController());
@@ -340,21 +346,19 @@ class _SearchSheetState extends State<SearchSheet>
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.only(
-                  top: 4,
-                  right: 9,
-                  bottom: 1,
-                ),
+                padding: const EdgeInsets.only(top: 4, right: 9, bottom: 1),
                 child: GestureDetector(
                   onTap: () {
                     context.read<HomeCubit>().addDestination();
 
                     if (widget.destinationControllers.length <=
                         context.read<HomeCubit>().state.locations.length) {
-                      widget.destinationControllers
-                          .add(TextEditingController());
+                      widget.destinationControllers.add(
+                        TextEditingController(),
+                      );
                       _updateDestinationFocusNodes(
-                          context.read<HomeCubit>().state.locations.length);
+                        context.read<HomeCubit>().state.locations.length,
+                      );
                       _setupAdditionalDestinationListeners();
                     }
                   },
@@ -368,10 +372,7 @@ class _SearchSheetState extends State<SearchSheet>
                       ),
                     ),
                     child: const Center(
-                      child: Icon(
-                        Icons.add,
-                        color: Colors.white,
-                      ),
+                      child: Icon(Icons.add, color: Colors.white),
                     ),
                   ),
                 ),
@@ -384,10 +385,13 @@ class _SearchSheetState extends State<SearchSheet>
             fillColor: textFieldFillColor,
             focusNode: _destinationNode,
             hinText: 'Enter Destination',
-            suffixIcon: widget.destinationController.text.isNotEmpty
-                ? ClearFieldAndResetState(
-                    widget: widget, state: _SearchSheetState())
-                : null,
+            suffixIcon:
+                widget.destinationController.text.isNotEmpty
+                    ? ClearFieldAndResetState(
+                      widget: widget,
+                      state: _SearchSheetState(),
+                    )
+                    : null,
             prefixText: Padding(
               padding: const EdgeInsets.only(
                 top: 6,
@@ -400,9 +404,7 @@ class _SearchSheetState extends State<SearchSheet>
                   color: Colors.red,
                   borderRadius: BorderRadius.circular(6),
                 ),
-                child: SvgPicture.asset(
-                  'assets/images/maps_icon.svg',
-                ),
+                child: SvgPicture.asset('assets/images/maps_icon.svg'),
               ),
             ),
             hintTextStyle: GoogleFonts.poppins(
@@ -436,11 +438,7 @@ class _SearchSheetState extends State<SearchSheet>
                   ),
                 ),
                 Padding(
-                  padding: const EdgeInsets.only(
-                    top: 4,
-                    right: 9,
-                    bottom: 1,
-                  ),
+                  padding: const EdgeInsets.only(top: 4, right: 9, bottom: 1),
                   child: GestureDetector(
                     onTap: () {
                       context.read<HomeCubit>().removeLastDestination();
@@ -448,7 +446,8 @@ class _SearchSheetState extends State<SearchSheet>
                       if (widget.destinationControllers.length > 1) {
                         widget.destinationControllers.removeLast().dispose();
                         _updateDestinationFocusNodes(
-                            context.read<HomeCubit>().state.locations.length);
+                          context.read<HomeCubit>().state.locations.length,
+                        );
                         _setupAdditionalDestinationListeners();
                       }
                     },
@@ -462,10 +461,7 @@ class _SearchSheetState extends State<SearchSheet>
                         ),
                       ),
                       child: const Center(
-                        child: Icon(
-                          Icons.remove,
-                          color: Colors.white,
-                        ),
+                        child: Icon(Icons.remove, color: Colors.white),
                       ),
                     ),
                   ),
@@ -474,33 +470,35 @@ class _SearchSheetState extends State<SearchSheet>
             ),
             const VSpace(3),
             TextFieldFactory.location(
-              controller: widget.destinationControllers[i -
-                  1], // Adjust index because first destination uses destinationController
+              controller:
+                  widget.destinationControllers[i -
+                      1], // Adjust index because first destination uses destinationController
               fillColor: textFieldFillColor,
               focusNode: _destinationNodes[i - 1],
               hinText: 'Enter Destination ${i + 1}',
-              suffixIcon: widget.destinationControllers[i - 1].text.isNotEmpty
-                  ? GestureDetector(
-                      onTap: () {
-                        widget.destinationControllers[i - 1].clear();
-                        context.read<HomeCubit>().clearPredictions();
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: ShapeDecoration(
-                          color: const Color(0xFFE61D2A),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(7),
+              suffixIcon:
+                  widget.destinationControllers[i - 1].text.isNotEmpty
+                      ? GestureDetector(
+                        onTap: () {
+                          widget.destinationControllers[i - 1].clear();
+                          context.read<HomeCubit>().clearPredictions();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: ShapeDecoration(
+                            color: const Color(0xFFE61D2A),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(7),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 16,
                           ),
                         ),
-                        child: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                    )
-                  : null,
+                      )
+                      : null,
               prefixText: Padding(
                 padding: const EdgeInsets.only(
                   top: 6,
@@ -513,9 +511,7 @@ class _SearchSheetState extends State<SearchSheet>
                     color: Colors.red,
                     borderRadius: BorderRadius.circular(6),
                   ),
-                  child: SvgPicture.asset(
-                    'assets/images/maps_icon.svg',
-                  ),
+                  child: SvgPicture.asset('assets/images/maps_icon.svg'),
                 ),
               ),
               hintTextStyle: GoogleFonts.poppins(
@@ -553,8 +549,11 @@ class _SearchSheetState extends State<SearchSheet>
               child: Column(
                 children: [
                   Container(
-                    padding:
-                        const EdgeInsets.only(right: 11, bottom: 11, left: 11),
+                    padding: const EdgeInsets.only(
+                      right: 11,
+                      bottom: 11,
+                      left: 11,
+                    ),
                     decoration: ShapeDecoration(
                       color: Colors.white,
                       shape: RoundedRectangleBorder(
@@ -597,44 +596,47 @@ class _SearchSheetState extends State<SearchSheet>
                               controller: widget.pickUpLocationController,
                               fillColor: textFieldFillColor,
                               focusNode: _pickUpNode,
-                              suffixIcon: context.select<HomeCubit, bool>(
-                                (icon) => icon.state.isPickUpLocation,
-                              )
-                                  ? _isLoading
-                                      ? const LoadingWidget()
-                                      : widget.pickUpLocationController.text
+                              suffixIcon:
+                                  context.select<HomeCubit, bool>(
+                                        (icon) => icon.state.isPickUpLocation,
+                                      )
+                                      ? _isLoading
+                                          ? const LoadingWidget()
+                                          : widget
+                                              .pickUpLocationController
+                                              .text
                                               .isNotEmpty
                                           ? ClearFieldAndResetState(
-                                              widget: widget,
-                                            )
+                                            widget: widget,
+                                          )
                                           : null
-                                  : Padding(
-                                      padding: const EdgeInsets.only(
-                                        top: 12,
-                                        bottom: 12,
-                                        left: 15.5,
-                                        right: 7,
-                                      ),
-                                      child: GestureDetector(
-                                        onTap: () {
-                                          // context
-                                          //     .read<HomeCubit>()
-                                          //     .removeLastDestination();
-                                        },
-                                        child: Container(
-                                          decoration: ShapeDecoration(
-                                            color: const Color(0xFFE61D2A),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(7),
+                                      : Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 12,
+                                          bottom: 12,
+                                          left: 15.5,
+                                          right: 7,
+                                        ),
+                                        child: GestureDetector(
+                                          onTap: () {
+                                            // context
+                                            //     .read<HomeCubit>()
+                                            //     .removeLastDestination();
+                                          },
+                                          child: Container(
+                                            decoration: ShapeDecoration(
+                                              color: const Color(0xFFE61D2A),
+                                              shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(7),
+                                              ),
                                             ),
-                                          ),
-                                          child: SvgPicture.asset(
-                                            'assets/images/delete_field.svg',
+                                            child: SvgPicture.asset(
+                                              'assets/images/delete_field.svg',
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
                               prefixText: Padding(
                                 padding: const EdgeInsets.only(
                                   top: 6,
@@ -681,25 +683,32 @@ class _SearchSheetState extends State<SearchSheet>
   }
 
   Widget _buildResultsPanel(BuildContext context) {
-    final isPickUpLocation = context
-        .select<HomeCubit, bool>((cubit) => cubit.state.isPickUpLocation);
-    final isDestinationLocation = context
-        .select<HomeCubit, bool>((cubit) => cubit.state.isDestinationLocation);
-    final pickUpPredictions =
-        context.select((HomeCubit c) => c.state.pickUpPredictions);
-    final destinationPredictions =
-        context.select((HomeCubit c) => c.state.destinationPredictions);
-    final recentLocations =
-        context.select((HomeCubit c) => c.state.recentLocations);
-    final activeDestinationIndex =
-        context.select((HomeCubit c) => c.activeDestinationIndex);
+    final isPickUpLocation = context.select<HomeCubit, bool>(
+      (cubit) => cubit.state.isPickUpLocation,
+    );
+    final isDestinationLocation = context.select<HomeCubit, bool>(
+      (cubit) => cubit.state.isDestinationLocation,
+    );
+    final pickUpPredictions = context.select(
+      (HomeCubit c) => c.state.pickUpPredictions,
+    );
+    final destinationPredictions = context.select(
+      (HomeCubit c) => c.state.destinationPredictions,
+    );
+    final recentLocations = context.select(
+      (HomeCubit c) => c.state.recentLocations,
+    );
+    final activeDestinationIndex = context.select(
+      (HomeCubit c) => c.activeDestinationIndex,
+    );
 
     final pickupText = widget.pickUpLocationController.text;
-    final destinationText = activeDestinationIndex == 0
-        ? widget.destinationController.text
-        : (activeDestinationIndex - 1 < widget.destinationControllers.length
-            ? widget.destinationControllers[activeDestinationIndex - 1].text
-            : '');
+    final destinationText =
+        activeDestinationIndex == 0
+            ? widget.destinationController.text
+            : (activeDestinationIndex - 1 < widget.destinationControllers.length
+                ? widget.destinationControllers[activeDestinationIndex - 1].text
+                : '');
 
     return BlocBuilder<HomeCubit, HomeState>(
       builder: (context, state) {
@@ -721,12 +730,12 @@ class _SearchSheetState extends State<SearchSheet>
                   return GestureDetector(
                     onTap: () async {
                       await context.read<HomeCubit>().handlePickUpLocation(
-                            prediction,
-                            _pickUpNode,
-                            _destinationNode,
-                            widget.pickUpLocationController,
-                            widget.destinationController,
-                          );
+                        prediction,
+                        _pickUpNode,
+                        _destinationNode,
+                        widget.pickUpLocationController,
+                        widget.destinationController,
+                      );
                     },
                     child: buildPredictionList(
                       context,
@@ -742,10 +751,7 @@ class _SearchSheetState extends State<SearchSheet>
               padding: EdgeInsets.all(16),
               child: Text(
                 'No results found',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
             );
           }
@@ -806,10 +812,7 @@ class _SearchSheetState extends State<SearchSheet>
               padding: EdgeInsets.all(16),
               child: Text(
                 'No results found',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
             );
           }
@@ -833,10 +836,10 @@ class _SearchSheetState extends State<SearchSheet>
                   return GestureDetector(
                     onTap: () async {
                       await context.read<HomeCubit>().handleRecentLocation(
-                            e,
-                            _destinationNode,
-                            widget.destinationController,
-                          );
+                        e,
+                        _destinationNode,
+                        widget.destinationController,
+                      );
                     },
                     child: buildRecentLocation(context, e),
                   );
@@ -848,10 +851,7 @@ class _SearchSheetState extends State<SearchSheet>
               padding: EdgeInsets.all(16),
               child: Text(
                 'No recent searches',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
             );
           }
@@ -867,16 +867,11 @@ class _SearchSheetState extends State<SearchSheet>
   ) {
     return Column(
       children: [
-        Divider(
-          thickness: 2,
-          color: Colors.black.withValues(alpha: 0.019),
-        ),
+        Divider(thickness: 2, color: Colors.black.withValues(alpha: 0.019)),
         Row(
           children: [
             Container(
-              margin: const EdgeInsets.symmetric(
-                horizontal: 8,
-              ),
+              margin: const EdgeInsets.symmetric(horizontal: 8),
               width: 30,
               height: 30,
               decoration: ShapeDecoration(
@@ -889,34 +884,32 @@ class _SearchSheetState extends State<SearchSheet>
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
-              child: Icon(
-                iconData,
-                color: Colors.orange,
-                size: 20,
-              ),
+              child: Icon(iconData, color: Colors.orange, size: 20),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  prediction.mainText,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    prediction.mainText,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  prediction.mainText,
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: Colors.grey[600],
+                  Text(
+                    prediction.secondaryText,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -927,16 +920,11 @@ class _SearchSheetState extends State<SearchSheet>
   Column buildRecentLocation(BuildContext context, FreedomLocation recent) {
     return Column(
       children: [
-        Divider(
-          thickness: 2,
-          color: Colors.black.withValues(alpha: 0.019),
-        ),
+        Divider(thickness: 2, color: Colors.black.withValues(alpha: 0.019)),
         Row(
           children: [
             Container(
-              margin: const EdgeInsets.symmetric(
-                horizontal: 8,
-              ),
+              margin: const EdgeInsets.symmetric(horizontal: 8),
               width: 30,
               height: 30,
               decoration: ShapeDecoration(
@@ -949,34 +937,32 @@ class _SearchSheetState extends State<SearchSheet>
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
-              child: const Icon(
-                Icons.history,
-                color: Colors.orange,
-                size: 20,
-              ),
+              child: const Icon(Icons.history, color: Colors.orange, size: 20),
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  recent.name,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    recent.name,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  recent.address,
-                  style: GoogleFonts.poppins(
-                    fontSize: 10,
-                    color: Colors.grey[600],
+                  Text(
+                    recent.address,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10,
+                      color: Colors.grey[600],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),
@@ -1009,11 +995,7 @@ class _SearchSheetState extends State<SearchSheet>
 }
 
 class ClearFieldAndResetState extends StatelessWidget {
-  const ClearFieldAndResetState({
-    required this.widget,
-    this.state,
-    super.key,
-  });
+  const ClearFieldAndResetState({required this.widget, this.state, super.key});
 
   final SearchSheet widget;
   final _SearchSheetState? state;
@@ -1023,12 +1005,7 @@ class ClearFieldAndResetState extends StatelessWidget {
       (HomeCubit cubit) => cubit.state.isPickUpLocation,
     );
     return Padding(
-      padding: const EdgeInsets.only(
-        top: 12,
-        bottom: 12,
-        left: 15.5,
-        right: 7,
-      ),
+      padding: const EdgeInsets.only(top: 12, bottom: 12, left: 15.5, right: 7),
       child: GestureDetector(
         onTap: () {
           if (widget.pickUpLocationController.text.isNotEmpty && isPickUp) {
@@ -1037,8 +1014,8 @@ class ClearFieldAndResetState extends StatelessWidget {
             context.read<HomeCubit>().clearPredictions().then((_) {
               if (context.mounted) {
                 context.read<HomeCubit>().showRecentPickUpLocations(
-                      showRecentlySearchedLocations: true,
-                    );
+                  showRecentlySearchedLocations: true,
+                );
               }
             });
           } else if (widget.destinationController.text.isNotEmpty) {
@@ -1056,20 +1033,12 @@ class ClearFieldAndResetState extends StatelessWidget {
         },
         child: Container(
           decoration: ShapeDecoration(
-            color: const Color(
-              0xFFE61D2A,
-            ),
+            color: const Color(0xFFE61D2A),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(
-                7,
-              ),
+              borderRadius: BorderRadius.circular(7),
             ),
           ),
-          child: const Icon(
-            Icons.close,
-            color: Colors.white,
-            size: 16,
-          ),
+          child: const Icon(Icons.close, color: Colors.white, size: 16),
         ),
       ),
     );
@@ -1077,9 +1046,7 @@ class ClearFieldAndResetState extends StatelessWidget {
 }
 
 class LoadingWidget extends StatelessWidget {
-  const LoadingWidget({
-    super.key,
-  });
+  const LoadingWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -1089,9 +1056,7 @@ class LoadingWidget extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       child: const CircularProgressIndicator(
         strokeWidth: 2,
-        valueColor: AlwaysStoppedAnimation<Color>(
-          Colors.orange,
-        ),
+        valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
       ),
     );
   }

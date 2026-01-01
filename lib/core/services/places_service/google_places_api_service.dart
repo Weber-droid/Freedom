@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:developer';
 import 'package:http/http.dart' as http;
 import 'places_api_models.dart';
+import 'google_places_api_service_helper.dart';
 
 /// Production-level Google Places API Service
 /// Handles all Places API requests with proper error handling and retry logic
@@ -172,6 +173,95 @@ class GooglePlacesService {
     } catch (e, stackTrace) {
       log('❌ Place details error: $e', stackTrace: stackTrace);
       throw PlacesApiException('Failed to fetch place details', e.toString());
+    }
+  }
+
+  /// Get place directly from coordinates (Reverse Geocoding)
+  Future<PlaceDetailsResponse> getPlaceFromCoordinates({
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'latlng': '$latitude,$longitude',
+        'key': apiKey,
+        //'result_type': 'premise|neighborhood|sublocality|locality', // Optional: filter types
+      };
+
+      final uri = Uri.parse(
+        'https://maps.googleapis.com/maps/api/geocode/json',
+      ).replace(queryParameters: queryParams);
+
+      log('📡 Reverse Geocoding URL: $uri');
+
+      final response = await _client.get(uri);
+
+      log('📥 Response status: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+
+        // Use a simpler approach by mapping geocoding result to PlaceDetails structure
+        if (data['status'] == 'OK' && (data['results'] as List).isNotEmpty) {
+          // We'll mimic the Place Details response structure
+          final firstResult = data['results'][0];
+
+          // Extract useful geometry if needed, though we already have lat/lng
+          final geometry = firstResult['geometry'];
+
+          // Construct a 'result' map that fits PlaceDetailsResponse.fromJson expects in 'result'
+          // The geocoding API 'results' array items look slightly different but have formatted_address and geometry.
+          // They might NOT have 'name', so we might need to use address components or formatted_address as name.
+
+          final placeData = {
+            'place_id': firstResult['place_id'],
+            'name':
+                firstResult['formatted_address'].split(
+                  ',',
+                )[0], // Heuristic for name
+            'formatted_address': firstResult['formatted_address'],
+            'geometry': geometry,
+            'types': firstResult['types'],
+          };
+
+          return PlaceDetailsResponse(
+            status: 'OK',
+            result: PlaceDetails.fromJson(placeData),
+          );
+        } else {
+          print(
+            '📥 GooglePlacesService: Status not OK or no results. Status: ${data['status']}',
+          );
+          if (data['error_message'] != null) {
+            print(
+              '📥 GooglePlacesService: Error message: ${data['error_message']}',
+            );
+          }
+
+          // If Geocoding API is not enabled, try Places API as fallback
+          if (data['status'] == 'REQUEST_DENIED') {
+            print(
+              '🔄 GooglePlacesService: Geocoding API denied, trying Places API fallback...',
+            );
+            return await GooglePlacesServiceHelper.getPlaceFromCoordinatesViaPlaces(
+              client: _client,
+              apiKey: apiKey,
+              baseUrl: baseUrl,
+              latitude: latitude,
+              longitude: longitude,
+            );
+          }
+
+          return PlaceDetailsResponse(
+            status: data['status'],
+            errorMessage: data['error_message'],
+          );
+        }
+      } else {
+        throw PlacesApiException('HTTP ${response.statusCode}', response.body);
+      }
+    } catch (e, stackTrace) {
+      log('❌ Reverse geocoding error: $e', stackTrace: stackTrace);
+      throw PlacesApiException('Failed to reverse geocode', e.toString());
     }
   }
 

@@ -109,34 +109,36 @@ class StackedBottomSheetComponentState
                           ),
                           child: Row(
                             children: [
-                              Text(
-                                context.select<HomeCubit, String>((cubit) {
-                                  final state = cubit.state;
-                                  if (state.destinationLocation?.address !=
-                                          null &&
-                                      state
-                                          .destinationLocation!
-                                          .address
-                                          .isNotEmpty) {
-                                    return state.destinationLocation!.address;
-                                  } else if (state
-                                      .destinationLocations
-                                      .isNotEmpty) {
-                                    for (final location
-                                        in state.destinationLocations) {
-                                      if (location.address.isNotEmpty) {
-                                        return location.address;
+                              Expanded(
+                                child: Text(
+                                  context.select<HomeCubit, String>((cubit) {
+                                    final state = cubit.state;
+                                    if (state.destinationLocation?.address !=
+                                            null &&
+                                        state
+                                            .destinationLocation!
+                                            .address
+                                            .isNotEmpty) {
+                                      return state.destinationLocation!.address;
+                                    } else if (state
+                                        .destinationLocations
+                                        .isNotEmpty) {
+                                      for (final location
+                                          in state.destinationLocations) {
+                                        if (location.address.isNotEmpty) {
+                                          return location.address;
+                                        }
                                       }
                                     }
-                                  }
-                                  return 'Your destination';
-                                }),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                                style: GoogleFonts.poppins(
-                                  color: Colors.black,
-                                  fontSize: 10.89,
-                                  fontWeight: FontWeight.w600,
+                                    return 'Your destination';
+                                  }),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                  style: GoogleFonts.poppins(
+                                    color: Colors.black,
+                                    fontSize: 10.89,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                               const Spacer(),

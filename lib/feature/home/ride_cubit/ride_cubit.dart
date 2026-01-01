@@ -482,7 +482,13 @@ class RideCubit extends Cubit<RideState> {
     emit(state.copyWith(status: RideRequestStatus.loading, errorMessage: null));
 
     try {
-      await _processSingleDestinationRide(request);
+      if (request.isMultiDestination) {
+        dev.log('🚗 Processing multi-destination ride');
+        await _processMultiDestinationRide(request);
+      } else {
+        dev.log('🚗 Processing single destination ride');
+        await _processSingleDestinationRide(request);
+      }
     } catch (e) {
       emit(
         state.copyWith(
@@ -512,6 +518,79 @@ class RideCubit extends Cubit<RideState> {
             status: RideRequestStatus.searching,
             rideResponse: rideResponse,
             currentRideId: rideResponse.data.rideId,
+            showStackedBottomSheet: false,
+            showRiderFound: false,
+            isSearching: true,
+            riderAvailable: false,
+          ),
+        );
+
+        _persistCurrentStateAsync();
+        _startTimer();
+        _listenToDriverStatus();
+      },
+    );
+  }
+
+  Future<void> _processMultiDestinationRide(RideRequestModel request) async {
+    dev.log('🚗 Converting to MultipleStopRideModel');
+    final multiStopModel = request.toMultipleStopRideModel();
+
+    emit(state.copyWith(rideRequestModel: request));
+    final response = await rideRequestRepository.requestMultipleStopRide(
+      multiStopModel,
+    );
+
+    response.fold(
+      (failure) {
+        dev.log('❌ Multi-destination ride request failed: ${failure.message}');
+        emit(
+          state.copyWith(
+            status: RideRequestStatus.error,
+            errorMessage: failure.message,
+          ),
+        );
+      },
+      (multiStopResponse) {
+        dev.log('✅ Multi-destination ride request successful');
+        // Map MultipleStopsResponse to RequestRideResponse for state consistency
+        final mappedResponse = RequestRideResponse(
+          message: multiStopResponse.message,
+          success: true,
+          data: RequestData(
+            rideId: multiStopResponse.data.rideId,
+            fare: multiStopResponse.data.fare.toString(),
+            currency: multiStopResponse.data.currency,
+            estimatedDistance: {
+              'text': multiStopResponse.data.estimatedDistance.text,
+              'value': multiStopResponse.data.estimatedDistance.value,
+            },
+            estimatedDuration: {
+              'text': multiStopResponse.data.estimatedDuration.text,
+              'value': multiStopResponse.data.estimatedDuration.value,
+            },
+            fareBreakdown: {
+              'baseFare': multiStopResponse.data.fareBreakdown.baseFare,
+              'distanceFare': multiStopResponse.data.fareBreakdown.distanceFare,
+              'timeFare': multiStopResponse.data.fareBreakdown.timeFare,
+              'multiStopFare':
+                  multiStopResponse.data.fareBreakdown.multiStopFare,
+              'surgeMultiplier':
+                  multiStopResponse.data.fareBreakdown.surgeMultiplier,
+            },
+            rideStatus: RideStatusExtension.fromJson(
+              multiStopResponse.data.status,
+            ),
+            paymentMethod: multiStopResponse.data.paymentMethod,
+            notifiedDriverCount: multiStopResponse.data.driversNotified,
+          ),
+        );
+
+        emit(
+          state.copyWith(
+            status: RideRequestStatus.searching,
+            rideResponse: mappedResponse,
+            currentRideId: multiStopResponse.data.rideId,
             showStackedBottomSheet: false,
             showRiderFound: false,
             isSearching: true,
@@ -690,7 +769,6 @@ class RideCubit extends Cubit<RideState> {
     });
 
     _driverRejectedSubscription = socketService.onDriverRejected.listen((data) {
-     
       emit(state.copyWith(driverRejected: data));
     });
   }

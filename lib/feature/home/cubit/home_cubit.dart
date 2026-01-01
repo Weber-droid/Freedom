@@ -110,6 +110,7 @@ class HomeCubit extends Cubit<HomeState> {
   }
 
   Future<void> getCurrentLocation() async {
+    print('📍 getCurrentLocation() called');
     emit(state.copyWith(serviceStatus: LocationServiceStatus.loading));
 
     try {
@@ -143,12 +144,17 @@ class HomeCubit extends Cubit<HomeState> {
       );
 
       final currentLocation = LatLng(position.latitude, position.longitude);
+
+      // Update location first so listeners can react (move map)
       emit(
         state.copyWith(
           currentLocation: currentLocation,
           serviceStatus: LocationServiceStatus.located,
         ),
       );
+
+      // Then fetch the address for this location
+      await getUserAddressFromLatLng(currentLocation);
     } catch (e) {
       emit(
         state.copyWith(
@@ -204,6 +210,7 @@ class HomeCubit extends Cubit<HomeState> {
   }
 
   Future<void> getUserAddressFromLatLng(LatLng? latLng) async {
+    print('🔵 getUserAddressFromLatLng START');
     try {
       double latitude;
       double longitude;
@@ -216,36 +223,103 @@ class HomeCubit extends Cubit<HomeState> {
         longitude = -1.616;
       }
 
-      final placeMarks = await placemarkFromCoordinates(latitude, longitude);
+      dev.log('🌍 Getting address for: $latitude, $longitude');
+      print('🌍 Getting address for: $latitude, $longitude');
 
-      final country = placeMarks.first.country ?? '';
-      final subLocality = placeMarks.first.subLocality ?? '';
-      final thoroughfare = placeMarks.first.thoroughfare ?? '';
-      final locality = placeMarks.first.locality ?? '';
+      String addressText = '';
 
-      final formattedAddress = [
-        thoroughfare,
-        subLocality,
-        locality,
-        country,
-      ].where((element) => element.isNotEmpty).join(', ');
+      // Try fetching from API first for better accuracy
+      try {
+        dev.log('📡 Attempting API reverse geocoding...');
+
+        final apiLocation = await _repository
+            .getPlaceFromCoordinates(latitude, longitude)
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                print('⏱️ API call timed out after 10 seconds');
+                return null;
+              },
+            );
+
+        if (apiLocation != null && apiLocation.address.isNotEmpty) {
+          dev.log(
+            '✅ API returned: name="${apiLocation.name}", address="${apiLocation.address}"',
+          );
+
+          // Avoid duplicates - if name is part of address or they're the same, just use address
+          if (apiLocation.name.isNotEmpty &&
+              apiLocation.name != apiLocation.address &&
+              !apiLocation.address.startsWith(apiLocation.name)) {
+            addressText = '${apiLocation.name}, ${apiLocation.address}';
+          } else {
+            addressText = apiLocation.address;
+          }
+          dev.log('📍 Using API address: $addressText');
+        } else {
+          dev.log('⚠️ API returned null or empty address');
+        }
+      } catch (e) {
+        dev.log('❌ API Reverse Geocoding failed: $e');
+      }
+
+      // Fallback to local geocoding if API failed or returned empty
+      if (addressText.isEmpty) {
+        print('📱 Using local geocoding fallback...');
+        dev.log('📱 Using local geocoding fallback...');
+        final placeMarks = await placemarkFromCoordinates(latitude, longitude);
+        final name = placeMarks.first.name ?? '';
+        final street = placeMarks.first.street ?? '';
+        final thoroughfare = placeMarks.first.thoroughfare ?? '';
+        final subLocality = placeMarks.first.subLocality ?? '';
+        final locality = placeMarks.first.locality ?? '';
+
+        dev.log(
+          '📱 Local geocoding: name="$name", street="$street", thoroughfare="$thoroughfare", subLocality="$subLocality", locality="$locality"',
+        );
+        print(
+          '📱 Local geocoding: name="$name", street="$street", thoroughfare="$thoroughfare", subLocality="$subLocality", locality="$locality"',
+        );
+
+        // Removed unused 'country' variable
+
+        addressText = [
+          if (name != street && name != thoroughfare) name,
+          street.isNotEmpty ? street : thoroughfare,
+          subLocality,
+          locality,
+        ].where((element) => element.isNotEmpty).toSet().join(', ');
+
+        dev.log('📍 Using local address: $addressText');
+        print('📍 Using local address: $addressText');
+      }
 
       final currentMarkerId = const MarkerId('current_location');
       final marker = Marker(
         markerId: currentMarkerId,
         position: LatLng(latitude, longitude),
-        infoWindow: InfoWindow(title: formattedAddress),
+        infoWindow: InfoWindow(title: addressText),
         icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
       );
 
       final currentMarkers = Map<MarkerId, Marker>.from(state.markers);
       currentMarkers[currentMarkerId] = marker;
 
+      dev.log('✅ Emitting new address: $addressText');
+      print('✅ Emitting new address: $addressText');
+      emit(state.copyWith(userAddress: addressText, markers: currentMarkers));
+      print('🔵 getUserAddressFromLatLng END - SUCCESS');
+    } catch (e, stackTrace) {
+      dev.log('❌ Failed to get user address: $e');
+      print('❌ CRITICAL ERROR in getUserAddressFromLatLng: $e');
+      print('Stack trace: $stackTrace');
       emit(
-        state.copyWith(userAddress: formattedAddress, markers: currentMarkers),
+        state.copyWith(
+          errorMessage: 'Failed to get user address: $e',
+          userAddress: 'Unknown Location',
+        ),
       );
-    } catch (e) {
-      emit(state.copyWith(errorMessage: 'Failed to get user address: $e'));
+      print('🔵 getUserAddressFromLatLng END - ERROR');
     }
   }
 

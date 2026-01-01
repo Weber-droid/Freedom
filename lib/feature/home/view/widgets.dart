@@ -626,20 +626,26 @@ class UserFloatingAccessBar extends StatelessWidget {
               ),
             ),
             const HSpace(27),
-            Container(
-              width: 47,
-              height: 47,
-              padding: const EdgeInsets.fromLTRB(12, 13, 12, 10),
-              decoration: ShapeDecoration(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                shape: OvalBorder(
-                  side: BorderSide(
-                    strokeAlign: BorderSide.strokeAlignOutside,
-                    color: Theme.of(context).cardColor,
+            GestureDetector(
+              onTap: () async {
+                print('🎯 RECENTER BUTTON TAPPED!');
+                await context.read<HomeCubit>().getCurrentLocation();
+              },
+              child: Container(
+                width: 47,
+                height: 47,
+                padding: const EdgeInsets.fromLTRB(12, 13, 12, 10),
+                decoration: ShapeDecoration(
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                  shape: OvalBorder(
+                    side: BorderSide(
+                      strokeAlign: BorderSide.strokeAlignOutside,
+                      color: Theme.of(context).cardColor,
+                    ),
                   ),
                 ),
+                child: SvgPicture.asset('assets/images/user_position.svg'),
               ),
-              child: SvgPicture.asset('assets/images/user_position.svg'),
             ),
           ],
         ),

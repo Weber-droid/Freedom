@@ -180,82 +180,84 @@ class PaymentMethodBottomSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Select Payment Method',
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Select Payment Method',
+              style: GoogleFonts.poppins(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          _PaymentMethodTile(
-            icon: Icons.money,
-            title: 'Cash',
-            subtitle: 'Pay with cash',
-            isSelected: selectedPaymentMethodId == 'cash',
-            onTap: () => onPaymentMethodSelected('cash', 'cash'),
-          ),
-          const Divider(height: 1),
-          ...paymentMethods.map((method) {
-            return method.when(
-              card: (
-                id,
-                userId,
-                type,
-                cardType,
-                last4,
-                expiryMonth,
-                expiryYear,
-                isDefault,
-                createdAt,
-                token,
-              ) {
-                return _PaymentMethodTile(
-                  icon: _getCardIcon(cardType),
-                  title: '${cardType.toUpperCase()} •••• $last4',
-                  subtitle: 'Expires $expiryMonth/$expiryYear',
-                  isSelected: selectedPaymentMethodId == id,
-                  isDefault: isDefault,
-                  onTap: () => onPaymentMethodSelected(id, 'card'),
-                );
-              },
-              momo: (
-                id,
-                userId,
-                type,
-                momoProvider,
-                momoNumber,
-                isDefault,
-                createdAt,
-              ) {
-                return _PaymentMethodTile(
-                  icon: Icons.phone_android,
-                  title: momoProvider.toUpperCase(),
-                  subtitle: momoNumber,
-                  isSelected: selectedPaymentMethodId == id,
-                  isDefault: isDefault,
-                  onTap: () => onPaymentMethodSelected(id, 'momo'),
-                );
-              },
-            );
-          }),
-          const SizedBox(height: 16),
-          TextButton.icon(
-            onPressed: () {
-              Navigator.of(context).pushNamed(WalletScreen.routeName);
-            },
-            icon: const Icon(Icons.add_circle_outline),
-            label: Text(
-              'Add New Payment Method',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+            const SizedBox(height: 20),
+            _PaymentMethodTile(
+              icon: Icons.money,
+              title: 'Cash',
+              subtitle: 'Pay with cash',
+              isSelected: selectedPaymentMethodId == 'cash',
+              onTap: () => onPaymentMethodSelected('cash', 'cash'),
             ),
-          ),
-        ],
+            const Divider(height: 1),
+            ...paymentMethods.map((method) {
+              return method.when(
+                card: (
+                  id,
+                  userId,
+                  type,
+                  cardType,
+                  last4,
+                  expiryMonth,
+                  expiryYear,
+                  isDefault,
+                  createdAt,
+                  token,
+                ) {
+                  return _PaymentMethodTile(
+                    icon: _getCardIcon(cardType),
+                    title: '${cardType.toUpperCase()} •••• $last4',
+                    subtitle: 'Expires $expiryMonth/$expiryYear',
+                    isSelected: selectedPaymentMethodId == id,
+                    isDefault: isDefault,
+                    onTap: () => onPaymentMethodSelected(id, 'card'),
+                  );
+                },
+                momo: (
+                  id,
+                  userId,
+                  type,
+                  momoProvider,
+                  momoNumber,
+                  isDefault,
+                  createdAt,
+                ) {
+                  return _PaymentMethodTile(
+                    icon: Icons.phone_android,
+                    title: momoProvider.toUpperCase(),
+                    subtitle: momoNumber,
+                    isSelected: selectedPaymentMethodId == id,
+                    isDefault: isDefault,
+                    onTap: () => onPaymentMethodSelected(id, 'momo'),
+                  );
+                },
+              );
+            }),
+            const SizedBox(height: 16),
+            TextButton.icon(
+              onPressed: () {
+                Navigator.of(context).pushNamed(WalletScreen.routeName);
+              },
+              icon: const Icon(Icons.add_circle_outline),
+              label: Text(
+                'Add New Payment Method',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -311,11 +313,14 @@ class _PaymentMethodTile extends StatelessWidget {
       ),
       title: Row(
         children: [
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontWeight: FontWeight.w500,
-              color: Colors.black,
+          Flexible(
+            child: Text(
+              title,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500,
+                color: Colors.black,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
           if (isDefault) ...[

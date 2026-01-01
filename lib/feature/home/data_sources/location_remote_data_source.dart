@@ -8,6 +8,7 @@ import 'package:freedom/feature/home/models/prediction_model.dart';
 abstract class LocationRemoteDataSource {
   Future<List<PlacePredictionModel>> getPlacePredictions(String query);
   Future<LocationModel?> getPlaceDetails(String placeId);
+  Future<LocationModel?> getPlaceFromCoordinates(double lat, double lng);
 }
 
 class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
@@ -17,6 +18,38 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
           GooglePlacesService(apiKey: dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '');
 
   final GooglePlacesService _placesService;
+
+  @override
+  Future<LocationModel?> getPlaceFromCoordinates(double lat, double lng) async {
+    try {
+      final response = await _placesService.getPlaceFromCoordinates(
+        latitude: lat,
+        longitude: lng,
+      );
+
+      if (response.isOk && response.result != null) {
+        final place = response.result!;
+
+        final model = LocationModel(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          placeId: place.placeId,
+          name: place.name,
+          address: place.formattedAddress ?? '',
+          latitude: place.geometry?.location.lat ?? lat,
+          longitude: place.geometry?.location.lng ?? lng,
+          iconType: PlacePredictionModel.getIconForPlaceType(place.types),
+        );
+        return model;
+      }
+      if (response.errorMessage != null) {
+        print('RemoteDataSource: Error message: ${response.errorMessage}');
+      }
+      return null;
+    } catch (e) {
+      log('Reverse Geocode Error: $e');
+      return null;
+    }
+  }
 
   @override
   Future<List<PlacePredictionModel>> getPlacePredictions(String query) async {
@@ -57,26 +90,26 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
 
       // Handle specific error cases
       if (response.status == 'REQUEST_DENIED') {
-        log('❌ REQUEST_DENIED: ${response.errorMessage}');
+        log('REQUEST_DENIED: ${response.errorMessage}');
         throw Exception(
           'Places API access denied. Please check your API key and billing settings.',
         );
       }
 
       if (response.status == 'INVALID_REQUEST') {
-        log('❌ INVALID_REQUEST: ${response.errorMessage}');
+        log('INVALID_REQUEST: ${response.errorMessage}');
         throw Exception('Invalid request parameters.');
       }
 
       return [];
     } on PlacesApiException catch (e) {
-      log('❌ Places API Exception: ${e.message}');
+      log('Places API Exception: ${e.message}');
       if (e.details != null) {
         log('Details: ${e.details}');
       }
       throw Exception('Failed to fetch place predictions: ${e.message}');
     } catch (e) {
-      log('❌ Places API Error: $e');
+      log('Places API Error: $e');
       throw Exception('Failed to fetch place predictions');
     }
   }
@@ -106,31 +139,31 @@ class LocationRemoteDataSourceImpl implements LocationRemoteDataSource {
 
       // Handle specific error cases
       if (response.status == 'REQUEST_DENIED') {
-        log('❌ REQUEST_DENIED: ${response.errorMessage}');
+        log('REQUEST_DENIED: ${response.errorMessage}');
         throw Exception(
           'Places API access denied. Please check your API key and billing settings.',
         );
       }
 
       if (response.status == 'INVALID_REQUEST') {
-        log('❌ INVALID_REQUEST: ${response.errorMessage}');
+        log('INVALID_REQUEST: ${response.errorMessage}');
         throw Exception('Invalid place ID.');
       }
 
       if (response.status == 'NOT_FOUND') {
-        log('⚠️ Place not found for ID: $placeId');
+        log('Place not found for ID: $placeId');
         return null;
       }
 
       return null;
     } on PlacesApiException catch (e) {
-      log('❌ Places API Exception: ${e.message}');
+      log('Places API Exception: ${e.message}');
       if (e.details != null) {
         log('Details: ${e.details}');
       }
       throw Exception('Failed to fetch place details: ${e.message}');
     } catch (e) {
-      log('❌ Places API Error: $e');
+      log('Places API Error: $e');
       throw Exception('Failed to fetch place details');
     }
   }

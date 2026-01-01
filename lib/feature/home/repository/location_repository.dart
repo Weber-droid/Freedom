@@ -15,6 +15,31 @@ class LocationRepositoryImpl implements LocationRepository {
   final LocationLocalDataSource localDataSource;
 
   @override
+  Future<FreedomLocation?> getPlaceFromCoordinates(
+    double lat,
+    double lng,
+  ) async {
+    try {
+      final model = await remoteDataSource.getPlaceFromCoordinates(lat, lng);
+      if (model == null) return null;
+
+      return FreedomLocation(
+        id: model.id,
+        placeId: model.placeId,
+        name: model.name,
+        address: model.address,
+        latitude: model.latitude,
+        longitude: model.longitude,
+        iconType: model.iconType,
+        isFavorite: false,
+      );
+    } catch (e) {
+      log('Repository error: $e');
+      return null;
+    }
+  }
+
+  @override
   Future<List<PlacePrediction>> getPlacePredictions(String query) async {
     try {
       final models = await remoteDataSource.getPlacePredictions(query);
@@ -159,4 +184,5 @@ abstract class LocationRepository {
   Future<void> saveLocation(FreedomLocation location);
   Future<void> removeLocation(String locationId);
   Future<void> clearRecentLocations();
+  Future<FreedomLocation?> getPlaceFromCoordinates(double lat, double lng);
 }
